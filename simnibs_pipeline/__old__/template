@@ -1,0 +1,14 @@
+import nilearn
+
+mni_template_fpath = 
+
+    
+FEF_RIGHT_MNI = [28, -8, 54]
+
+
+load template
+
+create_ mask()
+
+
+save into same dir than templates

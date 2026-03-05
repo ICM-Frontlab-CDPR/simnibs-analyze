@@ -1,0 +1,12 @@
+# ## All Outputs are:
+
+
+# # Pour chaque sujet:
+# - valeur efield dans la ROI - simu
+# - valeur efield dans la ROI - opti
+# # Valeur moyenne + variabilité
+# # Amélioration moyenne + variabilité
+# # Corrélation efield / réponse symptome du patient
+
+# # ______________
+# # check la robustesse de ses outputs étant donné les méthodes de calculs

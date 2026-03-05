@@ -1,0 +1,19 @@
+- add Tonis features 
+
+- sensitivity analysis to the position (both tms and tacs)  (how big is the perturbation when moving a bit the electrode)
+
+- clean uncessary plot
+
+- make for each subject an (x,y) plot x=simu y=opti (do it for each way of compute)
+
+- prune LLM garbage
+
+- make it POO : le run.py ne doit pas appeler directement les ofnctions des modules mais seulement des run-modules...
+make clean __init__.py 
+
+-pour la visualisation, bien separer la creation de toutes les views que ce soit des plots, des images#D from nilearn... de la composition des figures avec matplotlib (comment ont reunit tous les items traités dans des fichiers pour pouvoir comparer0)
+
+- check que tous les outputs créé le sont bien au bon endroit dans le simnibs-folder : 
+
+
+-faire passer la nomenclature des noms des colonnes du csv entre les etapes "features extraction" / analysis / viz

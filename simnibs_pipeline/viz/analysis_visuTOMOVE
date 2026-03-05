@@ -1,0 +1,92 @@
+
+
+def plot_intra_subject(diff_df: pd.DataFrame,
+					   out_path: Path,
+					   subject_col: str = "subject") -> None:
+	out_path.parent.mkdir(parents=True, exist_ok=True)
+	plt.figure(figsize=(7, 4))
+	plt.bar(diff_df[subject_col].astype(str), diff_df["diff"])
+	plt.ylabel("Difference (opti - simu)")
+	plt.xticks(rotation=45, ha="right")
+	plt.tight_layout()
+	plt.savefig(out_path, dpi=150)
+	plt.close()
+
+
+def plot_mean_by_subject_and_type(df: pd.DataFrame,
+								   out_path: Path,
+								   metric: str = "mean",
+								   subject_col: str = "subject",
+								   condition_col: str = "condition") -> None:
+	"""
+	Plot les valeurs moyennes par sujet avec distinction simulation/optimization.
+	"""
+	out_path.parent.mkdir(parents=True, exist_ok=True)
+	
+	# Extraire le type (simulation ou optimization) de la condition
+	df = df.copy()
+	df['type'] = df[condition_col].apply(lambda x: 'optimization' if 'optimization' in x else 'simulation')
+	df['roi'] = df[condition_col].apply(lambda x: x.replace('_simulation', '').replace('_optimization', ''))
+	
+	# Créer un plot par ROI
+	rois = df['roi'].unique()
+	n_rois = len(rois)
+	
+	fig, axes = plt.subplots(1, n_rois, figsize=(5 * n_rois, 6), sharey=True)
+	if n_rois == 1:
+		axes = [axes]
+	
+	for i, roi in enumerate(rois):
+		df_roi = df[df['roi'] == roi]
+		
+		# Pivot pour avoir simulation et optimization côte à côte
+		pivot = df_roi.pivot_table(
+			index=subject_col,
+			columns='type',
+			values=metric,
+			aggfunc='first'
+		)
+		
+		# Plot
+		ax = axes[i]
+		x = np.arange(len(pivot.index))
+		width = 0.35
+		
+		if 'simulation' in pivot.columns:
+			ax.bar(x - width/2, pivot['simulation'], width, label='Simulation', alpha=0.8)
+		if 'optimization' in pivot.columns:
+			ax.bar(x + width/2, pivot['optimization'], width, label='Optimization', alpha=0.8)
+		
+		ax.set_xlabel('Sujet')
+		ax.set_ylabel(f'{metric.capitalize()} E-field (V/m)')
+		ax.set_title(f'ROI: {roi}')
+		ax.set_xticks(x)
+		ax.set_xticklabels(pivot.index, rotation=45, ha='right')
+		ax.legend()
+		ax.grid(axis='y', alpha=0.3)
+	
+	plt.tight_layout()
+	plt.savefig(out_path, dpi=150, bbox_inches='tight')
+	plt.close()
+
+
+def plot_inter_subject(summary: pd.DataFrame,
+					   out_path: Path,
+					   condition_col: str = "condition") -> None:
+	out_path.parent.mkdir(parents=True, exist_ok=True)
+	plt.figure(figsize=(6, 4))
+	plt.bar(
+		summary[condition_col],
+		summary["mean"],
+		yerr=summary["sem"],
+		capsize=4,
+	)
+	plt.ylabel("Mean ROI value")
+	plt.tight_layout()
+	plt.savefig(out_path, dpi=150)
+	plt.close()
+
+
+
+plot_inter_subject(inter, out_dir / "inter_subject_plot.png", condition_col=args.condition_col)
+plot_intra_subject(diff_df, out_dir / "intra_subject_plot.png", subject_col=args.subject_col)

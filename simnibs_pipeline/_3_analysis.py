@@ -115,6 +115,11 @@ class Analysis:
         return df
 
 
+    def correlate_with():
+        # compute statistics between stim success and others variables (patient response / anatomic variables)
+        pass
+
+
 def _parse_args(argv: Iterable[str] | None = None):
     parser = argparse.ArgumentParser(description="Run inter/intra-subject analysis")
     parser.add_argument("--inputs", nargs="+", required=True, help="CSV files")

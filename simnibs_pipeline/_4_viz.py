@@ -109,10 +109,15 @@ class Visualizer:
         plotter.close()
         return image
 
+    def _colocalize():
+    # to be use for e-field figures
+        pass
+    
     # ------------------------------------------------------------------
     # Public methods
     # ------------------------------------------------------------------
 
+    
     def efields_figures(
         self,
         file_info_by_roi_mode: Dict[Tuple[str, str], List[Tuple[str, Path]]],

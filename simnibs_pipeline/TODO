@@ -1,10 +1,10 @@
 - add Tonis features 
 
+- il va falloir specifié les outputs fpath en fonction des parametres d'analyses sinon il va avoir un probleme
+
 - sensitivity analysis to the position (both tms and tacs)  (how big is the perturbation when moving a bit the electrode)
 
 - clean uncessary plot
-
-- make for each subject an (x,y) plot x=simu y=opti (do it for each way of compute)
 
 - prune LLM garbage
 

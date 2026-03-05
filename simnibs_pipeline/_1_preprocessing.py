@@ -11,7 +11,7 @@ from nilearn import image, masking
 
 from _io import load_img
 
-
+#TODO add condition sur mni-space ou subject space (c'est dans un get_fpath que ça doit etre défini)
 class Preprocessor:
     """
     Preprocess an e-field image within a ROI.

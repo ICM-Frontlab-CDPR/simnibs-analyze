@@ -120,7 +120,11 @@ class TargetGenerator:
         data[dist_sq <= radius_vox ** 2] = 1
 
         return new_img_like(template_img, data, affine=affine)
+    
 
+    def create_subject_roi_from_mni():
+        pass
+    
 
 # ---------------------------------------------------------------------------
 # CLI entry point

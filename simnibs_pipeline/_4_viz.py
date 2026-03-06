@@ -8,7 +8,7 @@ import nibabel as nib
 import numpy as np
 import pandas as pd
 import pyvista as pv
-from nilearn import plotting
+from nilearn import plotting, image as nl_image
 
 from _logging import get_logger
 
@@ -57,46 +57,58 @@ class Visualizer:
 
     @staticmethod
     def _create_3d_view(
-        nii_file: Path,
+        efield_path: Path,
         camera_position: str = "xy",
         cmap: str = "hot",
         threshold_percentile: float = 0.0,
         vmin: Optional[float] = None,
         vmax: Optional[float] = None,
+        skull_stripped_t1_path: Optional[Path] = None,
     ) -> np.ndarray:
         """
-        Render a NIfTI volume with PyVista (offscreen) and return an RGBA array.
+        Render an e-field NIfTI volume with PyVista (offscreen) and return an RGBA array.
+
+        When ``skull_stripped_t1_path`` is provided, the e-field is first resampled
+        into the skull-stripped T1 space (colocalization) before PyVista rendering,
+        giving an anatomically-aligned view.
 
         Parameters
         ----------
-        nii_file :
-            Path to the NIfTI file.
+        efield_path :
+            Path to the e-field NIfTI file.
         camera_position :
-            PyVista camera position string.
+            PyVista camera position string (``'xy'``, ``'xz'``, ``'yz'``).
         cmap :
             Colormap name.
         threshold_percentile :
             Voxels below this percentile of non-zero values are zeroed.
         vmin, vmax :
-            Explicit colour scale limits.  If both ``None``, PyVista auto-scales.
+            Explicit colour scale limits. If both ``None``, PyVista auto-scales.
+        skull_stripped_t1_path :
+            Optional path to the skull-stripped T1 (e.g. ``T1fs_nu_conform_brain.nii.gz``).
+            When set, the e-field is resampled into T1 space before rendering.
         """
-        img = nib.load(str(nii_file))
-        data = np.squeeze(img.get_fdata())
+        efield_img = nib.load(str(efield_path))
 
+        if skull_stripped_t1_path is not None:
+            skull_stripped_t1_img = nib.load(str(skull_stripped_t1_path))
+            efield_img = nl_image.resample_to_img(efield_img, skull_stripped_t1_img, interpolation="continuous")
+
+        data = np.squeeze(efield_img.get_fdata())
         if threshold_percentile > 0:
             nonzero = data[data > 0]
             if nonzero.size > 0:
                 thresh = np.percentile(nonzero, threshold_percentile)
                 data[data < thresh] = 0
 
-        affine = img.affine
-        spacing = img.header.get_zooms()[:3]
-        origin = affine[:3, 3]
+        efield_affine = efield_img.affine
+        efield_spacing = efield_img.header.get_zooms()[:3]
+        efield_origin = efield_affine[:3, 3]
 
         grid = pv.ImageData()
         grid.dimensions = np.array(data.shape) + 1
-        grid.spacing = spacing
-        grid.origin = origin
+        grid.spacing = efield_spacing
+        grid.origin = efield_origin
         grid.cell_data["values"] = data.flatten(order="F")
 
         plotter = pv.Plotter(off_screen=True)
@@ -109,18 +121,13 @@ class Visualizer:
         plotter.close()
         return image
 
-    def _colocalize():
-    # to be use for e-field figures
-        pass
-    
     # ------------------------------------------------------------------
     # Public methods
     # ------------------------------------------------------------------
-
-    
     def efields_figures(
         self,
         file_info_by_roi_mode: Dict[Tuple[str, str], List[Tuple[str, Path]]],
+        t1_brain_by_subject: Optional[Dict[str, Path]] = None,
     ) -> None:
         """
         Generate one 3D figure per (roi, mode) pair.
@@ -129,8 +136,11 @@ class Visualizer:
         ----------
         file_info_by_roi_mode :
             Mapping ``(roi, mode) → [(subject, efield_path), ...]``.
-            Resolve file paths in the caller (e.g. ``run.py``) using
-            :func:`file_io.find_simulation_dirs` / :func:`file_io.find_efield_files`.
+        t1_brain_by_subject :
+            Optional mapping ``subject → skull_stripped_t1_path``. When provided,
+            the e-field is resampled into T1 space before PyVista rendering,
+            giving an anatomically-aligned view.  When ``None``, the e-field
+            is rendered directly in its original MNI space.
         """
         output_dir = self.output_dir / "simu"
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -171,17 +181,20 @@ class Visualizer:
 
             for idx, (subject, efield_path) in enumerate(subject_files):
                 row, col = divmod(idx, n_cols)
+                ax = axes[row, col]
+                t1_path = (t1_brain_by_subject or {}).get(subject)
                 image = self._create_3d_view(
-                    nii_file=efield_path,
+                    efield_path=efield_path,
                     camera_position=self.camera_position,
                     cmap=self.cmap,
                     threshold_percentile=self.threshold_percentile,
                     vmin=vmin,
                     vmax=vmax,
+                    skull_stripped_t1_path=t1_path,
                 )
-                axes[row, col].imshow(image)
-                axes[row, col].axis("off")
-                axes[row, col].set_title(subject, fontsize=12)
+                ax.imshow(image)
+                ax.axis("off")
+                ax.set_title(subject, fontsize=12)
 
             for idx in range(n_subjects, n_rows * n_cols):
                 row, col = divmod(idx, n_cols)

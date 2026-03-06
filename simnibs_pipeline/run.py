@@ -13,7 +13,7 @@ from typing import Dict, List
 import nibabel as nib
 import pandas as pd
 
-from _0_target_generation import TargetGenerator
+from _0_anatomical_preparer import AnatomicalPreparer
 from _1_preprocessing import Preprocessor
 from _2_features_extraction import FeatureExtractor
 from _3_analysis import Analysis
@@ -263,21 +263,23 @@ def main(
 
     results_dir.mkdir(parents=True, exist_ok=True)
 
-    # ── Étape 0 : Target generation ─────────────────────────────────────
+    # ── Étape 0 : Setup targets (une fois, indépendant des sujets) ────────
+    rois: Dict = config.get("rois", {})
+    mni_target_dir = simnibs_output / "mni_target"
+    ref = config.get("paths", {}).get("mni_template")
+    radius_mm = config.get("target_generation", {}).get("radius_mm", 10.0)
+    gen = AnatomicalPreparer(
+        reference_img_path=Path(ref) if ref else None,
+        radius_mm=radius_mm,
+    )
+
     if not skip_target_generation:
-        logger.step("ÉTAPE 0 : GÉNÉRATION DES MASQUES ROI")
-        rois: Dict = config.get("rois", {})
-        mni_target_dir = simnibs_output / "mni_target"
+        logger.step("ÉTAPE 0 : GÉNÉRATION DES MASQUES ROI MNI")
         if all((mni_target_dir / f"{roi}_mask.nii.gz").exists() for roi in rois):
             logger.info(f"✓ Masques ROI déjà présents dans {mni_target_dir}")
         else:
             try:
-                ref = config.get("paths", {}).get("mni_template")
-                radius_mm = config.get("target_generation", {}).get("radius_mm", 10.0)
-                TargetGenerator(
-                    reference_img_path=Path(ref) if ref else None,
-                    radius_mm=radius_mm,
-                ).run(rois, mni_target_dir)
+                gen.setup(rois, mni_target_dir)
             except Exception as e:
                 logger.error(f"✗ Target generation échouée : {e}")
                 return 1
@@ -299,6 +301,10 @@ def main(
 
         for subject in config["subjects"]:
             logger.step(f"SUJET : {subject}")
+            m2m_dir = simnibs_output / subject / f"m2m_{subject}"
+            if not skip_target_generation and m2m_dir.exists():
+                subject_target_dir = simnibs_output / subject / "subject_target"
+                gen.run(m2m_dir, subject_target_dir)
             for condition in config["stim_conditions"]:
                 for mode in config["mode"]:
                     logger.info(f"--- {subject} / {condition} / {mode} ---")

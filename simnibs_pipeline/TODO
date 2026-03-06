@@ -1,15 +1,19 @@
-- add Tonis features 
 
-- il va falloir specifié les outputs fpath en fonction des parametres d'analyses sinon il va avoir un probleme
 
+Il va falloir specifié les outputs fpath en fonction des parametres d'analyses sinon il va y avoir un probleme, actuellement il y a 4 niveaux :
+1/ quand la segmentation change il y a un nouveau "derivative_root" (sauf a changer completmeent le travail de Guillaume)
+2/ en output de simnibs pipeline il y a un folder par simu / opti
+... faire gaffe à la manière de récupérer le parametrage de chaque simu (pour l'instant = nom du folder... pas top)
+3/ au moment de l'extraction de features : un seul fichier pour toute l'etude ?
+ca veut dire qu'il faut faire attention au nom des colonnes / des lignes, non-ambigue malgré tous les parametrages possibles. Dans ce cas, une ligne = un fichier nifti d'efield ? (faire attention )
+... ou alors plusieurs fichiers, mais il faut definir clairmeent la nomenclature.
+4/les resultats d'analyse a partir de ces features. La il peut y avoir un fichier par type d'analyse, la aussi faire attention a la non-ambiguité des noms.
+
+
+
+_____________
 - sensitivity analysis to the position (both tms and tacs)  (how big is the perturbation when moving a bit the electrode)
 
-- clean uncessary plot
-
-- prune LLM garbage
-
-- make it POO : le run.py ne doit pas appeler directement les ofnctions des modules mais seulement des run-modules...
-make clean __init__.py 
 
 -pour la visualisation, bien separer la creation de toutes les views que ce soit des plots, des images#D from nilearn... de la composition des figures avec matplotlib (comment ont reunit tous les items traités dans des fichiers pour pouvoir comparer0)
 

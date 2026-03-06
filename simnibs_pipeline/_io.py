@@ -154,6 +154,48 @@ def find_efield_files(simulation_dir: Path, mode: str) -> List[Path]:
     return efield_files
 
 
+def get_t1_conform(m2m_dir: Path, filename: str = "T1fs_nu_conform.nii.gz") -> Path:
+    """
+    Retourne le chemin du T1 dans ``m2m_dir``.
+
+    Parameters
+    ----------
+    m2m_dir : Path
+        Répertoire ``m2m_<subject>`` produit par SimNIBS.
+    filename : str
+        Nom du fichier T1 (default: ``T1fs_nu_conform.nii.gz``).
+
+    Raises
+    ------
+    FileNotFoundError
+    """
+    path = Path(m2m_dir) / filename
+    if not path.exists():
+        raise FileNotFoundError(f"T1 non trouvé : {path}")
+    return path
+
+
+def get_brainmask(m2m_dir: Path, filename: str = "brain.nii.gz") -> Path:
+    """
+    Retourne le chemin du masque cerveau dans ``m2m_dir``.
+
+    Parameters
+    ----------
+    m2m_dir : Path
+        Répertoire ``m2m_<subject>`` produit par SimNIBS.
+    filename : str
+        Nom du fichier masque (default: ``brain.nii.gz``).
+
+    Raises
+    ------
+    FileNotFoundError
+    """
+    path = Path(m2m_dir) / filename
+    if not path.exists():
+        raise FileNotFoundError(f"Masque cerveau non trouvé : {path}")
+    return path
+
+
 def get_roi_mask_path(simnibs_output_dir: Path, condition: str) -> Path:
     """
     Récupère le chemin du masque ROI pour une condition donnée.

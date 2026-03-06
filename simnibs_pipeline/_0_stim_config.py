@@ -1,4 +1,6 @@
-''' Definir des positions pour stim'''
+''' Definir des positions pour stim
+deplacer dans anatomicalPreparer...
+'''
 
 
 

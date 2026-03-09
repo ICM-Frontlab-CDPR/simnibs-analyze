@@ -264,6 +264,47 @@ def get_roi_mask_path(simnibs_output_dir: Path, condition: str) -> Path:
     return mask_path
 
 
+def get_preproc_dir(sim_dir: Path, mode: str) -> Path:
+    """
+    Retourne le dossier de preprocessing pour un répertoire de simulation donné.
+
+    Parameters
+    ----------
+    sim_dir : Path
+        Répertoire de simulation SimNIBS.
+    mode : str
+        ``'simulation'`` ou ``'optimization'``.
+    """
+    if mode == "optimization":
+        return sim_dir / "simulation_with_optimal_montage" / "mni_volumes"
+    return sim_dir / "mni_volumes"
+
+
+def get_preproc_paths(preproc_dir: Path, base_name: str) -> dict:
+    """
+    Retourne les chemins des fichiers preprocessés intra et extra-ROI.
+
+    Parameters
+    ----------
+    preproc_dir : Path
+        Dossier de sortie du preprocessing (ex: mni_volumes/).
+    base_name : str
+        Nom de base du fichier e-field (sans extension).
+
+    Returns
+    -------
+    dict avec les clés :
+        ``intra_masked``, ``intra_cleaned``,
+        ``extra_masked``,  ``extra_cleaned``
+    """
+    return {
+        "intra_masked":  preproc_dir / f"{base_name}_roi_masked.nii.gz",
+        "intra_cleaned": preproc_dir / f"{base_name}_roi_cleaned.nii.gz",
+        "extra_masked":  preproc_dir / f"{base_name}_extra_roi_masked.nii.gz",
+        "extra_cleaned": preproc_dir / f"{base_name}_extra_roi_cleaned.nii.gz",
+    }
+
+
 def load_nifti(path: Path) -> Tuple[np.ndarray, nib.Nifti1Image]:
     """
     Charge un fichier NIfTI.

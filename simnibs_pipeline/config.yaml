@@ -35,6 +35,10 @@ analysis:
   metric: mean
   subject_col: subject
   condition_col: condition
+  clustering:
+    method: mean              # colonne efield_ratio_<method> utilisée
+    specificity_threshold: 1.5
+    intensity_col: mean       # colonne numérique pour seuil haut/bas
   
 
 

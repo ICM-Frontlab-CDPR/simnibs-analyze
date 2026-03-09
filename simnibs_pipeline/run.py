@@ -21,6 +21,8 @@ from _4_viz import Visualizer
 from _pipeline_io import (
     find_efield_files,
     find_simulation_dirs,
+    get_preproc_dir,
+    get_preproc_paths,
     get_roi_mask_path,
     load_config,
     save_nifti,
@@ -71,47 +73,86 @@ def process_subject_condition(
 
     for sim_dir in simulation_dirs:
         for efield_path in find_efield_files(sim_dir, mode):
-            if mode == "optimization":
-                preproc_dir = sim_dir / "simulation_with_optimal_montage" / "mni_volumes"
-            else:
-                preproc_dir = sim_dir / "mni_volumes"
-
+            preproc_dir = get_preproc_dir(sim_dir, mode)
             base_name = efield_path.stem.replace(".nii", "")
-            cleaned_path = preproc_dir / f"{base_name}_roi_cleaned.nii.gz"
-            masked_path = preproc_dir / f"{base_name}_roi_masked.nii.gz"
+            paths = get_preproc_paths(preproc_dir, base_name)
 
-            # ── Preprocessing ───────────────────────────────────────────
+            preproc_kwargs = dict(
+                smooth_fwhm=preproc_params.get("smooth_fwhm", 2.0),
+                outlier_method=preproc_params.get("outlier_method", "iqr"),
+                portion=preproc_params.get("portion", None),
+            )
+
+            # ── Preprocessing INTRA-ROI ──────────────────────────────────
             if skip_preprocessing:
-                if not cleaned_path.exists():
-                    logger.warning(f"Fichier preprocessed introuvable, skip : {cleaned_path}")
+                if not paths["intra_cleaned"].exists():
+                    logger.warning(f"Fichier preprocessed introuvable, skip : {paths['intra_cleaned']}")
                     continue
-                logger.info(f"Utilisation fichier existant : {cleaned_path.name}")
+                logger.info(f"Utilisation fichier existant : {paths['intra_cleaned'].name}")
             else:
-                if cleaned_path.exists() and masked_path.exists():
-                    logger.info(f"Déjà preprocessé, skip : {cleaned_path.name}")
+                if paths["intra_cleaned"].exists() and paths["intra_masked"].exists():
+                    logger.info(f"Déjà preprocessé, skip : {paths['intra_cleaned'].name}")
                 else:
                     try:
-                        preproc = Preprocessor(
-                            smooth_fwhm=preproc_params.get("smooth_fwhm", 2.0),
-                            outlier_method=preproc_params.get("outlier_method", "iqr"),
-                            portion=preproc_params.get("portion", None),
-                        ).run(efield_path, roi_mask_path)
-                        save_nifti(preproc.masked_img, masked_path)
-                        save_nifti(preproc.cleaned_img, cleaned_path)
-                        logger.info(f"✓ Preprocessing : {cleaned_path.name}")
+                        preproc = Preprocessor(**preproc_kwargs).run(efield_path, roi_mask_path)
+                        save_nifti(preproc.masked_img, paths["intra_masked"])
+                        save_nifti(preproc.cleaned_img, paths["intra_cleaned"])
+                        logger.info(f"✓ Preprocessing intra-ROI : {paths['intra_cleaned'].name}")
                     except Exception as e:
-                        logger.error(f"✗ Preprocessing échoué ({efield_path.name}) : {e}")
+                        logger.error(f"✗ Preprocessing intra-ROI échoué ({efield_path.name}) : {e}")
                         continue
 
-            # ── Feature extraction ──────────────────────────────────────
+            # ── Preprocessing EXTRA-ROI ──────────────────────────────────
+            if skip_preprocessing:
+                if not paths["extra_cleaned"].exists():
+                    logger.warning(f"Fichier extra preprocessed introuvable, skip : {paths['extra_cleaned']}")
+                    continue
+            else:
+                if paths["extra_cleaned"].exists() and paths["extra_masked"].exists():
+                    logger.info(f"Déjà preprocessé, skip : {paths['extra_cleaned'].name}")
+                else:
+                    try:
+                        extra_preproc = Preprocessor(**preproc_kwargs).run(
+                            efield_path, Preprocessor.build_extra_mask(roi_mask_path)
+                        )
+                        save_nifti(extra_preproc.masked_img, paths["extra_masked"])
+                        save_nifti(extra_preproc.cleaned_img, paths["extra_cleaned"])
+                        logger.info(f"✓ Preprocessing extra-ROI : {paths['extra_cleaned'].name}")
+                    except Exception as e:
+                        logger.error(f"✗ Preprocessing extra-ROI échoué ({efield_path.name}) : {e}")
+                        continue
+
+            # ── Feature extraction ───────────────────────────────────────
             try:
-                row = FeatureExtractor().run(
-                    cleaned_path,
+                row_intra = FeatureExtractor().run(
+                    paths["intra_cleaned"],
                     roi_path=None,
                     subject=subject,
                     condition=f"{condition}_{mode}",
                 ).row
-                logger.info(f"✓ Features : mean={row.get('mean', 'N/A'):.4f}")
+                row_extra = FeatureExtractor().run(
+                    paths["extra_cleaned"],
+                    roi_path=None,
+                    subject=None,
+                    condition=None,
+                ).row
+
+                # Fusion : colonnes intra sans préfixe, extra avec préfixe extra_
+                row = {**row_intra}
+                for k in ["mean", "median", "std", "min", "max", "n_voxels"]:
+                    if k in row_extra:
+                        row[f"extra_{k}"] = row_extra[k]
+
+                # Ratio calculé depuis les valeurs nettoyées
+                intra_mean = row.get("mean", 0.0)
+                extra_mean = row.get("extra_mean", 1e-10)
+                row["efield_ratio_mean"] = intra_mean / max(float(extra_mean), 1e-10)
+
+                logger.info(
+                    f"✓ Features : intra_mean={intra_mean:.4f} | "
+                    f"extra_mean={extra_mean:.4f} | "
+                    f"ratio={row['efield_ratio_mean']:.4f}"
+                )
                 results.append(row)
             except Exception as e:
                 logger.error(f"✗ Feature extraction échouée ({cleaned_path.name}) : {e}")
@@ -161,6 +202,34 @@ def run_analysis(features_csv: Path, config: Dict) -> None:
             logger.info(f"✓ Diff intra-sujet : {diff_csv}")
         except Exception as e:
             logger.warning(f"Analyse intra-sujet impossible pour {cond} : {e}")
+
+    # Clustering
+    cl_params = ap.get("clustering", {})
+    cl_method = cl_params.get("method", "mean")
+    cl_threshold = float(cl_params.get("specificity_threshold", 1.5))
+    cl_intensity_col = cl_params.get("intensity_col", "mean")
+    ratio_col = f"efield_ratio_{cl_method}"
+    if ratio_col in df.columns:
+        try:
+            clustered_df = Analysis(df).assign_clusters(
+                method=cl_method,
+                specificity_threshold=cl_threshold,
+                intensity_col=cl_intensity_col,
+            )
+            # clusters.csv conserve toutes les colonnes originales (efield_path, subject,
+            # condition, stats…) + cluster — le lien avec les e-fields est donc direct.
+            clusters_csv = analysis_dir / "clusters.csv"
+            clustered_df.to_csv(clusters_csv, index=False)
+            logger.info(f"✓ Clusters sauvegardés : {clusters_csv}")
+            dist = clustered_df["cluster"].value_counts().to_dict()
+            logger.info(f"  Distribution : {dist}")
+        except Exception as e:
+            logger.warning(f"Clustering échoué : {e}")
+    else:
+        logger.warning(
+            f"Colonne '{ratio_col}' absente de all_features.csv — clustering ignoré. "
+            "Assurez-vous que compute_efield_ratio est appelé lors de l'extraction."
+        )
 
     # Scatter simulation vs optimization
     Visualizer(analysis_dir).plot_simulation_vs_optimization(
@@ -233,18 +302,15 @@ def run_viz(config: Dict) -> None:
                 sim_dirs = find_simulation_dirs(simnibs_output / subject, condition, mode)
                 if not sim_dirs:
                     continue
-                base = (
-                    sim_dirs[0] / "simulation_with_optimal_montage" / "mni_volumes"
-                    if mode == "optimization"
-                    else sim_dirs[0] / "mni_volumes"
-                )
-                masked = list(base.glob("*_roi_masked.nii.gz"))
-                cleaned = list(base.glob("*_roi_cleaned.nii.gz"))
-                if not masked or not cleaned:
-                    continue
-                preproc_data.setdefault(subject, []).append(
-                    (condition, mode, masked[0], cleaned[0])
-                )
+                preproc_dir = get_preproc_dir(sim_dirs[0], mode)
+                for efield_path in find_efield_files(sim_dirs[0], mode):
+                    base_name = efield_path.stem.replace(".nii", "")
+                    p = get_preproc_paths(preproc_dir, base_name)
+                    if not p["intra_masked"].exists() or not p["intra_cleaned"].exists():
+                        continue
+                    preproc_data.setdefault(subject, []).append(
+                        (condition, mode, p["intra_masked"], p["intra_cleaned"])
+                    )
     viz.efields_histograms(preproc_data)
     logger.info("✓ Histogrammes générés")
     logger.step("VISUALISATIONS TERMINÉES")

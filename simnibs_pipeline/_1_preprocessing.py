@@ -44,6 +44,23 @@ class Preprocessor:
         self.filtered_values: np.ndarray | None = None
 
     @staticmethod
+    def build_extra_mask(roi_mask_path: Path) -> nib.Nifti1Image:
+        """
+        Construit le masque extra-ROI en inversant le masque ROI binaire.
+
+        Parameters
+        ----------
+        roi_mask_path : Path
+            Chemin vers le masque ROI binaire.
+
+        Returns
+        -------
+        nib.Nifti1Image
+            Image binaire : 1 partout sauf dans la ROI.
+        """
+        return image.math_img("1 - img", img=load_img(roi_mask_path))
+
+    @staticmethod
     def _remove_outliers(
         values: np.ndarray,
         method: str = "iqr",

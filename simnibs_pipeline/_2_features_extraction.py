@@ -11,6 +11,7 @@ from typing import Iterable, Dict, Any
 import numpy as np
 import nibabel as nib
 import pandas as pd
+from nilearn.image import resample_to_img
 
 from _pipeline_io import load_img, validate_binary, save_rows
 
@@ -100,6 +101,14 @@ class FeatureExtractor:
         """
         efield_data = np.squeeze(full_efield_img.get_fdata(dtype=np.float32))
         roi_data = np.squeeze(roi_img.get_fdata())
+
+        # Rééchantillonner le masque ROI si les grilles diffèrent
+        if efield_data.shape != roi_data.shape:
+            roi_img = resample_to_img(
+                roi_img, full_efield_img, interpolation="nearest"
+            )
+            roi_data = np.squeeze(roi_img.get_fdata())
+
         validate_binary(roi_data, name="ROI mask")
         roi_mask = roi_data.astype(bool)
 
@@ -127,6 +136,7 @@ class FeatureExtractor:
         subject: str | None,
         condition: str | None,
         full_efield_img: nib.nifti1.Nifti1Image | None = None,
+        ratio_roi_path: Path | None = None,
     ) -> "FeatureExtractor":
         """
         Build a feature row for a single e-field file.
@@ -146,8 +156,14 @@ class FeatureExtractor:
             Condition label (e.g. ``"fef_simulation"``).
         full_efield_img :
             Full-brain e-field image (nibabel). When provided together with
-            ``roi_path``, ``efield_ratio_<method>`` columns are added for
-            each method in ``self.ratio_methods``.
+            ``ratio_roi_path`` (or ``roi_path`` as fallback),
+            ``efield_ratio_<method>`` columns are added for each method in
+            ``self.ratio_methods``.
+        ratio_roi_path :
+            ROI mask used exclusively for ratio computation.  Useful when
+            ``roi_path`` is ``None`` because the e-field is already masked
+            (e.g. a cleaned/preprocessed file) but the ratio still needs the
+            original binary ROI.
         """
         values = self._extract_values(efield_path, roi_path)
         stats = self.compute_stats(values)
@@ -161,8 +177,9 @@ class FeatureExtractor:
             row["condition"] = condition
         row.update(stats)
 
-        if full_efield_img is not None and roi_path is not None:
-            roi_img = load_img(roi_path)
+        _ratio_roi = ratio_roi_path or roi_path
+        if full_efield_img is not None and _ratio_roi is not None:
+            roi_img = load_img(_ratio_roi)
             for m in self.ratio_methods:
                 row[f"efield_ratio_{m}"] = self.compute_efield_ratio(
                     full_efield_img, roi_img, method=m

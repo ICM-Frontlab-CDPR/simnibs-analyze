@@ -375,7 +375,7 @@ class Visualizer:
         condition_col :
             Column containing condition labels.
         """
-        output_dir = self.output_dir / "analysis"
+        output_dir = self.output_dir / "figures"
         output_dir.mkdir(parents=True, exist_ok=True)
 
         df = df.copy()

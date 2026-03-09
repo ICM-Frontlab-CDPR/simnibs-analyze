@@ -154,7 +154,10 @@ def find_efield_files(simulation_dir: Path, mode: str) -> List[Path]:
     return efield_files
 
 
-def get_t1_conform(m2m_dir: Path, filename: str = "T1fs_nu_conform.nii.gz") -> Path:
+def get_t1_conform(
+    m2m_dir: Path,
+    filename: str = "segmentation/T1_bias_corrected.nii.gz",
+) -> Path:
     """
     Retourne le chemin du T1 dans ``m2m_dir``.
 
@@ -163,7 +166,7 @@ def get_t1_conform(m2m_dir: Path, filename: str = "T1fs_nu_conform.nii.gz") -> P
     m2m_dir : Path
         Répertoire ``m2m_<subject>`` produit par SimNIBS.
     filename : str
-        Nom du fichier T1 (default: ``T1fs_nu_conform.nii.gz``).
+        Chemin relatif du fichier T1 (default: ``segmentation/T1_bias_corrected.nii.gz``).
 
     Raises
     ------
@@ -175,22 +178,40 @@ def get_t1_conform(m2m_dir: Path, filename: str = "T1fs_nu_conform.nii.gz") -> P
     return path
 
 
-def get_brainmask(m2m_dir: Path, filename: str = "brain.nii.gz") -> Path:
+def get_brainmask(
+    m2m_dir: Optional[Path] = None,
+    filename: str = "label_prep/tissue_labeling_upsampled.nii.gz",
+    space: str = "subject",
+    mni_mask_path: Optional[Path] = None,
+) -> Path:
     """
-    Retourne le chemin du masque cerveau dans ``m2m_dir``.
+    Retourne le chemin du masque cerveau.
 
     Parameters
     ----------
-    m2m_dir : Path
-        Répertoire ``m2m_<subject>`` produit par SimNIBS.
+    m2m_dir : Path or None
+        Répertoire ``m2m_<subject>`` produit par SimNIBS. Ignoré si ``space='mni'``.
     filename : str
-        Nom du fichier masque (default: ``brain.nii.gz``).
+        Chemin relatif du fichier masque dans ``m2m_dir`` (espace sujet uniquement).
+    space : str
+        ``'subject'`` (défaut) : masque dans ``m2m_dir``.
+        ``'mni'`` : masque MNI passé via ``mni_mask_path`` (lu depuis config).
+    mni_mask_path : Path or None
+        Chemin du masque MNI, requis si ``space='mni'``.
+        Doit provenir de ``config['paths']['mni_brain_mask']``.
 
     Raises
     ------
-    FileNotFoundError
+    FileNotFoundError, ValueError
     """
-    path = Path(m2m_dir) / filename
+    if space == "mni":
+        if mni_mask_path is None:
+            raise ValueError("mni_mask_path est requis pour space='mni' (config['paths']['mni_brain_mask'])")
+        path = Path(mni_mask_path)
+    else:
+        if m2m_dir is None:
+            raise ValueError("m2m_dir est requis pour space='subject'")
+        path = Path(m2m_dir) / filename
     if not path.exists():
         raise FileNotFoundError(f"Masque cerveau non trouvé : {path}")
     return path

@@ -9,7 +9,7 @@ import numpy as np
 import nibabel as nib
 from nilearn import image, masking
 
-from _io import load_img
+from _pipeline_io import load_img
 
 #TODO add condition sur mni-space ou subject space (c'est dans un get_fpath que ça doit etre défini)
 class Preprocessor:
@@ -151,7 +151,7 @@ def _parse_args(argv: Iterable[str] | None = None):
 
 
 def main(argv: Iterable[str] | None = None) -> int:
-    from _io import save_nifti
+    from _pipeline_io import save_nifti
     args = _parse_args(argv)
     preproc = Preprocessor(
         smooth_fwhm=args.smooth_fwhm,

@@ -20,8 +20,9 @@ import nibabel as nib
 import numpy as np
 from nilearn import datasets, image
 from nilearn.image import new_img_like
+from scipy.ndimage import binary_fill_holes
 
-from _io import load_config, save_nifti, get_t1_conform, get_brainmask
+from _pipeline_io import load_config, save_nifti, get_t1_conform, get_brainmask
 from _logging import get_logger
 
 logger = get_logger(__name__)
@@ -43,9 +44,11 @@ class AnatomicalPreparer:
         self,
         reference_img_path: Optional[Path] = None,
         radius_mm: float = 10.0,
+        mni_brain_mask_path: Optional[Path] = None,
     ) -> None:
         self.radius_mm = radius_mm
         self.mask_imgs: Dict[str, nib.Nifti1Image] = {}
+        self._mni_brain_mask_path = Path(mni_brain_mask_path) if mni_brain_mask_path else None
 
         if reference_img_path is not None:
             logger.info(f"Loading reference image: {reference_img_path}")
@@ -199,7 +202,24 @@ class AnatomicalPreparer:
         if not np.allclose(mask_img.affine, t1_img.affine) or mask_img.shape != t1_img.shape:
             mask_img = image.resample_to_img(mask_img, t1_img, interpolation="nearest")
 
-        mask_data = (np.asarray(mask_img.dataobj) > 0).astype(t1_img.get_data_dtype())
+        mask_raw = np.asarray(mask_img.dataobj)
+        mask_labels = np.rint(mask_raw).astype(np.int16)
+
+        # SimNIBS tissue labeling convention: 1=WM, 2=GM, 3=CSF.
+        # Use only WM+GM (1, 2) — excluding CSF removes the subarachnoid
+        # halo around the cortex. binary_fill_holes restores the ventricles.
+        if np.all(np.isin(np.unique(mask_labels), [0, 1])):
+            brain_vox = mask_labels > 0
+        elif np.any(np.isin(mask_labels, [1, 2])):
+            brain_vox = np.isin(mask_labels, [1, 2])
+        else:
+            logger.warning(
+                "Brain mask: no WM/GM labels (1/2) found; falling back to >0."
+            )
+            brain_vox = mask_labels > 0
+
+        mask_data = binary_fill_holes(brain_vox).astype(t1_img.get_data_dtype())
+
         stripped_data = np.asarray(t1_img.dataobj) * mask_data
         stripped_img = nib.Nifti1Image(stripped_data, t1_img.affine, t1_img.header)
 

@@ -18,7 +18,7 @@ from _1_preprocessing import Preprocessor
 from _2_features_extraction import FeatureExtractor
 from _3_analysis import Analysis
 from _4_viz import Visualizer
-from _io import (
+from _pipeline_io import (
     find_efield_files,
     find_simulation_dirs,
     get_roi_mask_path,
@@ -267,10 +267,12 @@ def main(
     rois: Dict = config.get("rois", {})
     mni_target_dir = simnibs_output / "mni_target"
     ref = config.get("paths", {}).get("mni_template")
+    mni_brain_mask = config.get("paths", {}).get("mni_brain_mask")
     radius_mm = config.get("target_generation", {}).get("radius_mm", 10.0)
     gen = AnatomicalPreparer(
         reference_img_path=Path(ref) if ref else None,
         radius_mm=radius_mm,
+        mni_brain_mask_path=Path(mni_brain_mask) if mni_brain_mask else None,
     )
 
     if not skip_target_generation:

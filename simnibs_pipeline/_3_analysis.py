@@ -11,7 +11,7 @@ from typing import Iterable
 import numpy as np
 import pandas as pd
 
-from _io import load_csvs
+from _pipeline_io import load_csvs
 
 
 class Analysis:

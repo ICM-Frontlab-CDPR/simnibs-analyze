@@ -120,10 +120,9 @@ def find_simulation_dirs(subject_dir: Path, condition: str, mode: str) -> List[P
     return found_dirs
 
 
-def find_efield_files(simulation_dir: Path, mode: str) -> List[Path]:
+def find_efield_files(simulation_dir: Path, mode: str, space: str = "mni") -> List[Path]:
     """
     Trouve les fichiers e-field dans le répertoire de simulation/optimization.
-    Cherche spécifiquement les fichiers *_scalar_MNI_magnE.nii.gz.
 
     Parameters
     ----------
@@ -131,25 +130,36 @@ def find_efield_files(simulation_dir: Path, mode: str) -> List[Path]:
         Répertoire de la simulation ou optimization
     mode : str
         Mode (simulation ou optimization)
+    space : str
+        ``'mni'`` (défaut) : fichiers ``*_scalar_MNI_magnE.nii.gz`` dans ``mni_volumes/``.
+        ``'subject'`` : fichiers ``*_scalar_magnE.nii.gz`` dans ``subject_volumes/``.
 
     Returns
     -------
     List[Path]
         Liste des fichiers e-field trouvés
     """
-    if mode == "optimization":
-        mni_volumes_dir = simulation_dir / "simulation_with_optimal_montage" / "mni_volumes"
+    if space == "subject":
+        if mode == "optimization":
+            volumes_dir = simulation_dir / "simulation_with_optimal_montage" / "subject_volumes"
+        else:
+            volumes_dir = simulation_dir / "subject_volumes"
+        glob_pattern = "*_scalar_magnE.nii.gz"
     else:
-        mni_volumes_dir = simulation_dir / "mni_volumes"
+        if mode == "optimization":
+            volumes_dir = simulation_dir / "simulation_with_optimal_montage" / "mni_volumes"
+        else:
+            volumes_dir = simulation_dir / "mni_volumes"
+        glob_pattern = "*_scalar_MNI_magnE.nii.gz"
 
-    if not mni_volumes_dir.exists():
-        logger.warning(f"Répertoire mni_volumes non trouvé: {mni_volumes_dir}")
+    if not volumes_dir.exists():
+        logger.warning(f"Répertoire {space}_volumes non trouvé: {volumes_dir}")
         return []
 
-    efield_files = list(mni_volumes_dir.glob("*_scalar_MNI_magnE.nii.gz"))
+    efield_files = list(volumes_dir.glob(glob_pattern))
 
     if not efield_files:
-        logger.warning(f"Aucun fichier e-field trouvé dans {mni_volumes_dir}")
+        logger.warning(f"Aucun fichier e-field trouvé dans {volumes_dir}")
 
     return efield_files
 
@@ -214,6 +224,19 @@ def get_brainmask(
         path = Path(m2m_dir) / filename
     if not path.exists():
         raise FileNotFoundError(f"Masque cerveau non trouvé : {path}")
+    return path
+
+
+def get_mni_tissues(m2m_dir: Path) -> Path:
+    """
+    Retourne le chemin de la segmentation tissulaire en espace MNI.
+
+    Produit par SimNIBS dans ``toMNI/final_tissues_MNI.nii.gz``.
+    Labels : 1=WM, 2=GM, 3=CSF, 4=Bone, 5=Scalp …
+    """
+    path = Path(m2m_dir) / "toMNI" / "final_tissues_MNI.nii.gz"
+    if not path.exists():
+        raise FileNotFoundError(f"Tissues MNI non trouvés : {path}")
     return path
 
 

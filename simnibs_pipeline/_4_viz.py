@@ -63,14 +63,17 @@ class Visualizer:
         threshold_percentile: float = 0.0,
         vmin: Optional[float] = None,
         vmax: Optional[float] = None,
-        skull_stripped_t1_path: Optional[Path] = None,
+        brain_bg_path: Optional[Path] = None,
     ) -> np.ndarray:
         """
         Render an e-field NIfTI volume with PyVista (offscreen) and return an RGBA array.
 
-        When ``skull_stripped_t1_path`` is provided, the e-field is first resampled
-        into the skull-stripped T1 space (colocalization) before PyVista rendering,
-        giving an anatomically-aligned view.
+        When ``brain_bg_path`` is provided, the brain surface is rendered as a
+        semi-transparent white mesh and the e-field is overlaid as a coloured
+        volume.  **Both must be in the same coordinate space** — for MNI e-fields
+        (``*_scalar_MNI_magnE.nii.gz``), pass the ``T1_MNI_brain.nii.gz`` produced
+        by :meth:`AnatomicalPreparer._make_mni_brain_bg`.  No resampling is
+        performed here.
 
         Parameters
         ----------
@@ -84,16 +87,12 @@ class Visualizer:
             Voxels below this percentile of non-zero values are zeroed.
         vmin, vmax :
             Explicit colour scale limits. If both ``None``, PyVista auto-scales.
-        skull_stripped_t1_path :
-            Optional path to the skull-stripped T1 (e.g. ``T1fs_nu_conform_brain.nii.gz``).
-            When set, the e-field is resampled into T1 space before rendering.
+        brain_bg_path :
+            Optional path to a skull-stripped T1 **in the same space as the
+            e-field**.  Rendered as a semi-transparent brain surface behind the
+            e-field volume.
         """
-        efield_img = nib.load(str(efield_path))
-
-        if skull_stripped_t1_path is not None:
-            skull_stripped_t1_img = nib.load(str(skull_stripped_t1_path))
-            efield_img = nl_image.resample_to_img(efield_img, skull_stripped_t1_img, interpolation="continuous")
-
+        efield_img = nib.as_closest_canonical(nib.load(str(efield_path)))
         data = np.squeeze(efield_img.get_fdata())
         if threshold_percentile > 0:
             nonzero = data[data > 0]
@@ -112,10 +111,29 @@ class Visualizer:
         grid.cell_data["values"] = data.flatten(order="F")
 
         plotter = pv.Plotter(off_screen=True)
+
+        # ── Fond anatomique (surface du cerveau) ──────────────────────────
+        if brain_bg_path is not None:
+            t1_img = nib.as_closest_canonical(nib.load(str(brain_bg_path)))
+            t1_data = np.squeeze(t1_img.get_fdata())
+            t1_spacing = t1_img.header.get_zooms()[:3]
+            t1_origin = t1_img.affine[:3, 3]
+            t1_grid = pv.ImageData()
+            t1_grid.dimensions = np.array(t1_data.shape) + 1
+            t1_grid.spacing = t1_spacing
+            t1_grid.origin = t1_origin
+            t1_grid.cell_data["t1"] = t1_data.flatten(order="F")
+            nonzero_t1 = t1_data[t1_data > 0]
+            iso_val = float(np.percentile(nonzero_t1, 20)) if nonzero_t1.size > 0 else 0.1
+            brain_surface = t1_grid.cell_data_to_point_data().contour([iso_val])
+            plotter.add_mesh(brain_surface, color="white", opacity=0.15, smooth_shading=True)
+
+        # ── Volume e-field ────────────────────────────────────────────────
         if vmin is not None and vmax is not None:
             plotter.add_volume(grid, cmap=cmap, clim=[vmin, vmax])
         else:
             plotter.add_volume(grid, cmap=cmap)
+
         plotter.camera_position = camera_position
         image = plotter.screenshot(return_img=True)
         plotter.close()
@@ -128,6 +146,7 @@ class Visualizer:
         self,
         file_info_by_roi_mode: Dict[Tuple[str, str], List[Tuple[str, Path]]],
         t1_brain_by_subject: Optional[Dict[str, Path]] = None,
+        space: str = "mni",
     ) -> None:
         """
         Generate one 3D figure per (roi, mode) pair.
@@ -137,10 +156,13 @@ class Visualizer:
         file_info_by_roi_mode :
             Mapping ``(roi, mode) → [(subject, efield_path), ...]``.
         t1_brain_by_subject :
-            Optional mapping ``subject → skull_stripped_t1_path``. When provided,
-            the e-field is resampled into T1 space before PyVista rendering,
-            giving an anatomically-aligned view.  When ``None``, the e-field
-            is rendered directly in its original MNI space.
+            Optional mapping ``subject → T1 brain path``. Brain surface is
+            rendered behind the e-field.  Must be in the same space as the
+            e-fields (use ``T1_MNI_brain.nii.gz`` for MNI,
+            ``T1_subject_brain.nii.gz`` for subject space).
+        space : str
+            ``'mni'`` or ``'subject'`` — included in the output filename so
+            figures from both spaces are saved without overwriting each other.
         """
         output_dir = self.output_dir / "simu"
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -182,7 +204,7 @@ class Visualizer:
             for idx, (subject, efield_path) in enumerate(subject_files):
                 row, col = divmod(idx, n_cols)
                 ax = axes[row, col]
-                t1_path = (t1_brain_by_subject or {}).get(subject)
+                brain_bg = (t1_brain_by_subject or {}).get(subject)
                 image = self._create_3d_view(
                     efield_path=efield_path,
                     camera_position=self.camera_position,
@@ -190,7 +212,7 @@ class Visualizer:
                     threshold_percentile=self.threshold_percentile,
                     vmin=vmin,
                     vmax=vmax,
-                    skull_stripped_t1_path=t1_path,
+                    brain_bg_path=brain_bg,
                 )
                 ax.imshow(image)
                 ax.axis("off")
@@ -200,9 +222,9 @@ class Visualizer:
                 row, col = divmod(idx, n_cols)
                 axes[row, col].axis("off")
 
-            fig.suptitle(f"{roi} – {mode}", fontsize=16, fontweight="bold")
+            fig.suptitle(f"{roi} – {mode} ({space.upper()})", fontsize=16, fontweight="bold")
             plt.tight_layout()
-            out_path = output_dir / f"efields_3d_{roi}_{mode}_{self.camera_position}.png"
+            out_path = output_dir / f"efields_3d_{roi}_{mode}_{space}_{self.camera_position}.png"
             plt.savefig(out_path, dpi=300, bbox_inches="tight")
             plt.close()
             logger.info(f"  Sauvegardé : {out_path}")

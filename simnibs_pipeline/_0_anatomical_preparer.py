@@ -22,7 +22,7 @@ from nilearn import datasets, image
 from nilearn.image import new_img_like
 from scipy.ndimage import binary_fill_holes
 
-from _pipeline_io import load_config, save_nifti, get_t1_conform, get_brainmask
+from _pipeline_io import load_config, save_nifti, get_t1_conform, get_brainmask, get_mni_tissues
 from _logging import get_logger
 
 logger = get_logger(__name__)
@@ -53,9 +53,11 @@ class AnatomicalPreparer:
         if reference_img_path is not None:
             logger.info(f"Loading reference image: {reference_img_path}")
             self._template = nib.load(str(reference_img_path))
+            self._template_path = Path(reference_img_path)
         else:
             logger.info("Loading standard MNI152 1 mm template")
             self._template = datasets.load_mni152_template(resolution=1)
+            self._template_path = None
 
     # ------------------------------------------------------------------
     # Public API
@@ -129,13 +131,33 @@ class AnatomicalPreparer:
         output_dir.mkdir(parents=True, exist_ok=True)
 
         self.stripped_t1_path: Optional[Path] = None
+        self.mni_stripped_t1_path: Optional[Path] = None
 
+        # ── Subject-space skull-strip ──────────────────────────────────
+        # T1 source : m2m_<subject>/segmentation/T1_bias_corrected.nii.gz
+        # Masque    : m2m_<subject>/label_prep/tissue_labeling_upsampled.nii.gz
+        # Output    : subject_target/T1_subject_brain.nii.gz
         try:
             t1_path = get_t1_conform(m2m_dir)
             mask_path = get_brainmask(m2m_dir)
-            self.stripped_t1_path = self._skull_strip(t1_path, mask_path)
+            self.stripped_t1_path = self._skull_strip(
+                t1_path, mask_path, out_path=output_dir / "T1_subject_brain.nii.gz"
+            )
         except FileNotFoundError as e:
-            logger.warning(f"Skull-stripping skipped — {e}")
+            logger.warning(f"Skull-stripping (subject) skipped — {e}")
+
+        # ── MNI-space skull-strip ───────────────────────────────────────
+        # T1 source : templates/MNI152_T1_1mm.nii.gz  (self._template_path)
+        # Masque    : m2m_<subject>/toMNI/final_tissues_MNI.nii.gz
+        # Output    : subject_target/T1_MNI_brain.nii.gz
+        # → même espace que les e-fields (*_scalar_MNI_magnE.nii.gz), pas de resampling.
+        try:
+            mni_tissues_path = get_mni_tissues(m2m_dir)
+            self.mni_stripped_t1_path = self._skull_strip(
+                self._template_path, mni_tissues_path, out_path=output_dir / "T1_MNI_brain.nii.gz"
+            )
+        except FileNotFoundError as e:
+            logger.warning(f"Skull-stripping (MNI) skipped — {e}")
 
         return self
 
@@ -174,24 +196,32 @@ class AnatomicalPreparer:
         pass
 
     @staticmethod
-    def _skull_strip(t1_path: Path, mask_path: Path) -> Path:
+    def _skull_strip(
+        t1_path: Path,
+        mask_path: Path,
+        out_path: Optional[Path] = None,
+    ) -> Path:
         """
-        Apply a brain mask to a T1 image and save the result alongside the T1.
+        Apply a brain mask to a T1 image and save the result.
+
+        Works for both subject-space and MNI-space skull-stripping — the
+        only difference is which T1 and mask files are passed.
 
         Parameters
         ----------
         t1_path : Path
-            Path to the T1 NIfTI image.
+            Path to the T1 NIfTI image (or a loaded template path).
         mask_path : Path
-            Path to the binary brain mask NIfTI image.
+            Path to the tissue-labeling NIfTI (labels 1=WM, 2=GM …).
+        out_path : Path or None
+            Explicit output path.  If None, the result is saved alongside
+            the T1 as ``<T1stem>_brain.nii.gz``.
 
         Returns
         -------
         Path
-            Path to the saved skull-stripped image (``<T1stem>_brain.nii.gz``).
+            Path to the saved skull-stripped image.
         """
-        
-        #TODO extraire les io reponsabilités.
         t1_path = Path(t1_path)
         mask_path = Path(mask_path)
 
@@ -203,7 +233,7 @@ class AnatomicalPreparer:
             mask_img = image.resample_to_img(mask_img, t1_img, interpolation="nearest")
 
         mask_raw = np.asarray(mask_img.dataobj)
-        mask_labels = np.rint(mask_raw).astype(np.int16)
+        mask_labels = np.rint(np.squeeze(mask_raw)).astype(np.int16)
 
         # SimNIBS tissue labeling convention: 1=WM, 2=GM, 3=CSF.
         # Use only WM+GM (1, 2) — excluding CSF removes the subarachnoid
@@ -220,12 +250,14 @@ class AnatomicalPreparer:
 
         mask_data = binary_fill_holes(brain_vox).astype(t1_img.get_data_dtype())
 
-        stripped_data = np.asarray(t1_img.dataobj) * mask_data
+        stripped_data = np.squeeze(np.asarray(t1_img.dataobj)) * mask_data
         stripped_img = nib.Nifti1Image(stripped_data, t1_img.affine, t1_img.header)
 
-        # Build output path: strip .nii or .nii.gz suffix, append _brain.nii.gz
-        stem = t1_path.name.replace(".nii.gz", "").replace(".nii", "")
-        out_path = t1_path.parent / f"{stem}_brain.nii.gz"
+        if out_path is None:
+            stem = t1_path.name.replace(".nii.gz", "").replace(".nii", "")
+            out_path = t1_path.parent / f"{stem}_brain.nii.gz"
+        out_path = Path(out_path)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
         nib.save(stripped_img, str(out_path))
         logger.info(f"Skull-stripped T1 saved → {out_path}")
         return out_path

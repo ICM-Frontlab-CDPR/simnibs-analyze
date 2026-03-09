@@ -195,19 +195,35 @@ def run_viz(config: Dict) -> None:
         logger.info("✓ Masques ROI visualisés")
 
     # ── Figures 3D e-fields ─────────────────────────────────────────────
-    file_info: Dict = {}
-    for mode in modes:
-        for condition in conditions:
-            for subject in subjects:
-                sim_dirs = find_simulation_dirs(simnibs_output / subject, condition, mode)
-                if not sim_dirs:
-                    continue
-                efields = find_efield_files(sim_dirs[0], mode)
-                if not efields:
-                    continue
-                file_info.setdefault((condition, mode), []).append((subject, efields[0]))
-    viz.efields_figures(file_info)
-    logger.info("✓ Figures 3D e-fields générées")
+    # Brain backgrounds par sujet (produits par AnatomicalPreparer.run())
+    mni_brain_bg_by_subject: Dict[str, Path] = {}
+    subject_brain_bg_by_subject: Dict[str, Path] = {}
+    for subject in subjects:
+        mni_bg = simnibs_output / subject / "subject_target" / "T1_MNI_brain.nii.gz"
+        subj_bg = simnibs_output / subject / "subject_target" / "T1_subject_brain.nii.gz"
+        if mni_bg.exists():
+            mni_brain_bg_by_subject[subject] = mni_bg
+        if subj_bg.exists():
+            subject_brain_bg_by_subject[subject] = subj_bg
+
+    for space in ["mni", "subject"]:
+        file_info: Dict = {}
+        for mode in modes:
+            for condition in conditions:
+                for subject in subjects:
+                    sim_dirs = find_simulation_dirs(simnibs_output / subject, condition, mode)
+                    if not sim_dirs:
+                        continue
+                    efields = find_efield_files(sim_dirs[0], mode, space=space)
+                    if not efields:
+                        continue
+                    file_info.setdefault((condition, mode), []).append((subject, efields[0]))
+        if not file_info:
+            logger.warning(f"Aucun e-field trouvé pour space={space}, figures skippées")
+            continue
+        brain_bgs = mni_brain_bg_by_subject if space == "mni" else subject_brain_bg_by_subject
+        viz.efields_figures(file_info, t1_brain_by_subject=brain_bgs or None, space=space)
+        logger.info(f"✓ Figures 3D e-fields générées ({space.upper()})")    
 
     # ── Histogrammes preprocessing ───────────────────────────────────────
     preproc_data: Dict = {}

@@ -1,6 +1,7 @@
 """SimNIBS pipeline — modules principaux."""
 
 __all__ = [
+    "run",
     "_0_anatomical_preparer",
     "_0_stim_config",
     "_1_preprocessing",

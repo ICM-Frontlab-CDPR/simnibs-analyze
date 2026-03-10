@@ -234,6 +234,7 @@ class Visualizer:
     def efields_histograms(
         self,
         data_by_subject: Dict[str, List[Tuple[str, str, Path, Path]]],
+        region: str = "intra",
     ) -> None:
         """
         Generate one histogram figure per subject comparing masked vs cleaned e-fields.
@@ -242,14 +243,14 @@ class Visualizer:
         ----------
         data_by_subject :
             Mapping ``subject → [(roi, mode, masked_path, cleaned_path), ...]``.
-            Resolve file paths in the caller using
-            :func:`file_io.find_simulation_dirs`.
+        region :
+            Label inclus dans le titre et le nom de fichier (``"intra"`` ou ``"extra"``).
         """
         output_dir = self.output_dir / "preprocess"
         output_dir.mkdir(parents=True, exist_ok=True)
 
         for subject, subject_data in data_by_subject.items():
-            logger.info(f"Histogrammes pour {subject}")
+            logger.info(f"Histogrammes {region}-ROI pour {subject}")
             n_plots = len(subject_data)
             n_cols = min(3, n_plots)
             n_rows = (n_plots + n_cols - 1) // n_cols
@@ -263,33 +264,42 @@ class Visualizer:
                 axes = axes.reshape(-1, 1)
 
             for idx, (roi, mode, masked_path, cleaned_path) in enumerate(subject_data):
-                row, col = divmod(idx, n_cols)
+                row_idx, col = divmod(idx, n_cols)
 
                 masked_data = nib.load(str(masked_path)).get_fdata().ravel()
                 masked_data = masked_data[masked_data > 0]
                 cleaned_data = nib.load(str(cleaned_path)).get_fdata().ravel()
-                cleaned_data = cleaned_data[cleaned_data > 0]
+                cleaned_data = cleaned_data[np.isfinite(cleaned_data) & (cleaned_data > 0)]
 
-                ax = axes[row, col]
-                ax.hist(masked_data, bins=self.bins, alpha=0.6, label="Avant", color="red", density=True)
-                ax.hist(cleaned_data, bins=self.bins, alpha=0.6, label="Après", color="blue", density=True)
+                ax = axes[row_idx, col]
+                if masked_data.size > 0 or cleaned_data.size > 0:
+                    all_vals = np.concatenate([a for a in [masked_data, cleaned_data] if a.size > 0])
+                    xrange = (float(all_vals.min()), float(all_vals.max()))
+                else:
+                    xrange = None
+                if masked_data.size > 0:
+                    ax.hist(masked_data, bins=self.bins, range=xrange, alpha=0.6, label="Avant", color="red", density=True)
+                if cleaned_data.size > 0:
+                    ax.hist(cleaned_data, bins=self.bins, range=xrange, alpha=0.6, label="Après", color="blue", density=True)
+                if masked_data.size == 0 and cleaned_data.size == 0:
+                    ax.text(0.5, 0.5, "Aucune donnée", ha="center", va="center", transform=ax.transAxes)
                 ax.set_xlabel("E-field (V/m)", fontsize=10)
                 ax.set_ylabel("Densité", fontsize=10)
-                ax.set_title(f"{roi}\n{mode}", fontsize=11)
+                ax.set_title(f"{roi} | {mode}", fontsize=11)
                 ax.legend(fontsize=8)
                 ax.grid(True, alpha=0.3)
 
             for idx in range(n_plots, n_rows * n_cols):
-                row, col = divmod(idx, n_cols)
-                axes[row, col].axis("off")
+                row_idx, col = divmod(idx, n_cols)
+                axes[row_idx, col].axis("off")
 
             fig.suptitle(
-                f"Histogrammes E-field preprocessing – {subject}",
+                f"Preprocessing {region}-ROI – {subject}",
                 fontsize=16,
                 fontweight="bold",
             )
             plt.tight_layout()
-            out_path = output_dir / f"efields_histograms_{subject}.png"
+            out_path = output_dir / f"efields_histograms_{subject}_{region}.png"
             plt.savefig(out_path, dpi=300, bbox_inches="tight")
             plt.close()
             logger.info(f"  Sauvegardé : {out_path}")

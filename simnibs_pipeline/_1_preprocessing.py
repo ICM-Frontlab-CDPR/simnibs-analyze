@@ -148,9 +148,19 @@ class Preprocessor:
         roi_values = masking.apply_mask(efield, roi)
         self.masked_img = masking.unmask(roi_values, roi)
 
-        self.filtered_values, _ = self._remove_outliers(
-            roi_values, method=self.outlier_method, portion=self.portion
-        )
+        # Calculer les bornes outliers uniquement sur les voxels non-nuls (valeurs
+        # cérébrales réelles). Cela évite que les zéros du background, présents quand
+        # le masque couvre tout le volume (ex: extra-ROI), ne compriment l'IQR et
+        # ne classent tous les vrais signaux comme outliers.
+        nonzero_idx = roi_values > 0
+        nonzero_vals = roi_values[nonzero_idx]
+        self.filtered_values = roi_values.copy().astype(float)
+        if nonzero_vals.size > 0:
+            filtered_nonzero, _ = self._remove_outliers(
+                nonzero_vals, method=self.outlier_method, portion=self.portion
+            )
+            self.filtered_values[nonzero_idx] = filtered_nonzero
+
         self.cleaned_img = masking.unmask(self.filtered_values, roi)
         return self
 

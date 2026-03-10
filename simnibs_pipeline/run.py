@@ -112,12 +112,11 @@ def process_subject_condition(
                     logger.info(f"Déjà preprocessé, skip : {paths['extra_cleaned'].name}")
                 else:
                     try:
-                        extra_preproc = Preprocessor(**preproc_kwargs).run(
-                            efield_path, Preprocessor.build_extra_mask(roi_mask_path)
-                        )
-                        save_nifti(extra_preproc.masked_img, paths["extra_masked"])
-                        save_nifti(extra_preproc.cleaned_img, paths["extra_cleaned"])
-                        logger.info(f"✓ Preprocessing extra-ROI : {paths['extra_cleaned'].name}")
+                        extra_mask = Preprocessor.build_extra_mask(roi_mask_path)
+                        extra_masked_img = Preprocessor(**preproc_kwargs).run(efield_path, extra_mask).masked_img
+                        save_nifti(extra_masked_img, paths["extra_masked"])
+                        save_nifti(extra_masked_img, paths["extra_cleaned"])  # cleaned = masked
+                        logger.info(f"✓ Preprocessing extra-ROI : {paths['extra_masked'].name}")
                     except Exception as e:
                         logger.error(f"✗ Preprocessing extra-ROI échoué ({efield_path.name}) : {e}")
                         continue
@@ -149,13 +148,14 @@ def process_subject_condition(
                 row["efield_ratio_mean"] = intra_mean / max(float(extra_mean), 1e-10)
 
                 logger.info(
-                    f"✓ Features : intra_mean={intra_mean:.4f} | "
-                    f"extra_mean={extra_mean:.4f} | "
+                    f"✓ Features : intra_mean={intra_mean:.6f} | "
+                    f"extra n_voxels={row_extra.get('n_voxels','?')} mean={row_extra.get('mean', 'MISSING')!r} | "
+                    f"extra_mean={extra_mean:.6e} | "
                     f"ratio={row['efield_ratio_mean']:.4f}"
                 )
                 results.append(row)
             except Exception as e:
-                logger.error(f"✗ Feature extraction échouée ({cleaned_path.name}) : {e}")
+                logger.error(f"✗ Feature extraction échouée ({subject}/{condition}/{mode}) : {e}")
 
     return results
 
@@ -295,7 +295,8 @@ def run_viz(config: Dict) -> None:
         logger.info(f"✓ Figures 3D e-fields générées ({space.upper()})")    
 
     # ── Histogrammes preprocessing ───────────────────────────────────────
-    preproc_data: Dict = {}
+    intra_data: Dict = {}
+    extra_data: Dict = {}
     for subject in subjects:
         for mode in modes:
             for condition in conditions:
@@ -306,13 +307,20 @@ def run_viz(config: Dict) -> None:
                 for efield_path in find_efield_files(sim_dirs[0], mode):
                     base_name = efield_path.stem.replace(".nii", "")
                     p = get_preproc_paths(preproc_dir, base_name)
-                    if not p["intra_masked"].exists() or not p["intra_cleaned"].exists():
-                        continue
-                    preproc_data.setdefault(subject, []).append(
-                        (condition, mode, p["intra_masked"], p["intra_cleaned"])
-                    )
-    viz.efields_histograms(preproc_data)
-    logger.info("✓ Histogrammes générés")
+                    if p["intra_masked"].exists() and p["intra_cleaned"].exists():
+                        intra_data.setdefault(subject, []).append(
+                            (condition, mode, p["intra_masked"], p["intra_cleaned"])
+                        )
+                    if p["extra_masked"].exists() and p["extra_cleaned"].exists():
+                        extra_data.setdefault(subject, []).append(
+                            (condition, mode, p["extra_masked"], p["extra_cleaned"])
+                        )
+    if intra_data:
+        viz.efields_histograms(intra_data, region="intra")
+        logger.info("✓ Histogrammes intra-ROI générés")
+    if extra_data:
+        viz.efields_histograms(extra_data, region="extra")
+        logger.info("✓ Histogrammes extra-ROI générés")
     logger.step("VISUALISATIONS TERMINÉES")
 
 

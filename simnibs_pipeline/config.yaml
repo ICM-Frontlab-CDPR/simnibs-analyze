@@ -16,7 +16,7 @@ target_generation:
 # Paths
 paths:
   simnibs_output: /Users/hippolyte.dreyfus/Desktop/hemianotACS/Data/derivatives/simnibs-config-healthyV2
-  results_dir: /Users/hippolyte.dreyfus/Desktop/hemianotACS/Data/derivatives/simnibs-config-healthyV2/results-V2
+  results_dir: /Users/hippolyte.dreyfus/Desktop/hemianotACS/Data/derivatives/results-V2
   mni_template: /Users/hippolyte.dreyfus/Documents/FRONTLAB-SimNIBS-pipeline/templates/MNI152_T1_1mm.nii.gz
   mni_brain_mask: /Users/hippolyte.dreyfus/Documents/FRONTLAB-SimNIBS-pipeline/templates/MNI152_T1_1mm_brain_mask.nii.gz
 

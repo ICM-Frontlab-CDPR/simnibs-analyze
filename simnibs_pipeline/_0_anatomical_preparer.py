@@ -22,7 +22,11 @@ from nilearn import datasets, image
 from nilearn.image import new_img_like
 from scipy.ndimage import binary_fill_holes
 
-from _pipeline_io import load_config, save_nifti, get_t1_conform, get_brainmask, get_mni_tissues
+from _pipeline_io import (
+    load_config, save_nifti, get_t1_conform, get_brainmask, get_mni_tissues,
+    method_tag, ROI_METHOD_SPHERE, ROI_METHOD_ATLAS, get_atlas_roi_path,
+    space_tag, SPACE_MNI,
+)
 from _logging import get_logger
 
 logger = get_logger(__name__)
@@ -78,7 +82,8 @@ class AnatomicalPreparer:
         rois : dict
             ``{roi_name: [x_mni, y_mni, z_mni]}`` coordinates in mm.
         output_dir : Path
-            Directory where ``{roi_name}_mask_space-mni.nii.gz`` files will be written.
+            Directory where ``{roi_name}_method-sphere_mask_space-mni.nii.gz``
+            files will be written.
 
         Returns
         -------
@@ -93,7 +98,7 @@ class AnatomicalPreparer:
 
         for roi_name, mni_coords in rois.items():
             mask_img = self._create_sphere_mask(self._template, mni_coords, self.radius_mm)
-            out_path = output_dir / f"{roi_name}_mask_space-mni.nii.gz"
+            out_path = output_dir / f"{roi_name}_{method_tag(ROI_METHOD_SPHERE)}_mask_{space_tag(SPACE_MNI)}.nii.gz"
             save_nifti(mask_img, out_path)
             self.mask_imgs[roi_name] = mask_img
             logger.info(f"  ✓ {roi_name}: {out_path.name}")
@@ -191,6 +196,132 @@ class AnatomicalPreparer:
         return new_img_like(template_img, data, affine=affine)
     
 
+    def setup_from_atlas(
+        self,
+        atlas_name: str,
+        roi_regions: Dict[str, "str | List[str]"],
+        output_dir: Path,
+    ) -> "AnatomicalPreparer":
+        """
+        Extract ROI masks from a brain atlas and save in MNI space.
+
+        Subject-independent. Call this once before the subject loop, as an
+        alternative to :meth:`setup` when ROIs are defined by atlas regions
+        rather than MNI sphere coordinates.
+
+        Supported atlases
+        -----------------
+        * ``'harvard-oxford'`` — Harvard-Oxford cortical (1 mm maxprob, thr 25 %)
+        * ``'aal'``            — AAL (Automated Anatomical Labeling)
+        * ``'destrieux'``      — Destrieux 2009 cortical parcellation
+
+        Parameters
+        ----------
+        atlas_name : str
+            Name of the atlas (case-sensitive, see list above).
+        roi_regions : dict
+            ``{roi_output_name: region_name_or_list_of_names}``.
+            Each value is either a single atlas region label (str) or a list of labels
+            whose union forms the mask.
+            Example::
+
+                {
+                    "fef": "Frontal Eye Fields",
+                    "ips": ["Lateral Occipital Cortex, superior division",
+                            "Superoparietal Cortex"],
+                }
+
+        output_dir : Path
+            Directory where ``{roi_name}_method-atlas-{atlas_name}_mask_space-mni.nii.gz``
+            files will be written.
+
+        Returns
+        -------
+        self
+            ``self.mask_imgs`` is populated; ``self.mni_output_dir`` is set.
+        """
+        from nilearn import datasets as nl_datasets
+
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        self.mni_output_dir = output_dir
+
+        _ATLAS_FETCHERS = {
+            "harvard-oxford": lambda: nl_datasets.fetch_atlas_harvard_oxford(
+                "cort-maxprob-thr25-1mm"
+            ),
+            "aal": lambda: nl_datasets.fetch_atlas_aal(),
+            "destrieux": lambda: nl_datasets.fetch_atlas_destrieux_2009(),
+        }
+
+        if atlas_name not in _ATLAS_FETCHERS:
+            raise ValueError(
+                f"Atlas '{atlas_name}' non supporté. "
+                f"Atlases disponibles: {list(_ATLAS_FETCHERS)}"
+            )
+
+        logger.info(f"Fetching atlas: {atlas_name}")
+        atlas_data = _ATLAS_FETCHERS[atlas_name]()
+        atlas_img = nib.load(atlas_data.maps)
+        raw_labels = list(atlas_data.labels)
+
+        # Build label_name → label_value mapping.
+        # AAL provides a separate `indices` list; other atlases use positional indices.
+        if hasattr(atlas_data, "indices"):
+            label_map: Dict[str, int] = {
+                str(name): int(idx)
+                for name, idx in zip(raw_labels, atlas_data.indices)
+            }
+        else:
+            label_map = {str(name): i for i, name in enumerate(raw_labels)}
+
+        atlas_array = atlas_img.get_fdata()
+        mtag = method_tag(ROI_METHOD_ATLAS, atlas_name)
+
+        for roi_name, regions in roi_regions.items():
+            if isinstance(regions, str):
+                regions = [regions]
+
+            mask_data = np.zeros(atlas_array.shape, dtype=np.uint8)
+            found: List[str] = []
+            for region_name in regions:
+                if region_name not in label_map:
+                    # Case-insensitive fallback
+                    matches = [k for k in label_map if k.lower() == region_name.lower()]
+                    if not matches:
+                        logger.warning(
+                            f"Région '{region_name}' introuvable dans l'atlas {atlas_name}. "
+                            f"Premières régions disponibles: {list(label_map)[:10]}"
+                        )
+                        continue
+                    region_name = matches[0]
+                label_val = label_map[region_name]
+                mask_data[np.round(atlas_array).astype(int) == label_val] = 1
+                found.append(region_name)
+
+            if mask_data.sum() == 0:
+                logger.warning(f"Masque vide pour '{roi_name}' dans l'atlas {atlas_name}")
+                continue
+
+            # Resample to pipeline template if voxel grids differ
+            mask_img_roi = nib.Nifti1Image(mask_data, atlas_img.affine)
+            if (
+                atlas_img.shape[:3] != self._template.shape[:3]
+                or not np.allclose(atlas_img.affine, self._template.affine)
+            ):
+                mask_img_roi = image.resample_to_img(
+                    mask_img_roi, self._template, interpolation="nearest"
+                )
+
+            out_path = get_atlas_roi_path(output_dir, atlas_name, roi_name)
+            save_nifti(mask_img_roi, out_path)
+            # Store as (img, mtag) tuple to match create_subject_roi_from_mni expectations
+            self.mask_imgs[roi_name] = (mask_img_roi, mtag)
+            logger.info(f"  ✓ {roi_name} [{', '.join(found)}]: {out_path.name}")
+
+        logger.info(f"{len(self.mask_imgs)} atlas mask(s) saved to {output_dir}")
+        return self
+
     def create_subject_roi_from_mni(
         self,
         m2m_dir: Path,
@@ -239,22 +370,28 @@ class AnatomicalPreparer:
         simnibs_output_dir = m2m_dir.parent.parent
         mni_output_dir = getattr(self, "mni_output_dir", simnibs_output_dir / "mni_target")
         self.mni_output_dir = mni_output_dir
-        mni_mask_paths = sorted(mni_output_dir.glob("*_mask_space-mni.nii.gz"))
+        # Accept masks from any generation method (sphere, atlas, …)
+        mni_mask_paths = sorted(mni_output_dir.glob("*_method-*_mask_space-mni.nii.gz"))
         if not mni_mask_paths:
             raise FileNotFoundError(f"No MNI ROI masks found in: {mni_output_dir}")
         self.mask_imgs = {}
         for p in mni_mask_paths:
-            roi_name = p.name.replace("_mask_space-mni.nii.gz", "")
-            self.mask_imgs[roi_name] = nib.load(str(p))
+            # filename: {roi_name}_{method_tag}_mask_space-mni.nii.gz
+            # split on the last occurrence of "_method-" to recover roi_name
+            stem = p.name.replace("_mask_space-mni.nii.gz", "")
+            split_idx = stem.rfind("_method-")
+            roi_name = stem[:split_idx]
+            mtag = stem[split_idx + 1:]  # e.g. "method-sphere" or "method-atlas-aal"
+            self.mask_imgs[roi_name] = (nib.load(str(p)), mtag)
 
         subject_roi_paths: Dict[str, Path] = {}
 
         # ── Warp each MNI ROI mask to subject space ────────────────────
-        for roi_name, mni_mask_img in self.mask_imgs.items():
+        for roi_name, (mni_mask_img, mtag) in self.mask_imgs.items():
             logger.info(f"Warping {roi_name} from MNI to subject space...")
 
             # Ensure MNI mask is saved on disk (ANTsPy reads from file)
-            mni_mask_path = self.mni_output_dir / f"{roi_name}_mask_space-mni.nii.gz"
+            mni_mask_path = self.mni_output_dir / f"{roi_name}_{mtag}_mask_space-mni.nii.gz"
             if not mni_mask_path.exists():
                 save_nifti(mni_mask_img, mni_mask_path)
 
@@ -267,7 +404,7 @@ class AnatomicalPreparer:
                 interpolator="nearestNeighbor",  # binary mask
             )
 
-            subject_mask_path = output_dir / f"{roi_name}_mask_space-native.nii.gz"
+            subject_mask_path = output_dir / f"{roi_name}_{mtag}_mask_space-native.nii.gz"
             ants.image_write(warped, str(subject_mask_path))
 
             logger.info(f"  ✓ {roi_name} warped → {subject_mask_path.name}")

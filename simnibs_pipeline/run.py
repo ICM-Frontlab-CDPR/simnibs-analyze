@@ -21,6 +21,8 @@ from _4_viz import Visualizer
 from _pipeline_io import (
     SPACE_MNI,
     SPACE_NATIVE,
+    ROI_METHOD_SPHERE,
+    ROI_METHOD_ATLAS,
     find_efield_files,
     find_simulation_dirs,
     get_analysis_dir,
@@ -33,6 +35,8 @@ from _pipeline_io import (
     get_roi_mask_path,
     get_subject_paths,
     load_config,
+    method_tag,
+    normalize_roi_method,
     normalize_space,
     space_tag,
     save_nifti,
@@ -80,8 +84,15 @@ def process_subject_condition(
         logger.warning(f"Aucune simulation trouvée pour {subject}/{condition}/{mode}")
         return results
 
+    tg_params = config.get("target_generation", {})
+    roi_method = normalize_roi_method(tg_params.get("roi_method", ROI_METHOD_SPHERE))
+    atlas_name = tg_params.get("atlas_name") if roi_method == ROI_METHOD_ATLAS else None
+
     try:
-        roi_mask_path = get_roi_mask_path(simnibs_output, condition, space=space, subject=subject)
+        roi_mask_path = get_roi_mask_path(
+            simnibs_output, condition, space=space, subject=subject,
+            method=roi_method, atlas_name=atlas_name,
+        )
     except (FileNotFoundError, ValueError) as e:
         logger.error(str(e))
         return results
@@ -273,12 +284,16 @@ def run_viz(config: Dict, space: str) -> None:
 
     # ── Masques ROI ─────────────────────────────────────────────────────
     mni_target_dir = simnibs_output / "mni_target"
-    mask_paths = sorted(mni_target_dir.glob("*_mask_space-mni.nii.gz"))
+    # Glob accepts masks from any method (sphere, atlas, …)
+    mask_paths = sorted(mni_target_dir.glob("*_method-*_mask_space-mni.nii.gz"))
     if space == SPACE_MNI and mask_paths:
         mni_tpl_path = config.get("paths", {}).get("mni_template")
         mni_template = nib.load(str(mni_tpl_path)) if mni_tpl_path else None
         mask_imgs = [nib.load(str(p)) for p in mask_paths]
-        roi_names = [p.name.replace("_mask_space-mni.nii.gz", "") for p in mask_paths]
+        roi_names = [
+            p.name[: p.name.rfind("_method-")].replace("_mask_space-mni.nii.gz", "")
+            for p in mask_paths
+        ]
         viz.visualize_roi_masks(mask_imgs, roi_names, mni_template)
         logger.info("✓ Masques ROI visualisés")
 
@@ -387,6 +402,15 @@ def main(
     ref = config.get("paths", {}).get("mni_template")
     mni_brain_mask = config.get("paths", {}).get("mni_brain_mask")
     radius_mm = config.get("target_generation", {}).get("radius_mm", 10.0)
+    roi_method = normalize_roi_method(
+        config.get("target_generation", {}).get("roi_method", ROI_METHOD_SPHERE)
+    )
+    atlas_name = (
+        config.get("target_generation", {}).get("atlas_name")
+        if roi_method == ROI_METHOD_ATLAS
+        else None
+    )
+    m_tag = method_tag(roi_method, atlas_name)
     gen = AnatomicalPreparer(
         reference_img_path=Path(ref) if ref else None,
         radius_mm=radius_mm,
@@ -395,11 +419,17 @@ def main(
 
     if not skip_target_generation:
         logger.step("ÉTAPE 0 : GÉNÉRATION DES MASQUES ROI MNI")
-        if all((mni_target_dir / f"{roi}_mask_space-mni.nii.gz").exists() for roi in rois):
+        if all(
+            (mni_target_dir / f"{roi}_{m_tag}_mask_space-mni.nii.gz").exists()
+            for roi in rois
+        ):
             logger.info(f"✓ Masques ROI déjà présents dans {mni_target_dir}")
         else:
             try:
-                gen.setup(rois, mni_target_dir)
+                if roi_method == ROI_METHOD_ATLAS:
+                    gen.setup_from_atlas(atlas_name, rois, mni_target_dir)
+                else:
+                    gen.setup(rois, mni_target_dir)
             except Exception as e:
                 logger.error(f"✗ Target generation échouée : {e}")
                 return 1
@@ -430,7 +460,7 @@ def main(
             if space == SPACE_NATIVE and skip_target_generation:
                 missing = [
                     roi for roi in rois
-                    if not (subject_target_dir / f"{roi}_mask_space-native.nii.gz").exists()
+                    if not (subject_target_dir / f"{roi}_{m_tag}_mask_space-native.nii.gz").exists()
                 ]
                 if missing:
                     logger.warning(

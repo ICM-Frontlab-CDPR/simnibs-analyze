@@ -17,6 +17,60 @@ from _logging import get_logger
 
 logger = get_logger(__name__)
 
+SPACE_MNI = "mni"
+SPACE_NATIVE = "native"
+
+
+def normalize_space(space: str) -> str:
+    """Normalize and validate the working space value."""
+    normalized = str(space).lower().strip()
+    if normalized not in {SPACE_MNI, SPACE_NATIVE}:
+        raise ValueError(
+            f"Paramètre 'space' invalide: {space}. Valeurs autorisées: {SPACE_MNI}, {SPACE_NATIVE}"
+        )
+    return normalized
+
+
+def space_tag(space: str) -> str:
+    """Return tagged space label used in output paths and file names."""
+    return f"space-{normalize_space(space)}"
+
+
+def get_subject_paths(simnibs_output_dir: Path, subject: str) -> Dict[str, Path]:
+    """Return canonical subject-level paths used across the pipeline."""
+    subject_dir = Path(simnibs_output_dir) / subject
+    return {
+        "subject_dir": subject_dir,
+        "m2m_dir": subject_dir / f"m2m_{subject}",
+        "subject_target_dir": subject_dir / "subject_target",
+    }
+
+
+def get_analysis_dir(results_dir: Path, space: str) -> Path:
+    """Return the shared analysis output directory (space encoded in filenames)."""
+    _ = normalize_space(space)
+    return Path(results_dir) / "analysis"
+
+
+def get_features_csv_path(results_dir: Path, space: str) -> Path:
+    """Return the canonical features CSV path for a given space."""
+    return get_analysis_dir(results_dir, space) / f"all_features_{space_tag(space)}.csv"
+
+
+def get_inter_subject_summary_csv_path(results_dir: Path, space: str) -> Path:
+    """Return the inter-subject summary CSV path for a given space."""
+    return get_analysis_dir(results_dir, space) / f"inter_subject_summary_{space_tag(space)}.csv"
+
+
+def get_intra_subject_diff_csv_path(results_dir: Path, space: str, condition: str) -> Path:
+    """Return the intra-subject diff CSV path for a condition and space."""
+    return get_analysis_dir(results_dir, space) / f"intra_subject_diff_{condition}_{space_tag(space)}.csv"
+
+
+def get_clusters_csv_path(results_dir: Path, space: str) -> Path:
+    """Return the clustering CSV path for a given space."""
+    return get_analysis_dir(results_dir, space) / f"clusters_{space_tag(space)}.csv"
+
 
 def load_config(config_path: Path) -> Dict:
     """Charge le fichier de configuration YAML."""
@@ -120,7 +174,7 @@ def find_simulation_dirs(subject_dir: Path, condition: str, mode: str) -> List[P
     return found_dirs
 
 
-def find_efield_files(simulation_dir: Path, mode: str, space: str = "mni") -> List[Path]:
+def find_efield_files(simulation_dir: Path, mode: str, space: str = SPACE_MNI) -> List[Path]:
     """
     Trouve les fichiers e-field dans le répertoire de simulation/optimization.
 
@@ -132,14 +186,16 @@ def find_efield_files(simulation_dir: Path, mode: str, space: str = "mni") -> Li
         Mode (simulation ou optimization)
     space : str
         ``'mni'`` (défaut) : fichiers ``*_scalar_MNI_magnE.nii.gz`` dans ``mni_volumes/``.
-        ``'subject'`` : fichiers ``*_scalar_magnE.nii.gz`` dans ``subject_volumes/``.
+        ``'native'`` : fichiers ``*_scalar_magnE.nii.gz`` dans ``subject_volumes/``.
 
     Returns
     -------
     List[Path]
         Liste des fichiers e-field trouvés
     """
-    if space == "subject":
+    space = normalize_space(space)
+
+    if space == SPACE_NATIVE:
         if mode == "optimization":
             volumes_dir = simulation_dir / "simulation_with_optimal_montage" / "subject_volumes"
         else:
@@ -191,7 +247,7 @@ def get_t1_conform(
 def get_brainmask(
     m2m_dir: Optional[Path] = None,
     filename: str = "label_prep/tissue_labeling_upsampled.nii.gz",
-    space: str = "subject",
+    space: str = SPACE_NATIVE,
     mni_mask_path: Optional[Path] = None,
 ) -> Path:
     """
@@ -204,7 +260,7 @@ def get_brainmask(
     filename : str
         Chemin relatif du fichier masque dans ``m2m_dir`` (espace sujet uniquement).
     space : str
-        ``'subject'`` (défaut) : masque dans ``m2m_dir``.
+        ``'native'`` (défaut) : masque dans ``m2m_dir``.
         ``'mni'`` : masque MNI passé via ``mni_mask_path`` (lu depuis config).
     mni_mask_path : Path or None
         Chemin du masque MNI, requis si ``space='mni'``.
@@ -214,13 +270,15 @@ def get_brainmask(
     ------
     FileNotFoundError, ValueError
     """
-    if space == "mni":
+    space = normalize_space(space)
+
+    if space == SPACE_MNI:
         if mni_mask_path is None:
             raise ValueError("mni_mask_path est requis pour space='mni' (config['paths']['mni_brain_mask'])")
         path = Path(mni_mask_path)
     else:
         if m2m_dir is None:
-            raise ValueError("m2m_dir est requis pour space='subject'")
+            raise ValueError("m2m_dir est requis pour space='native'")
         path = Path(m2m_dir) / filename
     if not path.exists():
         raise FileNotFoundError(f"Masque cerveau non trouvé : {path}")
@@ -240,31 +298,58 @@ def get_mni_tissues(m2m_dir: Path) -> Path:
     return path
 
 
-def get_roi_mask_path(simnibs_output_dir: Path, condition: str) -> Path:
+def get_roi_mask_path(
+    simnibs_output_dir: Path,
+    condition: str,
+    space: str = SPACE_MNI,
+    subject: Optional[str] = None,
+) -> Path:
     """
     Récupère le chemin du masque ROI pour une condition donnée.
 
     Parameters
     ----------
     simnibs_output_dir : Path
-        Répertoire de sortie SimNIBS (les masques sont dans mni_target/)
+        Répertoire de sortie SimNIBS
     condition : str
         Condition de stimulation
+    space : str
+        ``'mni'`` (défaut) : masques dans ``mni_target/``.
+        ``'native'`` : masques sujets dans ``<subject>/subject_target/``.
+    subject : str or None
+        ID sujet requis si ``space='native'``.
 
     Returns
     -------
     Path
         Chemin du masque ROI
+    
+    Raises
+    ------
+    FileNotFoundError
+        Si le masque demandé n'existe pas.
     """
-    mask_path = simnibs_output_dir / "mni_target" / f"{condition}_mask.nii.gz"
+    space = normalize_space(space)
+
+    if space == SPACE_NATIVE:
+        if not subject:
+            raise ValueError("subject est requis pour space='native'")
+        mask_path = (
+            simnibs_output_dir
+            / subject
+            / "subject_target"
+            / f"{condition}_mask_{space_tag(space)}.nii.gz"
+        )
+    else:
+        mask_path = simnibs_output_dir / "mni_target" / f"{condition}_mask_{space_tag(space)}.nii.gz"
 
     if not mask_path.exists():
-        raise FileNotFoundError(f"Masque ROI non trouvé: {mask_path}")
+        raise FileNotFoundError(f"Masque ROI non trouvé ({space} space): {mask_path}")
 
     return mask_path
 
 
-def get_preproc_dir(sim_dir: Path, mode: str) -> Path:
+def get_preproc_dir(sim_dir: Path, mode: str, space: str = SPACE_MNI) -> Path:
     """
     Retourne le dossier de preprocessing pour un répertoire de simulation donné.
 
@@ -274,10 +359,14 @@ def get_preproc_dir(sim_dir: Path, mode: str) -> Path:
         Répertoire de simulation SimNIBS.
     mode : str
         ``'simulation'`` ou ``'optimization'``.
+    space : str
+        ``'mni'`` (défaut) ou ``'native'``.
     """
+    space = normalize_space(space)
+    volumes_dir = "subject_volumes" if space == SPACE_NATIVE else "mni_volumes"
     if mode == "optimization":
-        return sim_dir / "simulation_with_optimal_montage" / "mni_volumes"
-    return sim_dir / "mni_volumes"
+        return sim_dir / "simulation_with_optimal_montage" / volumes_dir
+    return sim_dir / volumes_dir
 
 
 def get_preproc_paths(preproc_dir: Path, base_name: str) -> dict:

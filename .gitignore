@@ -1,0 +1,12 @@
+analysis_env/
+logs/
+log/
+legacy/
+outputs/
+simNIBS_outputs/
+__pycache__
+outputs/
+*.out
+.DS_Store
+*.__pycache__
+*.pyc

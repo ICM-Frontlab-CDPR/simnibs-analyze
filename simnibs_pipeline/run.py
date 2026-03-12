@@ -19,12 +19,22 @@ from _2_features_extraction import FeatureExtractor
 from _3_analysis import Analysis
 from _4_viz import Visualizer
 from _pipeline_io import (
+    SPACE_MNI,
+    SPACE_NATIVE,
     find_efield_files,
     find_simulation_dirs,
+    get_analysis_dir,
+    get_clusters_csv_path,
+    get_features_csv_path,
+    get_inter_subject_summary_csv_path,
+    get_intra_subject_diff_csv_path,
     get_preproc_dir,
     get_preproc_paths,
     get_roi_mask_path,
+    get_subject_paths,
     load_config,
+    normalize_space,
+    space_tag,
     save_nifti,
     save_rows,
 )
@@ -41,9 +51,15 @@ def process_subject_condition(
     mode: str,
     config: Dict,
     skip_preprocessing: bool = False,
+    space: str = SPACE_MNI,
 ) -> List[Dict]:
     """
     Préprocesse et extrait les features de tous les e-fields pour un sujet/condition/mode.
+
+    Parameters
+    ----------
+    space : str
+        ``'mni'`` (défaut) ou ``'native'`` — espace de travail pour les efields et ROI masks.
 
     Returns
     -------
@@ -52,7 +68,8 @@ def process_subject_condition(
     """
     results: List[Dict] = []
     simnibs_output = Path(config["paths"]["simnibs_output"])
-    subject_dir = simnibs_output / subject
+    subject_paths = get_subject_paths(simnibs_output, subject)
+    subject_dir = subject_paths["subject_dir"]
 
     if not subject_dir.exists():
         logger.warning(f"Répertoire sujet introuvable : {subject_dir}")
@@ -64,16 +81,16 @@ def process_subject_condition(
         return results
 
     try:
-        roi_mask_path = get_roi_mask_path(simnibs_output, condition)
-    except FileNotFoundError as e:
+        roi_mask_path = get_roi_mask_path(simnibs_output, condition, space=space, subject=subject)
+    except (FileNotFoundError, ValueError) as e:
         logger.error(str(e))
         return results
 
     preproc_params = config.get("preprocessing", {})
 
     for sim_dir in simulation_dirs:
-        for efield_path in find_efield_files(sim_dir, mode):
-            preproc_dir = get_preproc_dir(sim_dir, mode)
+        for efield_path in find_efield_files(sim_dir, mode, space=space):
+            preproc_dir = get_preproc_dir(sim_dir, mode, space=space)
             base_name = efield_path.stem.replace(".nii", "")
             paths = get_preproc_paths(preproc_dir, base_name)
 
@@ -141,6 +158,7 @@ def process_subject_condition(
                 for k in ["mean", "median", "std", "min", "max", "n_voxels"]:
                     if k in row_extra:
                         row[f"extra_{k}"] = row_extra[k]
+                row["space"] = space
 
                 # Ratio calculé depuis les valeurs nettoyées
                 intra_mean = row.get("mean", 0.0)
@@ -160,12 +178,12 @@ def process_subject_condition(
     return results
 
 
-def run_analysis(features_csv: Path, config: Dict) -> None:
+def run_analysis(features_csv: Path, config: Dict, space: str) -> None:
     """Analyse inter/intra-sujets et scatter plot simulation vs optimization."""
     logger.step("ANALYSE INTER/INTRA-SUJETS")
 
     results_dir = Path(config["paths"]["results_dir"])
-    analysis_dir = results_dir / "analysis"
+    analysis_dir = get_analysis_dir(results_dir, space)
     analysis_dir.mkdir(parents=True, exist_ok=True)
 
     ap = config.get("analysis", {})
@@ -178,7 +196,7 @@ def run_analysis(features_csv: Path, config: Dict) -> None:
 
     # Inter-sujet
     inter = Analysis(df).inter_subject_summary(metric=metric, condition_col=condition_col)
-    inter_csv = analysis_dir / "inter_subject_summary.csv"
+    inter_csv = get_inter_subject_summary_csv_path(results_dir, space)
     inter.to_csv(inter_csv, index=False)
     logger.info(f"✓ Résumé inter-sujet : {inter_csv}")
 
@@ -197,7 +215,7 @@ def run_analysis(features_csv: Path, config: Dict) -> None:
                 cond_a=sim_cond,
                 cond_b=opt_cond,
             )
-            diff_csv = analysis_dir / f"intra_subject_diff_{cond}.csv"
+            diff_csv = get_intra_subject_diff_csv_path(results_dir, space, cond)
             diff_df.to_csv(diff_csv, index=False)
             logger.info(f"✓ Diff intra-sujet : {diff_csv}")
         except Exception as e:
@@ -218,7 +236,7 @@ def run_analysis(features_csv: Path, config: Dict) -> None:
             )
             # clusters.csv conserve toutes les colonnes originales (efield_path, subject,
             # condition, stats…) + cluster — le lien avec les e-fields est donc direct.
-            clusters_csv = analysis_dir / "clusters.csv"
+            clusters_csv = get_clusters_csv_path(results_dir, space)
             clustered_df.to_csv(clusters_csv, index=False)
             logger.info(f"✓ Clusters sauvegardés : {clusters_csv}")
             dist = clustered_df["cluster"].value_counts().to_dict()
@@ -227,19 +245,20 @@ def run_analysis(features_csv: Path, config: Dict) -> None:
             logger.warning(f"Clustering échoué : {e}")
     else:
         logger.warning(
-            f"Colonne '{ratio_col}' absente de all_features.csv — clustering ignoré. "
+            f"Colonne '{ratio_col}' absente de {features_csv.name} — clustering ignoré. "
             "Assurez-vous que compute_efield_ratio est appelé lors de l'extraction."
         )
 
     # Scatter simulation vs optimization
     Visualizer(analysis_dir).plot_simulation_vs_optimization(
         df, metric=metric, subject_col=subject_col, condition_col=condition_col,
+        output_tag=space,
     )
     logger.info("✓ Scatter simulation vs optimization créé")
     logger.step("ANALYSE TERMINÉE")
 
 
-def run_viz(config: Dict) -> None:
+def run_viz(config: Dict, space: str) -> None:
     """Collecte les chemins (IO) puis génère toutes les visualisations."""
     logger.step("GÉNÉRATION DES VISUALISATIONS")
 
@@ -254,12 +273,12 @@ def run_viz(config: Dict) -> None:
 
     # ── Masques ROI ─────────────────────────────────────────────────────
     mni_target_dir = simnibs_output / "mni_target"
-    mask_paths = sorted(mni_target_dir.glob("*_mask.nii.gz"))
-    if mask_paths:
+    mask_paths = sorted(mni_target_dir.glob("*_mask_space-mni.nii.gz"))
+    if space == SPACE_MNI and mask_paths:
         mni_tpl_path = config.get("paths", {}).get("mni_template")
         mni_template = nib.load(str(mni_tpl_path)) if mni_tpl_path else None
         mask_imgs = [nib.load(str(p)) for p in mask_paths]
-        roi_names = [p.stem.replace("_mask", "") for p in mask_paths]
+        roi_names = [p.name.replace("_mask_space-mni.nii.gz", "") for p in mask_paths]
         viz.visualize_roi_masks(mask_imgs, roi_names, mni_template)
         logger.info("✓ Masques ROI visualisés")
 
@@ -268,31 +287,32 @@ def run_viz(config: Dict) -> None:
     mni_brain_bg_by_subject: Dict[str, Path] = {}
     subject_brain_bg_by_subject: Dict[str, Path] = {}
     for subject in subjects:
-        mni_bg = simnibs_output / subject / "subject_target" / "T1_MNI_brain.nii.gz"
-        subj_bg = simnibs_output / subject / "subject_target" / "T1_subject_brain.nii.gz"
+        subject_paths = get_subject_paths(simnibs_output, subject)
+        mni_bg = subject_paths["subject_target_dir"] / "T1_MNI_brain.nii.gz"
+        subj_bg = subject_paths["subject_target_dir"] / "T1_subject_brain.nii.gz"
         if mni_bg.exists():
             mni_brain_bg_by_subject[subject] = mni_bg
         if subj_bg.exists():
             subject_brain_bg_by_subject[subject] = subj_bg
 
-    for space in ["mni", "subject"]:
-        file_info: Dict = {}
-        for mode in modes:
-            for condition in conditions:
-                for subject in subjects:
-                    sim_dirs = find_simulation_dirs(simnibs_output / subject, condition, mode)
-                    if not sim_dirs:
-                        continue
-                    efields = find_efield_files(sim_dirs[0], mode, space=space)
-                    if not efields:
-                        continue
-                    file_info.setdefault((condition, mode), []).append((subject, efields[0]))
-        if not file_info:
-            logger.warning(f"Aucun e-field trouvé pour space={space}, figures skippées")
-            continue
-        brain_bgs = mni_brain_bg_by_subject if space == "mni" else subject_brain_bg_by_subject
+    file_info: Dict = {}
+    for mode in modes:
+        for condition in conditions:
+            for subject in subjects:
+                subject_paths = get_subject_paths(simnibs_output, subject)
+                sim_dirs = find_simulation_dirs(subject_paths["subject_dir"], condition, mode)
+                if not sim_dirs:
+                    continue
+                efields = find_efield_files(sim_dirs[0], mode, space=space)
+                if not efields:
+                    continue
+                file_info.setdefault((condition, mode), []).append((subject, efields[0]))
+    if file_info:
+        brain_bgs = mni_brain_bg_by_subject if space == SPACE_MNI else subject_brain_bg_by_subject
         viz.efields_figures(file_info, t1_brain_by_subject=brain_bgs or None, space=space)
-        logger.info(f"✓ Figures 3D e-fields générées ({space.upper()})")    
+        logger.info(f"✓ Figures 3D e-fields générées ({space.upper()})")
+    else:
+        logger.warning(f"Aucun e-field trouvé pour space={space}, figures skippées")
 
     # ── Histogrammes preprocessing ───────────────────────────────────────
     intra_data: Dict = {}
@@ -300,11 +320,12 @@ def run_viz(config: Dict) -> None:
     for subject in subjects:
         for mode in modes:
             for condition in conditions:
-                sim_dirs = find_simulation_dirs(simnibs_output / subject, condition, mode)
+                subject_paths = get_subject_paths(simnibs_output, subject)
+                sim_dirs = find_simulation_dirs(subject_paths["subject_dir"], condition, mode)
                 if not sim_dirs:
                     continue
-                preproc_dir = get_preproc_dir(sim_dirs[0], mode)
-                for efield_path in find_efield_files(sim_dirs[0], mode):
+                preproc_dir = get_preproc_dir(sim_dirs[0], mode, space=space)
+                for efield_path in find_efield_files(sim_dirs[0], mode, space=space):
                     base_name = efield_path.stem.replace(".nii", "")
                     p = get_preproc_paths(preproc_dir, base_name)
                     if p["intra_masked"].exists() and p["intra_cleaned"].exists():
@@ -316,10 +337,10 @@ def run_viz(config: Dict) -> None:
                             (condition, mode, p["extra_masked"], p["extra_cleaned"])
                         )
     if intra_data:
-        viz.efields_histograms(intra_data, region="intra")
+        viz.efields_histograms(intra_data, region="intra", space=space)
         logger.info("✓ Histogrammes intra-ROI générés")
     if extra_data:
-        viz.efields_histograms(extra_data, region="extra")
+        viz.efields_histograms(extra_data, region="extra", space=space)
         logger.info("✓ Histogrammes extra-ROI générés")
     logger.step("VISUALISATIONS TERMINÉES")
 
@@ -337,9 +358,16 @@ def main(
     logger.info(f"Config : {config_path}")
 
     config = load_config(config_path)
+    try:
+        space = normalize_space(config.get("space", SPACE_MNI))
+    except ValueError as e:
+        logger.error(str(e))
+        return 1
+
     logger.info(f"Sujets     : {config['subjects']}")
     logger.info(f"Conditions : {config['stim_conditions']}")
     logger.info(f"Modes      : {config['mode']}")
+    logger.info(f"Espace     : {space}")
 
     results_dir = Path(config["paths"]["results_dir"])
     simnibs_output = Path(config["paths"]["simnibs_output"])
@@ -367,7 +395,7 @@ def main(
 
     if not skip_target_generation:
         logger.step("ÉTAPE 0 : GÉNÉRATION DES MASQUES ROI MNI")
-        if all((mni_target_dir / f"{roi}_mask.nii.gz").exists() for roi in rois):
+        if all((mni_target_dir / f"{roi}_mask_space-mni.nii.gz").exists() for roi in rois):
             logger.info(f"✓ Masques ROI déjà présents dans {mni_target_dir}")
         else:
             try:
@@ -379,30 +407,65 @@ def main(
         logger.info("Génération des masques ROI skippée")
 
     # ── Étapes 1+2 : Preprocessing + Feature extraction ─────────────────
-    analysis_dir = results_dir / "analysis"
-    features_csv = analysis_dir / "all_features.csv"
+    analysis_dir = get_analysis_dir(results_dir, space)
+    features_csv = get_features_csv_path(results_dir, space)
 
     if skip_features:
         if not features_csv.exists():
-            logger.error(f"all_features.csv introuvable : {features_csv}")
+            logger.error(f"all_features_{space_tag(space)}.csv introuvable : {features_csv}")
             return 1
         logger.info(f"Feature extraction skippée — utilisation de {features_csv}")
     else:
         all_features: List[Dict] = []
         stats = {"total": 0, "success": 0, "failed": 0}
+        
+        logger.info(f"Computing in {space.upper()} space")
 
         for subject in config["subjects"]:
             logger.step(f"SUJET : {subject}")
-            m2m_dir = simnibs_output / subject / f"m2m_{subject}"
+            subject_paths = get_subject_paths(simnibs_output, subject)
+            m2m_dir = subject_paths["m2m_dir"]
+            subject_target_dir = subject_paths["subject_target_dir"]
+
+            if space == SPACE_NATIVE and skip_target_generation:
+                missing = [
+                    roi for roi in rois
+                    if not (subject_target_dir / f"{roi}_mask_space-native.nii.gz").exists()
+                ]
+                if missing:
+                    logger.warning(
+                        f"Masques ROI native-space manquants pour {subject} ({missing}) avec --skip-target-generation. "
+                        "Sujet ignoré pour éviter des outputs ambigus."
+                    )
+                    continue
+            
             if not skip_target_generation and m2m_dir.exists():
-                subject_target_dir = simnibs_output / subject / "subject_target"
+                # Always generate T1 skull-stripped in both spaces
                 gen.run(m2m_dir, subject_target_dir)
+                
+                # If working in native space, generate native-space ROI masks
+                if space == SPACE_NATIVE:
+                    logger.info("Generating native-space ROI masks...")
+                    try:
+                        gen.create_subject_roi_from_mni(m2m_dir, subject_target_dir)
+                        logger.info(f"✓ Native-space ROI masks generated for {subject}")
+                    except Exception as e:
+                        logger.warning(f"Native-space ROI generation failed: {e}")
+                        logger.warning(f"Subject {subject} ignoré pour éviter un mélange d'espaces")
+                        continue
+            elif space == SPACE_NATIVE and not m2m_dir.exists():
+                logger.warning(
+                    f"m2m introuvable pour {subject}: {m2m_dir}. Sujet ignoré en espace native."
+                )
+                continue
+            
             for condition in config["stim_conditions"]:
                 for mode in config["mode"]:
                     logger.info(f"--- {subject} / {condition} / {mode} ---")
                     rows = process_subject_condition(
                         subject, condition, mode, config,
                         skip_preprocessing=skip_preprocessing,
+                        space=space,
                     )
                     stats["total"] += 1
                     if rows:
@@ -422,13 +485,13 @@ def main(
 
     # ── Étape 3 : Analyse ────────────────────────────────────────────────
     if not skip_analysis:
-        run_analysis(features_csv, config)
+        run_analysis(features_csv, config, space=space)
     else:
         logger.info("Analyse skippée")
 
     # ── Étape 4 : Visualisations ─────────────────────────────────────────
     if not skip_viz:
-        run_viz(config)
+        run_viz(config, space=space)
     else:
         logger.info("Visualisations skippées")
 

@@ -11,6 +11,7 @@ import pyvista as pv
 from nilearn import plotting, image as nl_image
 
 from _logging import get_logger
+from _pipeline_io import space_tag
 
 logger = get_logger(__name__)
 
@@ -161,11 +162,12 @@ class Visualizer:
             e-fields (use ``T1_MNI_brain.nii.gz`` for MNI,
             ``T1_subject_brain.nii.gz`` for subject space).
         space : str
-            ``'mni'`` or ``'subject'`` — included in the output filename so
+            ``'mni'`` or ``'native'`` — included in the output filename so
             figures from both spaces are saved without overwriting each other.
         """
         output_dir = self.output_dir / "simu"
         output_dir.mkdir(parents=True, exist_ok=True)
+        tag = space_tag(space)
 
         # Global colour scale across all files
         all_nonzero: List[np.ndarray] = []
@@ -224,7 +226,7 @@ class Visualizer:
 
             fig.suptitle(f"{roi} – {mode} ({space.upper()})", fontsize=16, fontweight="bold")
             plt.tight_layout()
-            out_path = output_dir / f"efields_3d_{roi}_{mode}_{space}_{self.camera_position}.png"
+            out_path = output_dir / f"efields_3d_{roi}_{mode}_{tag}_{self.camera_position}.png"
             plt.savefig(out_path, dpi=300, bbox_inches="tight")
             plt.close()
             logger.info(f"  Sauvegardé : {out_path}")
@@ -235,6 +237,7 @@ class Visualizer:
         self,
         data_by_subject: Dict[str, List[Tuple[str, str, Path, Path]]],
         region: str = "intra",
+        space: str = "mni",
     ) -> None:
         """
         Generate one histogram figure per subject comparing masked vs cleaned e-fields.
@@ -245,9 +248,12 @@ class Visualizer:
             Mapping ``subject → [(roi, mode, masked_path, cleaned_path), ...]``.
         region :
             Label inclus dans le titre et le nom de fichier (``"intra"`` ou ``"extra"``).
+        space :
+            ``'mni'`` ou ``'native'`` — suffixe de nom de fichier.
         """
         output_dir = self.output_dir / "preprocess"
         output_dir.mkdir(parents=True, exist_ok=True)
+        tag = space_tag(space)
 
         for subject, subject_data in data_by_subject.items():
             logger.info(f"Histogrammes {region}-ROI pour {subject}")
@@ -299,7 +305,7 @@ class Visualizer:
                 fontweight="bold",
             )
             plt.tight_layout()
-            out_path = output_dir / f"efields_histograms_{subject}_{region}.png"
+            out_path = output_dir / f"efields_histograms_{subject}_{region}_{tag}.png"
             plt.savefig(out_path, dpi=300, bbox_inches="tight")
             plt.close()
             logger.info(f"  Sauvegardé : {out_path}")
@@ -391,6 +397,7 @@ class Visualizer:
         metric: str = "mean",
         subject_col: str = "subject",
         condition_col: str = "condition",
+        output_tag: str = "",
     ) -> None:
         """
         Scatter plot: per subject, simulation (x) vs optimisation (y) for each ROI.
@@ -406,6 +413,8 @@ class Visualizer:
             Column containing subject identifiers.
         condition_col :
             Column containing condition labels.
+        output_tag :
+            Optional suffix added to output filename (e.g., ``"mni"`` or ``"native"``).
         """
         output_dir = self.output_dir / "figures"
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -458,7 +467,9 @@ class Visualizer:
             ax.set_aspect("equal", adjustable="box")
 
         plt.tight_layout()
-        out_path = output_dir / "simulation_vs_optimization.png"
+        tagged = space_tag(output_tag) if output_tag else ""
+        suffix = f"_{tagged}" if tagged else ""
+        out_path = output_dir / f"simulation_vs_optimization{suffix}.png"
         plt.savefig(out_path, dpi=150, bbox_inches="tight")
         plt.close()
         logger.info(f"Sauvegardé : {out_path}")

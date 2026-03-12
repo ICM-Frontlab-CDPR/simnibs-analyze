@@ -78,7 +78,7 @@ class AnatomicalPreparer:
         rois : dict
             ``{roi_name: [x_mni, y_mni, z_mni]}`` coordinates in mm.
         output_dir : Path
-            Directory where ``{roi_name}_mask.nii.gz`` files will be written.
+            Directory where ``{roi_name}_mask_space-mni.nii.gz`` files will be written.
 
         Returns
         -------
@@ -93,7 +93,7 @@ class AnatomicalPreparer:
 
         for roi_name, mni_coords in rois.items():
             mask_img = self._create_sphere_mask(self._template, mni_coords, self.radius_mm)
-            out_path = output_dir / f"{roi_name}_mask.nii.gz"
+            out_path = output_dir / f"{roi_name}_mask_space-mni.nii.gz"
             save_nifti(mask_img, out_path)
             self.mask_imgs[roi_name] = mask_img
             logger.info(f"  ✓ {roi_name}: {out_path.name}")
@@ -191,9 +191,89 @@ class AnatomicalPreparer:
         return new_img_like(template_img, data, affine=affine)
     
 
-    def create_subject_roi_from_mni(self):
-        """TODO: warp MNI masks to subject space (called from run())."""
-        pass
+    def create_subject_roi_from_mni(
+        self,
+        m2m_dir: Path,
+        output_dir: Path,
+    ) -> Dict[str, Path]:
+        """
+        Warp MNI ROI masks to subject space using ANTsPy.
+
+        Parameters
+        ----------
+        m2m_dir : Path
+            Path to the SimNIBS m2m_<subject> directory.
+            Must contain toMNI/MNI2Conform_nonl.nii.gz.
+        output_dir : Path
+            Directory where subject-space ROI masks will be written
+            (e.g., subject_target/).
+
+        Returns
+        -------
+        Dict[str, Path]
+            {roi_name: path_to_subject_space_mask}
+
+        Raises
+        ------
+        FileNotFoundError
+            If the warp field or MNI masks are missing.
+        """
+        import ants
+
+        m2m_dir = Path(m2m_dir)
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # ── Warp field (MNI → subject space) ──────────────────────────
+        warp_mni2conform = m2m_dir / "toMNI" / "MNI2Conform_nonl.nii.gz"
+        if not warp_mni2conform.exists():
+            raise FileNotFoundError(
+                f"MNI→Subject warp field not found: {warp_mni2conform}"
+            )
+
+        # ── Reference image (subject-space T1) ────────────────────────
+        t1_subject_path = get_t1_conform(m2m_dir)
+        fixed = ants.image_read(str(t1_subject_path))
+
+        # Load MNI masks from disk in all cases to keep behavior deterministic.
+        simnibs_output_dir = m2m_dir.parent.parent
+        mni_output_dir = getattr(self, "mni_output_dir", simnibs_output_dir / "mni_target")
+        self.mni_output_dir = mni_output_dir
+        mni_mask_paths = sorted(mni_output_dir.glob("*_mask_space-mni.nii.gz"))
+        if not mni_mask_paths:
+            raise FileNotFoundError(f"No MNI ROI masks found in: {mni_output_dir}")
+        self.mask_imgs = {}
+        for p in mni_mask_paths:
+            roi_name = p.name.replace("_mask_space-mni.nii.gz", "")
+            self.mask_imgs[roi_name] = nib.load(str(p))
+
+        subject_roi_paths: Dict[str, Path] = {}
+
+        # ── Warp each MNI ROI mask to subject space ────────────────────
+        for roi_name, mni_mask_img in self.mask_imgs.items():
+            logger.info(f"Warping {roi_name} from MNI to subject space...")
+
+            # Ensure MNI mask is saved on disk (ANTsPy reads from file)
+            mni_mask_path = self.mni_output_dir / f"{roi_name}_mask_space-mni.nii.gz"
+            if not mni_mask_path.exists():
+                save_nifti(mni_mask_img, mni_mask_path)
+
+            moving = ants.image_read(str(mni_mask_path))
+
+            warped = ants.apply_transforms(
+                fixed=fixed,
+                moving=moving,
+                transformlist=[str(warp_mni2conform)],
+                interpolator="nearestNeighbor",  # binary mask
+            )
+
+            subject_mask_path = output_dir / f"{roi_name}_mask_space-native.nii.gz"
+            ants.image_write(warped, str(subject_mask_path))
+
+            logger.info(f"  ✓ {roi_name} warped → {subject_mask_path.name}")
+            subject_roi_paths[roi_name] = subject_mask_path
+
+        return subject_roi_paths
 
     @staticmethod
     def _skull_strip(

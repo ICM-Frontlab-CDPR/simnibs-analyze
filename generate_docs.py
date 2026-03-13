@@ -16,12 +16,12 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).parent
-PIPELINE_DIR = ROOT / "simnibs_pipeline"
+PIPELINE_DIR = ROOT / "simnibs_analyze"
 OUTPUT_DIR = ROOT / "docs" / "api"
 
 # Documenter le package entier — __init__.__all__ contrôle quels sous-modules
 # sont inclus (les 6 modules principaux uniquement).
-MODULES = ["simnibs_pipeline"]
+MODULES = ["simnibs_analyze"]
 
 try:
     import pdoc  # noqa: F401
@@ -33,7 +33,7 @@ except ImportError:
 if OUTPUT_DIR.exists():
     shutil.rmtree(OUTPUT_DIR)
 
-# ROOT must be on PYTHONPATH so `simnibs_pipeline` is importable as a package.
+# ROOT must be on PYTHONPATH so `simnibs_analyze` is importable as a package.
 # PIPELINE_DIR must also be on PYTHONPATH so flat `from _pipeline_io import ...`
 # inside the modules resolves correctly.
 pythonpath = str(ROOT) + os.pathsep + str(PIPELINE_DIR)
@@ -45,4 +45,4 @@ subprocess.check_call(
 )
 
 print(f"\n✓ Documentation générée dans : {OUTPUT_DIR}")
-print(f"  Ouvrir : {OUTPUT_DIR / 'simnibs_pipeline.html'}")
+print(f"  Ouvrir : {OUTPUT_DIR / 'simnibs_analyze.html'}")

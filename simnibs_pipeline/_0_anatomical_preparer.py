@@ -6,7 +6,10 @@ Usage (CLI):
 
 Usage (API):
     gen = AnatomicalPreparer(radius_mm=10.0)
-    gen.setup(rois={"fef": [28, -8, 54]}, output_dir=Path("mni_target"))
+    gen.setup_mni_rois(
+        rois={"fef": {"method": "sphere", "coords": [28, -8, 54]}},
+        output_dir=Path("mni_target"),
+    )
     gen.mask_imgs  # dict[str, nib.Nifti1Image]
 """
 
@@ -63,20 +66,30 @@ class AnatomicalPreparer:
     # Public API
     # ------------------------------------------------------------------
 
-    def setup(
+    def setup_mni_rois(
         self,
-        rois: Dict[str, List[float]],
+        rois: Dict[str, dict],
         output_dir: Path,
     ) -> "AnatomicalPreparer":
         """
-        Create and save one spherical mask per ROI in MNI space.
+        Create and save one binary mask per ROI in MNI space.
 
         Subject-independent. Call this once before the subject loop.
+        Dispatches to :meth:`_create_sphere_mask` or :meth:`_create_parcel_mask`
+        based on the ``method`` key of each ROI definition.
 
         Parameters
         ----------
         rois : dict
-            ``{roi_name: [x_mni, y_mni, z_mni]}`` coordinates in mm.
+            ``{roi_name: roi_def}`` where ``roi_def`` is::
+
+                # sphere (MNI coordinates)
+                {"method": "sphere", "coords": [x, y, z]}
+
+                # atlas parcel
+                {"method": "atlas", "atlas": "harvard-oxford",
+                 "regions": "Frontal Eye Fields"}  # str or list[str]
+
         output_dir : Path
             Directory where ``{roi_name}_mask_space-mni.nii.gz`` files will be written.
 
@@ -91,12 +104,25 @@ class AnatomicalPreparer:
         self.mni_output_dir = output_dir
         logger.info(f"Generating {len(rois)} ROI mask(s) → {output_dir}")
 
-        for roi_name, mni_coords in rois.items():
-            mask_img = self._create_sphere_mask(self._template, mni_coords, self.radius_mm)
+        for roi_name, roi_def in rois.items():
+            method = roi_def.get("method", "sphere")
+            if method == "sphere":
+                mask_img = self._create_sphere_mask(
+                    self._template, roi_def["coords"], self.radius_mm
+                )
+            elif method == "atlas":
+                mask_img = self._create_parcel_mask(
+                    self._template, roi_def["atlas"], roi_def["regions"]
+                )
+            else:
+                raise ValueError(
+                    f"ROI '{roi_name}': unknown method '{method}'. "
+                    "Expected 'sphere' or 'atlas'."
+                )
             out_path = output_dir / f"{roi_name}_mask_space-mni.nii.gz"
             save_nifti(mask_img, out_path)
             self.mask_imgs[roi_name] = mask_img
-            logger.info(f"  ✓ {roi_name}: {out_path.name}")
+            logger.info(f"  ✓ {roi_name} [{method}]: {out_path.name}")
 
         logger.info(f"{len(self.mask_imgs)} mask(s) saved to {output_dir}")
         return self
@@ -189,7 +215,84 @@ class AnatomicalPreparer:
         data[dist_sq <= radius_vox ** 2] = 1
 
         return new_img_like(template_img, data, affine=affine)
-    
+
+    @staticmethod
+    def _create_parcel_mask(
+        template_img: nib.Nifti1Image,
+        atlas_name: str,
+        region_names: "str | List[str]",
+    ) -> nib.Nifti1Image:
+        """Return a binary NIfTI mask from one or more atlas parcels.
+
+        Resampled to ``template_img`` space if needed — mirrors
+        :meth:`_create_sphere_mask` in signature and return type.
+
+        Parameters
+        ----------
+        template_img : nib.Nifti1Image
+            Reference image that defines the output voxel grid.
+        atlas_name : str
+            One of ``'harvard-oxford'``, ``'aal'``, ``'destrieux'``.
+        region_names : str or list of str
+            One or more atlas region labels whose union forms the mask.
+
+        Returns
+        -------
+        nib.Nifti1Image
+            Binary mask in ``template_img`` space.
+        """
+        from nilearn import datasets as nl_datasets
+
+        if isinstance(region_names, str):
+            region_names = [region_names]
+
+        _FETCHERS = {
+            "harvard-oxford": lambda: nl_datasets.fetch_atlas_harvard_oxford("cort-maxprob-thr25-1mm"),
+            "aal": lambda: nl_datasets.fetch_atlas_aal(),
+            "destrieux": lambda: nl_datasets.fetch_atlas_destrieux_2009(),
+        }
+        if atlas_name not in _FETCHERS:
+            raise ValueError(
+                f"Atlas '{atlas_name}' not supported. Available: {list(_FETCHERS)}"
+            )
+
+        atlas_data = _FETCHERS[atlas_name]()
+        atlas_img = nib.load(atlas_data.maps)
+        raw_labels = list(atlas_data.labels)
+
+        # AAL provides a separate `indices` list; other atlases use positional indices.
+        if hasattr(atlas_data, "indices"):
+            label_map: Dict[str, int] = {
+                str(name): int(idx) for name, idx in zip(raw_labels, atlas_data.indices)
+            }
+        else:
+            label_map = {str(name): i for i, name in enumerate(raw_labels)}
+
+        atlas_array = atlas_img.get_fdata()
+        mask_data = np.zeros(atlas_array.shape, dtype=np.uint8)
+
+        for region_name in region_names:
+            if region_name not in label_map:
+                matches = [k for k in label_map if k.lower() == region_name.lower()]
+                if not matches:
+                    raise ValueError(
+                        f"Region '{region_name}' not found in atlas '{atlas_name}'. "
+                        f"First available labels: {list(label_map)[:10]}"
+                    )
+                region_name = matches[0]
+            mask_data[np.round(atlas_array).astype(int) == label_map[region_name]] = 1
+
+        mask_img = nib.Nifti1Image(mask_data, atlas_img.affine)
+
+        # Resample to pipeline template if voxel grids differ
+        if (
+            atlas_img.shape[:3] != template_img.shape[:3]
+            or not np.allclose(atlas_img.affine, template_img.affine)
+        ):
+            mask_img = image.resample_to_img(mask_img, template_img, interpolation="nearest")
+
+        return mask_img
+
 
     def create_subject_roi_from_mni(
         self,
@@ -372,9 +475,9 @@ def main(argv=None) -> int:
     args = _parse_args(argv)
 
     config = load_config(args.config)
-    rois: Dict[str, List[float]] = config.get("rois", {})
+    rois: Dict[str, dict] = config.get("target_generation", {}).get("rois", {})
     if not rois:
-        logger.error("No 'rois' section found in config — nothing to generate.")
+        logger.error("No 'target_generation.rois' section found in config — nothing to generate.")
         return 1
 
     ref_path = config.get("paths", {}).get("mni_template")
@@ -386,7 +489,7 @@ def main(argv=None) -> int:
     AnatomicalPreparer(
         reference_img_path=Path(ref_path) if ref_path else None,
         radius_mm=radius_mm,
-    ).run(rois, output_dir)
+    ).setup_mni_rois(rois, output_dir)
 
     return 0
 

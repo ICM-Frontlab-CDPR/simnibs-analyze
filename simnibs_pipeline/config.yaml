@@ -4,15 +4,27 @@ stim_conditions: [fef, ips_left, ips_right]
 mode: [simulation, optimization]
 space: mni  # config values: 'mni' or 'native' ; output paths use suffixes like 'space-mni'/'space-native'
 
-# ROI definitions — MNI coordinates [x, y, z] in mm
-rois:
-  fef: [28, -8, 54]
-  ips_left: [-25, -60, 52]
-  ips_right: [25, -60, 52]
-
-# Target generation parameters
+# Target generation
+# method: sphere  → coords: [x_mni, y_mni, z_mni] (mm)
+# method: atlas   → atlas: <name>  ('harvard-oxford', 'aal', 'destrieux')
+#                   regions: <label>  (str or list of str)
 target_generation:
-  radius_mm: 10.0
+  radius_mm: 10.0  # used for method: sphere
+  rois:
+    fef:
+      method: sphere
+      coords: [28, -8, 54]
+    ips_left:
+      method: sphere
+      coords: [-25, -60, 52]
+    ips_right:
+      method: sphere
+      coords: [25, -60, 52]
+    # atlas example:
+    # v1:
+    #   method: atlas
+    #   atlas: harvard-oxford
+    #   regions: "Lateral Occipital Cortex, inferior division"
 
 # Paths
 paths:

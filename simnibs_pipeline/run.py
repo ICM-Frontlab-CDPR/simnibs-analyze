@@ -382,7 +382,7 @@ def main(
     results_dir.mkdir(parents=True, exist_ok=True)
 
     # ── Étape 0 : Setup targets (une fois, indépendant des sujets) ────────
-    rois: Dict = config.get("rois", {})
+    rois: Dict = config.get("target_generation", {}).get("rois", {})
     mni_target_dir = simnibs_output / "mni_target"
     ref = config.get("paths", {}).get("mni_template")
     mni_brain_mask = config.get("paths", {}).get("mni_brain_mask")
@@ -399,7 +399,7 @@ def main(
             logger.info(f"✓ Masques ROI déjà présents dans {mni_target_dir}")
         else:
             try:
-                gen.setup(rois, mni_target_dir)
+                gen.setup_mni_rois(rois, mni_target_dir)
             except Exception as e:
                 logger.error(f"✗ Target generation échouée : {e}")
                 return 1

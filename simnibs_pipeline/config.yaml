@@ -13,8 +13,6 @@ rois:
 # Target generation parameters
 target_generation:
   radius_mm: 10.0
-  roi_method: sphere   # 'sphere' (MNI coordinates) or 'atlas' (atlas region names)
-  # atlas_name: harvard-oxford  # required when roi_method: atlas ('harvard-oxford', 'aal', 'destrieux')
 
 # Paths
 paths:

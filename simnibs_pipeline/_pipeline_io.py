@@ -20,9 +20,6 @@ logger = get_logger(__name__)
 SPACE_MNI = "mni"
 SPACE_NATIVE = "native"
 
-ROI_METHOD_SPHERE = "sphere"
-ROI_METHOD_ATLAS = "atlas"
-
 
 def normalize_space(space: str) -> str:
     """Normalize and validate the working space value."""
@@ -37,45 +34,6 @@ def normalize_space(space: str) -> str:
 def space_tag(space: str) -> str:
     """Return tagged space label used in output paths and file names."""
     return f"space-{normalize_space(space)}"
-
-
-def normalize_roi_method(method: str) -> str:
-    """Normalize and validate a ROI generation method value."""
-    normalized = str(method).lower().strip()
-    if normalized not in {ROI_METHOD_SPHERE, ROI_METHOD_ATLAS}:
-        raise ValueError(
-            f"Paramètre 'roi_method' invalide: {method!r}. "
-            f"Valeurs autorisées: '{ROI_METHOD_SPHERE}', '{ROI_METHOD_ATLAS}'"
-        )
-    return normalized
-
-
-def method_tag(method: str, atlas_name: Optional[str] = None) -> str:
-    """Return the method portion of a ROI mask filename.
-
-    Examples
-    --------
-    method_tag("sphere")              → ``"method-sphere"``
-    method_tag("atlas", "aal")        → ``"method-atlas-aal"``
-    method_tag("atlas", "harvard-oxford") → ``"method-atlas-harvard-oxford"``
-    """
-    method = normalize_roi_method(method)
-    if method == ROI_METHOD_ATLAS:
-        if not atlas_name:
-            raise ValueError("atlas_name est requis pour method='atlas'")
-        return f"method-atlas-{atlas_name}"
-    return f"method-{method}"
-
-
-def get_atlas_roi_path(output_dir: Path, atlas_name: str, roi_name: str) -> Path:
-    """Return the canonical MNI path for an atlas-derived ROI mask.
-
-    Shorthand for ``get_roi_mask_path`` with ``method='atlas'``.
-    """
-    return (
-        Path(output_dir)
-        / f"{roi_name}_{method_tag(ROI_METHOD_ATLAS, atlas_name)}_mask_{space_tag(SPACE_MNI)}.nii.gz"
-    )
 
 
 def get_subject_paths(simnibs_output_dir: Path, subject: str) -> Dict[str, Path]:
@@ -345,8 +303,6 @@ def get_roi_mask_path(
     condition: str,
     space: str = SPACE_MNI,
     subject: Optional[str] = None,
-    method: str = ROI_METHOD_SPHERE,
-    atlas_name: Optional[str] = None,
 ) -> Path:
     """
     Récupère le chemin du masque ROI pour une condition donnée.
@@ -362,23 +318,18 @@ def get_roi_mask_path(
         ``'native'`` : masques sujets dans ``<subject>/subject_target/``.
     subject : str or None
         ID sujet requis si ``space='native'``.
-    method : str
-        ``'sphere'`` (défaut) ou ``'atlas'`` — méthode de génération du masque ROI.
-    atlas_name : str or None
-        Nom de l'atlas requis si ``method='atlas'``.
 
     Returns
     -------
     Path
         Chemin du masque ROI
-
+    
     Raises
     ------
     FileNotFoundError
         Si le masque demandé n'existe pas.
     """
     space = normalize_space(space)
-    m_tag = method_tag(method, atlas_name)
 
     if space == SPACE_NATIVE:
         if not subject:
@@ -387,19 +338,13 @@ def get_roi_mask_path(
             simnibs_output_dir
             / subject
             / "subject_target"
-            / f"{condition}_{m_tag}_mask_{space_tag(space)}.nii.gz"
+            / f"{condition}_mask_{space_tag(space)}.nii.gz"
         )
     else:
-        mask_path = (
-            simnibs_output_dir
-            / "mni_target"
-            / f"{condition}_{m_tag}_mask_{space_tag(space)}.nii.gz"
-        )
+        mask_path = simnibs_output_dir / "mni_target" / f"{condition}_mask_{space_tag(space)}.nii.gz"
 
     if not mask_path.exists():
-        raise FileNotFoundError(
-            f"Masque ROI non trouvé ({space} space, {m_tag}): {mask_path}"
-        )
+        raise FileNotFoundError(f"Masque ROI non trouvé ({space} space): {mask_path}")
 
     return mask_path
 

@@ -11,7 +11,6 @@ from typing import Optional, List, Dict, Any, Iterable, Tuple, Union
 import numpy as np
 import nibabel as nib
 import pandas as pd
-import yaml
 
 from _logging import get_logger
 
@@ -73,9 +72,14 @@ def get_clusters_csv_path(results_dir: Path, space: str) -> Path:
 
 
 def load_config(config_path: Path) -> Dict:
-    """Charge le fichier de configuration YAML."""
-    with open(config_path, "r") as f:
-        return yaml.safe_load(f)
+    """Charge et valide le fichier de configuration YAML.
+
+    Valide la structure via les modèles Pydantic définis dans ``_config.py``.
+    Retourne un dict (compatibilité avec les appelants existants).
+    """
+    from _config import load_and_validate
+    cfg = load_and_validate(config_path)
+    return cfg.model_dump()
 
 
 def find_raw_efield(

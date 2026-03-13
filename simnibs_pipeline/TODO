@@ -1,4 +1,105 @@
 
+# ============================================================
+# REFACTORING : "sub-config to classes"
+# À utiliser comme prompt LLM quand on reprend ce chantier.
+# ============================================================
+
+## Contexte du projet
+
+Pipeline Python d'analyse d'e-fields SimNIBS.
+Workspace : /home/hippolyted/Documents/simnibs-analyze/simnibs_pipeline/
+
+Fichiers principaux :
+- _config.py          — modèles Pydantic de validation du config.yaml
+- _pipeline_io.py     — I/O (load_config retourne PipelineConfig)
+- run.py              — orchestrateur principal
+- _0_anatomical_preparer.py
+- _1_preprocessing.py
+- _2_features_extraction.py
+- _3_analysis.py
+- _4_viz.py
+
+## État actuel (ce qui a déjà été fait)
+
+1. config.yaml est validé via Pydantic (_config.py) à chaque load_config()
+2. run.py accède à la config par attributs typés (config.preprocessing.smooth_fwhm, etc.)
+3. Aucune classe métier ne reçoit la config — run.py extrait les paramètres et les passe
+   en primitifs :
+     Preprocessor(smooth_fwhm=config.preprocessing.smooth_fwhm, ...)
+     AnatomicalPreparer(radius_mm=config.target_generation.radius_mm, ...)
+
+## Refactorisation à faire
+
+### Idée
+Plutôt que d'extraire chaque paramètre dans run.py, passer directement la sous-section
+Pydantic correspondante à chaque classe :
+
+    Preprocessor(config=config.preprocessing)
+    # au lieu de :
+    Preprocessor(smooth_fwhm=config.preprocessing.smooth_fwhm, outlier_method=..., portion=...)
+
+### Avantage principal
+Quand on ajoute un paramètre à une classe, on modifie seulement :
+  - la classe
+  - _config.py (le modèle Pydantic)
+  - config.yaml
+run.py n'a pas besoin d'être touché.
+
+### État du mapping section config ↔ classe
+
+| Classe              | Section config          | Faisable ? | Notes                                           |
+|---------------------|-------------------------|------------|-------------------------------------------------|
+| Preprocessor        | preprocessing           | ✅ parfait  | 3 params, mapping 1:1                           |
+| FeatureExtractor    | feature_extraction      | ⚠️ partiel | ratio_methods ≠ metrics (à aligner)             |
+| Analysis            | analysis                | ⚠️ partiel | params passés aux méthodes, pas au constructeur |
+| Visualizer          | ❌ pas de section        | ✗ bloquant | Ajouter section visualization au yaml d'abord   |
+| AnatomicalPreparer  | target_generation+paths | ⚠️ split    | paramètres viennent de deux sections            |
+
+### Ce qu'il faut faire concrètement
+
+1. Ajouter une section `visualization` dans config.yaml + modèle VisualizationConfig dans
+   _config.py, avec les params actuels de Visualizer.__init__ :
+     cmap, threshold_percentile, bins, camera_position
+   (output_dir reste passé séparément — c'est un path runtime, pas un param de config)
+
+2. Modifier chaque classe pour accepter son sous-config :
+
+   # _1_preprocessing.py
+   class Preprocessor:
+       def __init__(self, config: PreprocessingConfig) -> None:
+
+   # _2_features_extraction.py
+   class FeatureExtractor:
+       def __init__(self, config: FeatureExtractionConfig) -> None:
+       # aligner le param ratio_methods avec config.metrics
+
+   # _4_viz.py
+   class Visualizer:
+       def __init__(self, output_dir: Path, config: VisualizationConfig) -> None:
+
+   # _0_anatomical_preparer.py — params sur deux sections, passer les deux séparément
+   class AnatomicalPreparer:
+       def __init__(self, config: TargetGenerationConfig, paths: PathsConfig) -> None:
+
+3. Mettre à jour run.py pour passer les sous-configs :
+   gen   = AnatomicalPreparer(config.target_generation, config.paths)
+   preproc = Preprocessor(config.preprocessing)
+   viz   = Visualizer(output_dir=results_dir, config=config.visualization)
+
+4. Analysis reste inchangé — ses params sont passés aux méthodes (.inter_subject_summary,
+   .assign_clusters…), pas au constructeur. Passer config.analysis directement aux appels
+   si besoin.
+
+### Règle à respecter
+Les classes métier importent les modèles Pydantic depuis _config.py,
+mais ne connaissent pas PipelineConfig (la config globale).
+Chaque classe ne voit que sa propre sous-section.
+
+# ============================================================
+
+
+# TODO original — outputs et nomenclature
+# ============================================================
 
 Il va falloir specifié les outputs fpath en fonction des parametres d'analyses sinon il va y avoir un probleme, actuellement il y a 4 niveaux :
 1/ quand la segmentation change il y a un nouveau "derivative_root" (sauf a changer completmeent le travail de Guillaume)

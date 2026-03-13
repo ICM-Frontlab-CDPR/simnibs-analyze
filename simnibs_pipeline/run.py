@@ -33,12 +33,12 @@ from _pipeline_io import (
     get_roi_mask_path,
     get_subject_paths,
     load_config,
-    normalize_space,
     space_tag,
     save_nifti,
     save_rows,
 )
 from _logging import get_logger
+from _config import PipelineConfig
 
 logger = get_logger(__name__)
 
@@ -49,7 +49,7 @@ def process_subject_condition(
     subject: str,
     condition: str,
     mode: str,
-    config: Dict,
+    config: PipelineConfig,
     skip_preprocessing: bool = False,
     space: str = SPACE_MNI,
 ) -> List[Dict]:
@@ -67,7 +67,7 @@ def process_subject_condition(
         Lignes de features extraites (une par fichier e-field trouvé).
     """
     results: List[Dict] = []
-    simnibs_output = Path(config["paths"]["simnibs_output"])
+    simnibs_output = config.paths.simnibs_output
     subject_paths = get_subject_paths(simnibs_output, subject)
     subject_dir = subject_paths["subject_dir"]
 
@@ -86,8 +86,6 @@ def process_subject_condition(
         logger.error(str(e))
         return results
 
-    preproc_params = config.get("preprocessing", {})
-
     for sim_dir in simulation_dirs:
         for efield_path in find_efield_files(sim_dir, mode, space=space):
             preproc_dir = get_preproc_dir(sim_dir, mode, space=space)
@@ -95,9 +93,9 @@ def process_subject_condition(
             paths = get_preproc_paths(preproc_dir, base_name)
 
             preproc_kwargs = dict(
-                smooth_fwhm=preproc_params.get("smooth_fwhm", 2.0),
-                outlier_method=preproc_params.get("outlier_method", "iqr"),
-                portion=preproc_params.get("portion", None),
+                smooth_fwhm=config.preprocessing.smooth_fwhm,
+                outlier_method=config.preprocessing.outlier_method,
+                portion=config.preprocessing.portion,
             )
 
             # ── Preprocessing INTRA-ROI ──────────────────────────────────
@@ -178,18 +176,17 @@ def process_subject_condition(
     return results
 
 
-def run_analysis(features_csv: Path, config: Dict, space: str) -> None:
+def run_analysis(features_csv: Path, config: PipelineConfig, space: str) -> None:
     """Analyse inter/intra-sujets et scatter plot simulation vs optimization."""
     logger.step("ANALYSE INTER/INTRA-SUJETS")
 
-    results_dir = Path(config["paths"]["results_dir"])
+    results_dir = config.paths.results_dir
     analysis_dir = get_analysis_dir(results_dir, space)
     analysis_dir.mkdir(parents=True, exist_ok=True)
 
-    ap = config.get("analysis", {})
-    metric = ap.get("metric", "mean")
-    subject_col = ap.get("subject_col", "subject")
-    condition_col = ap.get("condition_col", "condition")
+    metric = config.analysis.metric
+    subject_col = config.analysis.subject_col
+    condition_col = config.analysis.condition_col
 
     df = pd.read_csv(features_csv)
     logger.info(f"Chargement : {len(df)} lignes depuis {features_csv}")
@@ -202,7 +199,7 @@ def run_analysis(features_csv: Path, config: Dict, space: str) -> None:
 
     # Intra-sujet (paires simulation / optimization)
     conditions = set(df[condition_col].unique())
-    for cond in config["stim_conditions"]:
+    for cond in config.stim_conditions:
         sim_cond, opt_cond = f"{cond}_simulation", f"{cond}_optimization"
         if sim_cond not in conditions or opt_cond not in conditions:
             continue
@@ -222,10 +219,10 @@ def run_analysis(features_csv: Path, config: Dict, space: str) -> None:
             logger.warning(f"Analyse intra-sujet impossible pour {cond} : {e}")
 
     # Clustering
-    cl_params = ap.get("clustering", {})
-    cl_method = cl_params.get("method", "mean")
-    cl_threshold = float(cl_params.get("specificity_threshold", 1.5))
-    cl_intensity_col = cl_params.get("intensity_col", "mean")
+    cl_params = config.analysis.clustering
+    cl_method = cl_params.method
+    cl_threshold = cl_params.specificity_threshold
+    cl_intensity_col = cl_params.intensity_col
     ratio_col = f"efield_ratio_{cl_method}"
     if ratio_col in df.columns:
         try:
@@ -258,15 +255,15 @@ def run_analysis(features_csv: Path, config: Dict, space: str) -> None:
     logger.step("ANALYSE TERMINÉE")
 
 
-def run_viz(config: Dict, space: str) -> None:
+def run_viz(config: PipelineConfig, space: str) -> None:
     """Collecte les chemins (IO) puis génère toutes les visualisations."""
     logger.step("GÉNÉRATION DES VISUALISATIONS")
 
-    simnibs_output = Path(config["paths"]["simnibs_output"])
-    results_dir = Path(config["paths"]["results_dir"])
-    subjects: List[str] = config["subjects"]
-    conditions: List[str] = config["stim_conditions"]
-    modes: List[str] = config["mode"]
+    simnibs_output = config.paths.simnibs_output
+    results_dir = config.paths.results_dir
+    subjects: List[str] = config.subjects
+    conditions: List[str] = config.stim_conditions
+    modes: List[str] = config.mode
 
     viz = Visualizer(output_dir=results_dir, cmap="hot", threshold_percentile=50.0,
                      bins=50, camera_position="xy")
@@ -275,8 +272,7 @@ def run_viz(config: Dict, space: str) -> None:
     mni_target_dir = simnibs_output / "mni_target"
     mask_paths = sorted(mni_target_dir.glob("*_mask_space-mni.nii.gz"))
     if space == SPACE_MNI and mask_paths:
-        mni_tpl_path = config.get("paths", {}).get("mni_template")
-        mni_template = nib.load(str(mni_tpl_path)) if mni_tpl_path else None
+        mni_template = nib.load(str(config.paths.mni_template)) if config.paths.mni_template else None
         mask_imgs = [nib.load(str(p)) for p in mask_paths]
         roi_names = [p.name.replace("_mask_space-mni.nii.gz", "") for p in mask_paths]
         viz.visualize_roi_masks(mask_imgs, roi_names, mni_template)
@@ -357,20 +353,16 @@ def main(
     logger.step("DÉMARRAGE DU PIPELINE D'ANALYSE E-FIELD")
     logger.info(f"Config : {config_path}")
 
-    config = load_config(config_path)
-    try:
-        space = normalize_space(config.get("space", SPACE_MNI))
-    except ValueError as e:
-        logger.error(str(e))
-        return 1
+    config: PipelineConfig = load_config(config_path)
+    space = config.space
 
-    logger.info(f"Sujets     : {config['subjects']}")
-    logger.info(f"Conditions : {config['stim_conditions']}")
-    logger.info(f"Modes      : {config['mode']}")
+    logger.info(f"Sujets     : {config.subjects}")
+    logger.info(f"Conditions : {config.stim_conditions}")
+    logger.info(f"Modes      : {config.mode}")
     logger.info(f"Espace     : {space}")
 
-    results_dir = Path(config["paths"]["results_dir"])
-    simnibs_output = Path(config["paths"]["simnibs_output"])
+    results_dir = config.paths.results_dir
+    simnibs_output = config.paths.simnibs_output
 
     if results_dir.exists() and any(results_dir.iterdir()):
         logger.warning(f"Le dossier de sortie existe déjà : {results_dir}")
@@ -382,15 +374,12 @@ def main(
     results_dir.mkdir(parents=True, exist_ok=True)
 
     # ── Étape 0 : Setup targets (une fois, indépendant des sujets) ────────
-    rois: Dict = config.get("target_generation", {}).get("rois", {})
+    rois = config.target_generation.rois
     mni_target_dir = simnibs_output / "mni_target"
-    ref = config.get("paths", {}).get("mni_template")
-    mni_brain_mask = config.get("paths", {}).get("mni_brain_mask")
-    radius_mm = config.get("target_generation", {}).get("radius_mm", 10.0)
     gen = AnatomicalPreparer(
-        reference_img_path=Path(ref) if ref else None,
-        radius_mm=radius_mm,
-        mni_brain_mask_path=Path(mni_brain_mask) if mni_brain_mask else None,
+        reference_img_path=config.paths.mni_template,
+        radius_mm=config.target_generation.radius_mm,
+        mni_brain_mask_path=config.paths.mni_brain_mask,
     )
 
     if not skip_target_generation:
@@ -421,7 +410,7 @@ def main(
         
         logger.info(f"Computing in {space.upper()} space")
 
-        for subject in config["subjects"]:
+        for subject in config.subjects:
             logger.step(f"SUJET : {subject}")
             subject_paths = get_subject_paths(simnibs_output, subject)
             m2m_dir = subject_paths["m2m_dir"]
@@ -459,8 +448,8 @@ def main(
                 )
                 continue
             
-            for condition in config["stim_conditions"]:
-                for mode in config["mode"]:
+            for condition in config.stim_conditions:
+                for mode in config.mode:
                     logger.info(f"--- {subject} / {condition} / {mode} ---")
                     rows = process_subject_condition(
                         subject, condition, mode, config,

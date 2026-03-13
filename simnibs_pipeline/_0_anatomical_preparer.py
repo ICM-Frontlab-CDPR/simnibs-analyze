@@ -25,7 +25,7 @@ from nilearn import datasets, image
 from nilearn.image import new_img_like
 from scipy.ndimage import binary_fill_holes
 
-from _pipeline_io import load_config, save_nifti, get_t1_conform, get_brainmask, get_mni_tissues
+from _pipeline_io import save_nifti, get_t1_conform, get_brainmask, get_mni_tissues
 from _logging import get_logger
 
 logger = get_logger(__name__)
@@ -105,14 +105,14 @@ class AnatomicalPreparer:
         logger.info(f"Generating {len(rois)} ROI mask(s) → {output_dir}")
 
         for roi_name, roi_def in rois.items():
-            method = roi_def.get("method", "sphere")
+            method = roi_def.method
             if method == "sphere":
                 mask_img = self._create_sphere_mask(
-                    self._template, roi_def["coords"], self.radius_mm
+                    self._template, roi_def.coords, self.radius_mm
                 )
             elif method == "atlas":
                 mask_img = self._create_parcel_mask(
-                    self._template, roi_def["atlas"], roi_def["regions"]
+                    self._template, roi_def.atlas, roi_def.regions
                 )
             else:
                 raise ValueError(
@@ -474,21 +474,18 @@ def _parse_args(argv=None):
 def main(argv=None) -> int:
     args = _parse_args(argv)
 
-    config = load_config(args.config)
-    rois: Dict[str, dict] = config.get("target_generation", {}).get("rois", {})
+    from _config import load_and_validate
+    cfg = load_and_validate(args.config)
+    rois = cfg.target_generation.rois
     if not rois:
         logger.error("No 'target_generation.rois' section found in config — nothing to generate.")
         return 1
 
-    ref_path = config.get("paths", {}).get("mni_template")
-    output_dir = args.output or (
-        Path(config["paths"]["simnibs_output"]) / "mni_target"
-    )
-    radius_mm = config.get("target_generation", {}).get("radius_mm", 10.0)
+    output_dir = args.output or (cfg.paths.simnibs_output / "mni_target")
 
     AnatomicalPreparer(
-        reference_img_path=Path(ref_path) if ref_path else None,
-        radius_mm=radius_mm,
+        reference_img_path=cfg.paths.mni_template,
+        radius_mm=cfg.target_generation.radius_mm,
     ).setup_mni_rois(rois, output_dir)
 
     return 0

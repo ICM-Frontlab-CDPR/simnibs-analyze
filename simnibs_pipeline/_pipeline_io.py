@@ -71,15 +71,10 @@ def get_clusters_csv_path(results_dir: Path, space: str) -> Path:
     return get_analysis_dir(results_dir, space) / f"clusters_{space_tag(space)}.csv"
 
 
-def load_config(config_path: Path) -> Dict:
-    """Charge et valide le fichier de configuration YAML.
-
-    Valide la structure via les modèles Pydantic définis dans ``_config.py``.
-    Retourne un dict (compatibilité avec les appelants existants).
-    """
+def load_config(config_path: Path) -> "PipelineConfig":
+    """Charge et valide le fichier de configuration YAML via les modèles Pydantic."""
     from _config import load_and_validate
-    cfg = load_and_validate(config_path)
-    return cfg.model_dump()
+    return load_and_validate(config_path)
 
 
 def find_raw_efield(

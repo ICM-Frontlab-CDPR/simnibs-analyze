@@ -241,6 +241,8 @@ class AnatomicalPreparer:
         nib.Nifti1Image
             Binary mask in ``template_img`` space.
         """
+        import urllib3
+        from requests.adapters import HTTPAdapter
         from nilearn import datasets as nl_datasets
 
         if isinstance(region_names, str):
@@ -256,8 +258,16 @@ class AnatomicalPreparer:
                 f"Atlas '{atlas_name}' not supported. Available: {list(_FETCHERS)}"
             )
 
-        atlas_data = _FETCHERS[atlas_name]()
-        atlas_img = nib.load(atlas_data.maps)
+        # Disable SSL verification for atlas downloads (macOS cert issue).
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        _orig_send = HTTPAdapter.send
+        HTTPAdapter.send = lambda self, *a, **kw: _orig_send(self, *a, **{**kw, "verify": False})
+        try:
+            atlas_data = _FETCHERS[atlas_name]()
+        finally:
+            HTTPAdapter.send = _orig_send
+        maps = atlas_data.maps
+        atlas_img = maps if isinstance(maps, nib.Nifti1Image) else nib.load(maps)
         raw_labels = list(atlas_data.labels)
 
         # AAL provides a separate `indices` list; other atlases use positional indices.

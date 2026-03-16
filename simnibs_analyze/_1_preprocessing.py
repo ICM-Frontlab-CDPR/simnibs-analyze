@@ -174,15 +174,17 @@ def _parse_args(argv: Iterable[str] | None = None):
     parser.add_argument("--outlier-method", choices=["iqr", "z"], default="iqr")
     parser.add_argument("--portion", type=float, default=None,
                         help="Central portion to keep (e.g., 0.95)")
+    parser.add_argument("--if-exists", choices=["overwrite", "skip", "error"], default="overwrite")
     return parser.parse_args(argv)
 
 
 def main(argv: Iterable[str] | None = None) -> int:
     from _pipeline_io import save_nifti
     args = _parse_args(argv)
+    out = Path(args.out)
     preproc = Preprocessor(
         smooth_fwhm=args.smooth_fwhm,
         outlier_method=args.outlier_method,
         portion=args.portion,
     ).run(args.efield, args.roi)
-    save_nifti(preproc.cleaned_img, Path(args.out))
+    save_nifti(preproc.cleaned_img, out, if_exists=args.if_exists)

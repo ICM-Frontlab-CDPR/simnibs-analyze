@@ -21,6 +21,7 @@ from _4_viz import Visualizer
 from _pipeline_io import (
     SPACE_MNI,
     SPACE_NATIVE,
+    check_output,
     find_efield_files,
     find_simulation_dirs,
     get_analysis_dir,
@@ -33,9 +34,10 @@ from _pipeline_io import (
     get_roi_mask_path,
     get_subject_paths,
     load_config,
-    space_tag,
+    save_dataframe,
     save_nifti,
     save_rows,
+    space_tag,
 )
 from _logging import get_logger
 from _config import PipelineConfig
@@ -52,6 +54,7 @@ def process_subject_condition(
     config: PipelineConfig,
     skip_preprocessing: bool = False,
     space: str = SPACE_MNI,
+    if_exists: str = "overwrite",
 ) -> List[Dict]:
     """
     Préprocesse et extrait les features de tous les e-fields pour un sujet/condition/mode.
@@ -106,7 +109,21 @@ def process_subject_condition(
                 logger.info(f"Utilisation fichier existant : {paths['intra_cleaned'].name}")
             else:
                 if paths["intra_cleaned"].exists() and paths["intra_masked"].exists():
-                    logger.info(f"Déjà preprocessé, skip : {paths['intra_cleaned'].name}")
+                    if if_exists == "skip":
+                        logger.info(f"Déjà preprocessé, skip : {paths['intra_cleaned'].name}")
+                        pass  # will fall through to feature extraction below
+                    elif if_exists == "error":
+                        logger.error(f"Output exists (if_exists='error'): {paths['intra_cleaned'].name}")
+                        return []
+                    else:
+                        try:
+                            preproc = Preprocessor(**preproc_kwargs).run(efield_path, roi_mask_path)
+                            save_nifti(preproc.masked_img, paths["intra_masked"])
+                            save_nifti(preproc.cleaned_img, paths["intra_cleaned"])
+                            logger.info(f"✓ Preprocessing intra-ROI : {paths['intra_cleaned'].name}")
+                        except Exception as e:
+                            logger.error(f"✗ Preprocessing intra-ROI échoué ({efield_path.name}) : {e}")
+                            continue
                 else:
                     try:
                         preproc = Preprocessor(**preproc_kwargs).run(efield_path, roi_mask_path)
@@ -124,7 +141,22 @@ def process_subject_condition(
                     continue
             else:
                 if paths["extra_cleaned"].exists() and paths["extra_masked"].exists():
-                    logger.info(f"Déjà preprocessé, skip : {paths['extra_cleaned'].name}")
+                    if if_exists == "skip":
+                        logger.info(f"Déjà preprocessé, skip : {paths['extra_cleaned'].name}")
+                        pass
+                    elif if_exists == "error":
+                        logger.error(f"Output exists (if_exists='error'): {paths['extra_cleaned'].name}")
+                        return []
+                    else:
+                        try:
+                            extra_mask = Preprocessor.build_extra_mask(roi_mask_path)
+                            extra_masked_img = Preprocessor(**preproc_kwargs).run(efield_path, extra_mask).masked_img
+                            save_nifti(extra_masked_img, paths["extra_masked"])
+                            save_nifti(extra_masked_img, paths["extra_cleaned"])  # cleaned = masked
+                            logger.info(f"✓ Preprocessing extra-ROI : {paths['extra_masked'].name}")
+                        except Exception as e:
+                            logger.error(f"✗ Preprocessing extra-ROI échoué ({efield_path.name}) : {e}")
+                            continue
                 else:
                     try:
                         extra_mask = Preprocessor.build_extra_mask(roi_mask_path)
@@ -176,7 +208,7 @@ def process_subject_condition(
     return results
 
 
-def run_analysis(features_csv: Path, config: PipelineConfig, space: str) -> None:
+def run_analysis(features_csv: Path, config: PipelineConfig, space: str, if_exists: str = "overwrite") -> None:
     """Analyse inter/intra-sujets et scatter plot simulation vs optimization."""
     logger.step("ANALYSE INTER/INTRA-SUJETS")
 
@@ -194,8 +226,9 @@ def run_analysis(features_csv: Path, config: PipelineConfig, space: str) -> None
     # Inter-sujet
     inter = Analysis(df).inter_subject_summary(metric=metric, condition_col=condition_col)
     inter_csv = get_inter_subject_summary_csv_path(results_dir, space)
-    inter.to_csv(inter_csv, index=False)
-    logger.info(f"✓ Résumé inter-sujet : {inter_csv}")
+    if check_output(inter_csv, if_exists):
+        save_dataframe(inter, inter_csv, index=False)
+        logger.info(f"✓ Résumé inter-sujet : {inter_csv}")
 
     # Intra-sujet (paires simulation / optimization)
     conditions = set(df[condition_col].unique())
@@ -213,8 +246,9 @@ def run_analysis(features_csv: Path, config: PipelineConfig, space: str) -> None
                 cond_b=opt_cond,
             )
             diff_csv = get_intra_subject_diff_csv_path(results_dir, space, cond)
-            diff_df.to_csv(diff_csv, index=False)
-            logger.info(f"✓ Diff intra-sujet : {diff_csv}")
+            if check_output(diff_csv, if_exists):
+                save_dataframe(diff_df, diff_csv, index=False)
+                logger.info(f"✓ Diff intra-sujet : {diff_csv}")
         except Exception as e:
             logger.warning(f"Analyse intra-sujet impossible pour {cond} : {e}")
 
@@ -234,8 +268,9 @@ def run_analysis(features_csv: Path, config: PipelineConfig, space: str) -> None
             # clusters.csv conserve toutes les colonnes originales (efield_path, subject,
             # condition, stats…) + cluster — le lien avec les e-fields est donc direct.
             clusters_csv = get_clusters_csv_path(results_dir, space)
-            clustered_df.to_csv(clusters_csv, index=False)
-            logger.info(f"✓ Clusters sauvegardés : {clusters_csv}")
+            if check_output(clusters_csv, if_exists):
+                save_dataframe(clustered_df, clusters_csv, index=False)
+                logger.info(f"✓ Clusters sauvegardés : {clusters_csv}")
             dist = clustered_df["cluster"].value_counts().to_dict()
             logger.info(f"  Distribution : {dist}")
         except Exception as e:
@@ -247,7 +282,7 @@ def run_analysis(features_csv: Path, config: PipelineConfig, space: str) -> None
         )
 
     # Scatter simulation vs optimization
-    Visualizer(analysis_dir).plot_simulation_vs_optimization(
+    Visualizer(analysis_dir, if_exists=if_exists).plot_simulation_vs_optimization(
         df, metric=metric, subject_col=subject_col, condition_col=condition_col,
         output_tag=space,
     )
@@ -255,7 +290,7 @@ def run_analysis(features_csv: Path, config: PipelineConfig, space: str) -> None
     logger.step("ANALYSE TERMINÉE")
 
 
-def run_viz(config: PipelineConfig, space: str) -> None:
+def run_viz(config: PipelineConfig, space: str, if_exists: str = "overwrite") -> None:
     """Collecte les chemins (IO) puis génère toutes les visualisations."""
     logger.step("GÉNÉRATION DES VISUALISATIONS")
 
@@ -266,7 +301,7 @@ def run_viz(config: PipelineConfig, space: str) -> None:
     modes: List[str] = config.mode
 
     viz = Visualizer(output_dir=results_dir, cmap="hot", threshold_percentile=50.0,
-                     bins=50, camera_position="xy")
+                     bins=50, camera_position="xy", if_exists=if_exists)
 
     # ── Masques ROI ─────────────────────────────────────────────────────
     mni_target_dir = simnibs_output / "mni_target"
@@ -364,12 +399,8 @@ def main(
     results_dir = config.paths.results_dir
     simnibs_output = config.paths.simnibs_output
 
-    if results_dir.exists() and any(results_dir.iterdir()):
-        logger.warning(f"Le dossier de sortie existe déjà : {results_dir}")
-        response = input("Continuer et écraser les fichiers existants ? (o/N) : ")
-        if response.lower() not in ("o", "oui", "y", "yes"):
-            logger.info("Annulé par l'utilisateur")
-            return 0
+    if_exists = config.running.if_exists
+    logger.info(f"if_exists = '{if_exists}'")
 
     results_dir.mkdir(parents=True, exist_ok=True)
 
@@ -384,11 +415,15 @@ def main(
 
     if not skip_target_generation:
         logger.step("ÉTAPE 0 : GÉNÉRATION DES MASQUES ROI MNI")
-        if all((mni_target_dir / f"{roi}_mask_space-mni.nii.gz").exists() for roi in rois):
-            logger.info(f"✓ Masques ROI déjà présents dans {mni_target_dir}")
+        existing_masks = all((mni_target_dir / f"{roi}_mask_space-mni.nii.gz").exists() for roi in rois)
+        if existing_masks and if_exists == "skip":
+            logger.info(f"✓ Masques ROI déjà présents, skip : {mni_target_dir}")
+        elif existing_masks and if_exists == "error":
+            logger.error(f"Masques ROI déjà présents dans {mni_target_dir} (if_exists='error')")
+            return 1
         else:
             try:
-                gen.setup_mni_rois(rois, mni_target_dir)
+                gen.setup_mni_rois(rois, mni_target_dir, if_exists=if_exists)
             except Exception as e:
                 logger.error(f"✗ Target generation échouée : {e}")
                 return 1
@@ -436,7 +471,7 @@ def main(
                 if space == SPACE_NATIVE:
                     logger.info("Generating native-space ROI masks...")
                     try:
-                        gen.create_subject_roi_from_mni(m2m_dir, subject_target_dir)
+                        gen.create_subject_roi_from_mni(m2m_dir, subject_target_dir, if_exists=if_exists)
                         logger.info(f"✓ Native-space ROI masks generated for {subject}")
                     except Exception as e:
                         logger.warning(f"Native-space ROI generation failed: {e}")
@@ -455,6 +490,7 @@ def main(
                         subject, condition, mode, config,
                         skip_preprocessing=skip_preprocessing,
                         space=space,
+                        if_exists=if_exists,
                     )
                     stats["total"] += 1
                     if rows:
@@ -468,19 +504,22 @@ def main(
             return 1
 
         analysis_dir.mkdir(parents=True, exist_ok=True)
+        if features_csv.exists() and if_exists == "error":
+            logger.error(f"{features_csv.name} existe déjà (if_exists='error')")
+            return 1
         save_rows(all_features, features_csv)
         logger.info(f"✓ {len(all_features)} features sauvegardées → {features_csv}")
         logger.info(f"  Succès : {stats['success']}/{stats['total']}, échecs : {stats['failed']}")
 
     # ── Étape 3 : Analyse ────────────────────────────────────────────────
     if not skip_analysis:
-        run_analysis(features_csv, config, space=space)
+        run_analysis(features_csv, config, space=space, if_exists=if_exists)
     else:
         logger.info("Analyse skippée")
 
     # ── Étape 4 : Visualisations ─────────────────────────────────────────
     if not skip_viz:
-        run_viz(config, space=space)
+        run_viz(config, space=space, if_exists=if_exists)
     else:
         logger.info("Visualisations skippées")
 

@@ -11,7 +11,7 @@ from typing import Iterable
 import numpy as np
 import pandas as pd
 
-from _pipeline_io import load_csvs
+from _pipeline_io import load_csvs, check_output, save_dataframe
 
 
 class Analysis:
@@ -129,6 +129,7 @@ def _parse_args(argv: Iterable[str] | None = None):
     parser.add_argument("--condition-col", default="condition")
     parser.add_argument("--cond-a", default="simu")
     parser.add_argument("--cond-b", default="opti")
+    parser.add_argument("--if-exists", choices=["overwrite", "skip", "error"], default="overwrite")
     return parser.parse_args(argv)
 
 
@@ -140,7 +141,8 @@ def main(argv: Iterable[str] | None = None) -> int:
     inter = analysis.inter_subject_summary(metric=args.metric, condition_col=args.condition_col)
     inter_csv = out_dir / "inter_subject_summary.csv"
     inter_csv.parent.mkdir(parents=True, exist_ok=True)
-    inter.to_csv(inter_csv, index=False)
+    if check_output(inter_csv, args.if_exists):
+        save_dataframe(inter, inter_csv, index=False)
 
     diff_df = analysis.intra_subject_diff(
         metric=args.metric,
@@ -150,7 +152,8 @@ def main(argv: Iterable[str] | None = None) -> int:
         cond_b=args.cond_b,
     )
     diff_csv = out_dir / "intra_subject_diff.csv"
-    diff_df.to_csv(diff_csv, index=False)
+    if check_output(diff_csv, args.if_exists):
+        save_dataframe(diff_df, diff_csv, index=False)
 
     return 0
 

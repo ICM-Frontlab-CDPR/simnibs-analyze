@@ -74,6 +74,10 @@ class AnalysisConfig(BaseModel):
     clustering: ClusteringConfig = ClusteringConfig()
 
 
+class RunningConfig(BaseModel):
+    if_exists: Literal["skip", "overwrite", "error"] = "skip"
+
+
 # ---------------------------------------------------------------------------
 # Root model
 # ---------------------------------------------------------------------------
@@ -83,6 +87,7 @@ class PipelineConfig(BaseModel):
     stim_conditions: list[str]
     mode: list[Literal["simulation", "optimization"]]
     space: Literal["mni", "native"] = "mni"
+    running: RunningConfig = RunningConfig()
     target_generation: TargetGenerationConfig
     paths: PathsConfig
     preprocessing: PreprocessingConfig = PreprocessingConfig()
@@ -91,13 +96,14 @@ class PipelineConfig(BaseModel):
 
     @model_validator(mode="after")
     def _stim_conditions_match_rois(self) -> "PipelineConfig":
-        """Warn if a stim_condition has no matching ROI name."""
+        """Every stim_condition must have a matching ROI key (used to find the mask file)."""
         roi_names = set(self.target_generation.rois)
-        unknown = [c for c in self.stim_conditions if c not in roi_names]
-        if unknown:
-            # Not a hard error — conditions and ROI names don't have to be identical
-            # (e.g. condition 'fef' matches ROI 'fef', but you can have extra ROIs).
-            pass
+        missing = [c for c in self.stim_conditions if c not in roi_names]
+        if missing:
+            raise ValueError(
+                f"stim_conditions {missing} have no matching entry in target_generation.rois. "
+                f"Available ROI keys: {sorted(roi_names)}"
+            )
         return self
 
 

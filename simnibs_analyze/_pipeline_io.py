@@ -435,9 +435,35 @@ def validate_binary(data: np.ndarray, name: str = "mask") -> None:
         )
 
 
-def save_nifti(img: nib.spatialimages.SpatialImage, output_path: Path) -> None:
+def check_output(path: Path, if_exists: str = "overwrite") -> bool:
+    """Return True if the file should be written, False if it should be skipped.
+
+    Parameters
+    ----------
+    path : Path
+        Target output path.
+    if_exists : str
+        ``'overwrite'`` — always write (default).
+        ``'skip'``      — silently skip if file exists.
+        ``'error'``     — raise FileExistsError if file exists.
+    """
+    path = Path(path)
+    if path.exists():
+        if if_exists == "skip":
+            logger.debug(f"  skip (exists): {path.name}")
+            return False
+        elif if_exists == "error":
+            raise FileExistsError(
+                f"Output already exists (if_exists='error'): {path}"
+            )
+    return True
+
+
+def save_nifti(img: nib.spatialimages.SpatialImage, output_path: Path, if_exists: str = "overwrite") -> None:
     """Save a NIfTI image to disk, creating parent directories as needed."""
     output_path = Path(output_path)
+    if not check_output(output_path, if_exists):
+        return
     output_path.parent.mkdir(parents=True, exist_ok=True)
     img.to_filename(str(output_path))
 
@@ -459,7 +485,7 @@ def load_csvs(csv_paths: Iterable[Path]) -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True)
 
 
-def save_rows(rows: List[Dict], out_csv: Path) -> None:
+def save_rows(rows: List[Dict], out_csv: Path, if_exists: str = "overwrite") -> None:
     """Save a list of row dicts to a CSV file, creating parent directories as needed.
 
     Parameters
@@ -468,7 +494,48 @@ def save_rows(rows: List[Dict], out_csv: Path) -> None:
         List of dicts, each representing one row (e.g. feature extraction output).
     out_csv :
         Destination CSV path.
+    if_exists :
+        ``'overwrite'`` (default), ``'skip'``, or ``'error'``.
     """
     out_csv = Path(out_csv)
+    if not check_output(out_csv, if_exists):
+        return
     out_csv.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(rows).to_csv(out_csv, index=False)
+
+
+def save_dataframe(df: pd.DataFrame, out_path: Path, if_exists: str = "overwrite", **to_csv_kwargs) -> None:
+    """Save a DataFrame to CSV, creating parent directories as needed."""
+    out_path = Path(out_path)
+    if not check_output(out_path, if_exists):
+        return
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(out_path, **to_csv_kwargs)
+
+
+def save_ants_image(img: "ants.ANTsImage", out_path: Path, if_exists: str = "overwrite") -> None:
+    """Save an ANTsPy image to disk, creating parent directories as needed."""
+    import ants
+    out_path = Path(out_path)
+    if not check_output(out_path, if_exists):
+        return
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    ants.image_write(img, str(out_path))
+
+
+def save_figure(out_path: Path, if_exists: str = "overwrite", **savefig_kwargs) -> bool:
+    """Save the current matplotlib figure to disk.
+
+    Returns True if the figure was saved, False if skipped.
+    Closes the figure in both cases.
+    """
+    import matplotlib.pyplot as plt
+    out_path = Path(out_path)
+    if not check_output(out_path, if_exists):
+        logger.debug(f"  skip figure (exists): {out_path.name}")
+        plt.close()
+        return False
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(out_path, **savefig_kwargs)
+    plt.close()
+    return True

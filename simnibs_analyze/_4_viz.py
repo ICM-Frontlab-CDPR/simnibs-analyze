@@ -11,7 +11,7 @@ import pyvista as pv
 from nilearn import plotting, image as nl_image
 
 from _logging import get_logger
-from _pipeline_io import space_tag
+from _pipeline_io import space_tag, check_output, save_figure
 
 logger = get_logger(__name__)
 
@@ -45,12 +45,14 @@ class Visualizer:
         threshold_percentile: float = 50.0,
         bins: int = 50,
         camera_position: str = "xy",
+        if_exists: str = "overwrite",
     ) -> None:
         self.output_dir = Path(output_dir)
         self.cmap = cmap
         self.threshold_percentile = threshold_percentile
         self.bins = bins
         self.camera_position = camera_position
+        self.if_exists = if_exists
 
     # ------------------------------------------------------------------
     # Private rendering helper
@@ -227,8 +229,7 @@ class Visualizer:
             fig.suptitle(f"{roi} – {mode} ({space.upper()})", fontsize=16, fontweight="bold")
             plt.tight_layout()
             out_path = output_dir / f"efields_3d_{roi}_{mode}_{tag}_{self.camera_position}.png"
-            plt.savefig(out_path, dpi=300, bbox_inches="tight")
-            plt.close()
+            save_figure(out_path, if_exists=self.if_exists, dpi=300, bbox_inches="tight")
             logger.info(f"  Sauvegardé : {out_path}")
 
         logger.info(f"Toutes les figures 3D dans {output_dir}")
@@ -306,8 +307,7 @@ class Visualizer:
             )
             plt.tight_layout()
             out_path = output_dir / f"efields_histograms_{subject}_{region}_{tag}.png"
-            plt.savefig(out_path, dpi=300, bbox_inches="tight")
-            plt.close()
+            save_figure(out_path, if_exists=self.if_exists, dpi=300, bbox_inches="tight")
             logger.info(f"  Sauvegardé : {out_path}")
 
         logger.info(f"Tous les histogrammes dans {output_dir}")
@@ -346,8 +346,7 @@ class Visualizer:
                 figure=fig,
             )
             out_path = output_dir / f"{roi_name}_mask_visualization.png"
-            plt.savefig(out_path, dpi=150, bbox_inches="tight")
-            plt.close()
+            save_figure(out_path, if_exists=self.if_exists, dpi=150, bbox_inches="tight")
             logger.info(f"  Sauvegardé : {out_path}")
 
         if len(mask_imgs) > 1:
@@ -385,8 +384,7 @@ class Visualizer:
 
             out_path = output_dir / "all_masks_combined.png"
             plt.tight_layout()
-            plt.savefig(out_path, dpi=150, bbox_inches="tight")
-            plt.close()
+            save_figure(out_path, if_exists=self.if_exists, dpi=150, bbox_inches="tight")
             logger.info(f"  Vue combinée sauvegardée : {out_path}")
 
         logger.info(f"Toutes les visualisations de masques dans {output_dir}")
@@ -470,6 +468,5 @@ class Visualizer:
         tagged = space_tag(output_tag) if output_tag else ""
         suffix = f"_{tagged}" if tagged else ""
         out_path = output_dir / f"simulation_vs_optimization{suffix}.png"
-        plt.savefig(out_path, dpi=150, bbox_inches="tight")
-        plt.close()
+        save_figure(out_path, if_exists=self.if_exists, dpi=150, bbox_inches="tight")
         logger.info(f"Sauvegardé : {out_path}")

@@ -25,7 +25,7 @@ from nilearn import datasets, image
 from nilearn.image import new_img_like
 from scipy.ndimage import binary_fill_holes
 
-from _pipeline_io import save_nifti, get_t1_conform, get_brainmask, get_mni_tissues
+from _pipeline_io import save_nifti, save_ants_image, check_output, get_t1_conform, get_brainmask, get_mni_tissues
 from _logging import get_logger
 
 logger = get_logger(__name__)
@@ -70,6 +70,7 @@ class AnatomicalPreparer:
         self,
         rois: Dict[str, dict],
         output_dir: Path,
+        if_exists: str = "overwrite",
     ) -> "AnatomicalPreparer":
         """
         Create and save one binary mask per ROI in MNI space.
@@ -120,7 +121,7 @@ class AnatomicalPreparer:
                     "Expected 'sphere' or 'atlas'."
                 )
             out_path = output_dir / f"{roi_name}_mask_space-mni.nii.gz"
-            save_nifti(mask_img, out_path)
+            save_nifti(mask_img, out_path, if_exists=if_exists)
             self.mask_imgs[roi_name] = mask_img
             logger.info(f"  ✓ {roi_name} [{method}]: {out_path.name}")
 
@@ -308,6 +309,7 @@ class AnatomicalPreparer:
         self,
         m2m_dir: Path,
         output_dir: Path,
+        if_exists: str = "overwrite",
     ) -> Dict[str, Path]:
         """
         Warp MNI ROI masks to subject space using ANTsPy.
@@ -381,9 +383,11 @@ class AnatomicalPreparer:
             )
 
             subject_mask_path = output_dir / f"{roi_name}_mask_space-native.nii.gz"
-            ants.image_write(warped, str(subject_mask_path))
-
-            logger.info(f"  ✓ {roi_name} warped → {subject_mask_path.name}")
+            if check_output(subject_mask_path, if_exists):
+                save_ants_image(warped, subject_mask_path)
+                logger.info(f"  ✓ {roi_name} warped → {subject_mask_path.name}")
+            else:
+                logger.info(f"  skip {roi_name} (exists): {subject_mask_path.name}")
             subject_roi_paths[roi_name] = subject_mask_path
 
         return subject_roi_paths
@@ -450,8 +454,7 @@ class AnatomicalPreparer:
             stem = t1_path.name.replace(".nii.gz", "").replace(".nii", "")
             out_path = t1_path.parent / f"{stem}_brain.nii.gz"
         out_path = Path(out_path)
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        nib.save(stripped_img, str(out_path))
+        save_nifti(stripped_img, out_path)
         logger.info(f"Skull-stripped T1 saved → {out_path}")
         return out_path
     

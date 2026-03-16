@@ -13,7 +13,7 @@ import nibabel as nib
 import pandas as pd
 from nilearn.image import resample_to_img
 
-from _pipeline_io import load_img, validate_binary, save_rows
+from _pipeline_io import load_img, validate_binary, save_rows, check_output
 
 
 class FeatureExtractor:
@@ -198,6 +198,7 @@ def _parse_args(argv: Iterable[str] | None = None):
     parser.add_argument("--out", required=True, help="Output CSV path")
     parser.add_argument("--subject", default=None, help="Subject ID")
     parser.add_argument("--condition", default=None, help="Condition label (e.g., simu/opti)")
+    parser.add_argument("--if-exists", choices=["overwrite", "skip", "error"], default="overwrite")
     return parser.parse_args(argv)
 
 
@@ -210,7 +211,7 @@ def main(argv: Iterable[str] | None = None) -> int:
         extractor.run(Path(efield), roi_path, args.subject, args.condition)
         if extractor.row is not None:
             rows.append(extractor.row)
-    save_rows(rows, Path(args.out))
+    save_rows(rows, Path(args.out), if_exists=args.if_exists)
     return 0
 
 

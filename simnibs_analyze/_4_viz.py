@@ -439,6 +439,12 @@ class Visualizer:
             ).dropna()
 
             if pivot.empty or "simulation" not in pivot.columns or "optimization" not in pivot.columns:
+                missing = [c for c in ("simulation", "optimization") if c not in pivot.columns]
+                logger.warning(
+                    f"plot_simulation_vs_optimization: ROI '{roi}' ignorée — "
+                    f"données manquantes : {missing}. "
+                    "Assurez-vous que mode: [simulation, optimization] est configuré."
+                )
                 continue
 
             ax = axes[i]

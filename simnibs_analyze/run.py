@@ -78,7 +78,10 @@ def process_subject_condition(
         logger.warning(f"Répertoire sujet introuvable : {subject_dir}")
         return results
 
-    simulation_dirs = find_simulation_dirs(subject_dir, condition, mode)
+    simulation_dirs = find_simulation_dirs(
+        subject_dir, condition, mode,
+        folder_pattern=config.target_generation.rois[condition].folder_pattern,
+    )
     if not simulation_dirs:
         logger.warning(f"Aucune simulation trouvée pour {subject}/{condition}/{mode}")
         return results
@@ -93,7 +96,7 @@ def process_subject_condition(
         for efield_path in find_efield_files(sim_dir, mode, space=space):
             preproc_dir = get_preproc_dir(sim_dir, mode, space=space)
             base_name = efield_path.stem.replace(".nii", "")
-            paths = get_preproc_paths(preproc_dir, base_name)
+            paths = get_preproc_paths(preproc_dir, base_name, condition)
 
             preproc_kwargs = dict(
                 smooth_fwhm=config.preprocessing.smooth_fwhm,
@@ -331,7 +334,10 @@ def run_viz(config: PipelineConfig, space: str, if_exists: str = "overwrite") ->
         for condition in conditions:
             for subject in subjects:
                 subject_paths = get_subject_paths(simnibs_output, subject)
-                sim_dirs = find_simulation_dirs(subject_paths["subject_dir"], condition, mode)
+                sim_dirs = find_simulation_dirs(
+                    subject_paths["subject_dir"], condition, mode,
+                    folder_pattern=config.target_generation.rois[condition].folder_pattern,
+                )
                 if not sim_dirs:
                     continue
                 efields = find_efield_files(sim_dirs[0], mode, space=space)
@@ -352,13 +358,16 @@ def run_viz(config: PipelineConfig, space: str, if_exists: str = "overwrite") ->
         for mode in modes:
             for condition in conditions:
                 subject_paths = get_subject_paths(simnibs_output, subject)
-                sim_dirs = find_simulation_dirs(subject_paths["subject_dir"], condition, mode)
+                sim_dirs = find_simulation_dirs(
+                    subject_paths["subject_dir"], condition, mode,
+                    folder_pattern=config.target_generation.rois[condition].folder_pattern,
+                )
                 if not sim_dirs:
                     continue
                 preproc_dir = get_preproc_dir(sim_dirs[0], mode, space=space)
                 for efield_path in find_efield_files(sim_dirs[0], mode, space=space):
                     base_name = efield_path.stem.replace(".nii", "")
-                    p = get_preproc_paths(preproc_dir, base_name)
+                    p = get_preproc_paths(preproc_dir, base_name, condition)
                     if p["intra_masked"].exists() and p["intra_cleaned"].exists():
                         intra_data.setdefault(subject, []).append(
                             (condition, mode, p["intra_masked"], p["intra_cleaned"])
@@ -465,7 +474,7 @@ def main(
             
             if not skip_target_generation and m2m_dir.exists():
                 # Always generate T1 skull-stripped in both spaces
-                gen.run(m2m_dir, subject_target_dir)
+                gen.run(m2m_dir, subject_target_dir, if_exists=if_exists)
                 
                 # If working in native space, generate native-space ROI masks
                 if space == SPACE_NATIVE:

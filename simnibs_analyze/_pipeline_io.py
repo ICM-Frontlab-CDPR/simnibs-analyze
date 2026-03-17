@@ -20,6 +20,61 @@ SPACE_MNI = "mni"
 SPACE_NATIVE = "native"
 
 
+# ---------------------------------------------------------------------------
+# Output naming context
+# ---------------------------------------------------------------------------
+
+class OutputContext:
+    """
+    Regroupe tous les paramètres nécessaires pour construire les noms de
+    fichiers de sortie du pipeline.  À instancier dans la boucle principale
+    (run.py) et à passer aux fonctions de save / get_*_path.
+
+    Paramètres
+    ----------
+    subject : str
+        Identifiant du sujet (ex: '0008').
+    condition : str
+        Nom de la ROI / condition de stimulation (ex: 'fef', 'ips-left').
+        Utilisé dans les noms de fichiers preprocessés et de masques.
+    mode : str
+        'simulation' ou 'optimization'.
+    space : str
+        'mni' ou 'native'.
+    roi_name : str
+        Clé ROI telle que définie dans config.yaml → target_generation.rois.
+        En général identique à *condition* ; utile si on veut distinguer la
+        clé config du nom de fichier.
+    base_name : str or None
+        Stem du fichier e-field source (ex: 'sub-0008_scalar_MNI_magnE').
+        Nécessaire pour get_preproc_paths.  Renseigné après find_efield_files.
+    results_dir : Path or None
+        Répertoire racine des résultats (config.paths.results_dir).
+    simnibs_output : Path or None
+        Répertoire racine des sorties SimNIBS (config.paths.simnibs_output).
+    """
+
+    def __init__(
+        self,
+        subject: str = "",
+        condition: str = "",
+        mode: str = "",
+        space: str = SPACE_MNI,
+        roi_name: str = "",
+        base_name: str = "",
+        results_dir: Optional[Path] = None,
+        simnibs_output: Optional[Path] = None,
+    ) -> None:
+        self.subject = subject
+        self.condition = condition
+        self.mode = mode
+        self.space = space
+        self.roi_name = roi_name or condition   # default: same as condition
+        self.base_name = base_name
+        self.results_dir = results_dir
+        self.simnibs_output = simnibs_output
+
+
 def normalize_space(space: str) -> str:
     """Normalize and validate the working space value."""
     normalized = str(space).lower().strip()
@@ -46,8 +101,7 @@ def get_subject_paths(simnibs_output_dir: Path, subject: str) -> Dict[str, Path]
 
 
 def get_analysis_dir(results_dir: Path, space: str) -> Path:
-    """Return the shared analysis output directory (space encoded in filenames)."""
-    _ = normalize_space(space)
+    """Return the shared analysis output directory."""
     return Path(results_dir) / "analysis"
 
 
@@ -135,7 +189,7 @@ def find_raw_efield(
     return efield_files[0] if efield_files else None
 
 
-def find_simulation_dirs(subject_dir: Path, condition: str, mode: str) -> List[Path]:
+def find_simulation_dirs(subject_dir: Path, condition: str, mode: str, folder_pattern: str | None = None) -> List[Path]:
     """
     Trouve tous les répertoires de simulation/optimization pour une condition donnée.
     Gère les hashes dans les noms de dossiers.
@@ -145,16 +199,22 @@ def find_simulation_dirs(subject_dir: Path, condition: str, mode: str) -> List[P
     subject_dir : Path
         Répertoire du sujet (ex: 001-CC)
     condition : str
-        Condition de stimulation (ex: fef, ips_left, ips_right)
+        Condition de stimulation (ex: fef, ips-left).
+        Utilisé comme fragment de recherche si *folder_pattern* n'est pas fourni.
     mode : str
         Mode (simulation ou optimization)
+    folder_pattern : str or None
+        Fragment glob à utiliser à la place du nom de condition pour chercher les
+        dossiers SimNIBS.  Utile quand le nom de ROI diffère du nom de dossier
+        (ex: ROI 'ips-left' mais dossiers nommés '…ips_left…').
 
     Returns
     -------
     List[Path]
         Liste des répertoires trouvés
     """
-    pattern = f"{mode}_{mode}_{condition}_*"
+    fragment = folder_pattern if folder_pattern is not None else condition
+    pattern = f"*{mode}_{fragment}*"
 
     if mode == "simulation":
         base_dir = subject_dir / "simulations"
@@ -368,7 +428,7 @@ def get_preproc_dir(sim_dir: Path, mode: str, space: str = SPACE_MNI) -> Path:
     return sim_dir / volumes_dir
 
 
-def get_preproc_paths(preproc_dir: Path, base_name: str) -> dict:
+def get_preproc_paths(preproc_dir: Path, base_name: str, roi_name: str) -> dict:
     """
     Retourne les chemins des fichiers preprocessés intra et extra-ROI.
 
@@ -378,6 +438,8 @@ def get_preproc_paths(preproc_dir: Path, base_name: str) -> dict:
         Dossier de sortie du preprocessing (ex: mni_volumes/).
     base_name : str
         Nom de base du fichier e-field (sans extension).
+    roi_name : str
+        Nom du ROI utilisé (ex: 'fef', 'ips_left').
 
     Returns
     -------
@@ -386,10 +448,10 @@ def get_preproc_paths(preproc_dir: Path, base_name: str) -> dict:
         ``extra_masked``,  ``extra_cleaned``
     """
     return {
-        "intra_masked":  preproc_dir / f"{base_name}_roi_masked.nii.gz",
-        "intra_cleaned": preproc_dir / f"{base_name}_roi_cleaned.nii.gz",
-        "extra_masked":  preproc_dir / f"{base_name}_extra_roi_masked.nii.gz",
-        "extra_cleaned": preproc_dir / f"{base_name}_extra_roi_cleaned.nii.gz",
+        "intra_masked":  preproc_dir / f"{base_name}_{roi_name}_masked.nii.gz",
+        "intra_cleaned": preproc_dir / f"{base_name}_{roi_name}_cleaned.nii.gz",
+        "extra_masked":  preproc_dir / f"{base_name}_extra_{roi_name}_masked.nii.gz",
+        "extra_cleaned": preproc_dir / f"{base_name}_extra_{roi_name}_cleaned.nii.gz",
     }
 
 
@@ -450,12 +512,12 @@ def check_output(path: Path, if_exists: str = "overwrite") -> bool:
     path = Path(path)
     if path.exists():
         if if_exists == "skip":
-            logger.debug(f"  skip (exists): {path.name}")
+            logger.info(f"Skip (already exists): {path.name}")
             return False
         elif if_exists == "error":
-            raise FileExistsError(
-                f"Output already exists (if_exists='error'): {path}"
-            )
+            msg = f"Output already exists (if_exists='error'): {path}"
+            logger.error(msg)
+            raise FileExistsError(msg)
     return True
 
 

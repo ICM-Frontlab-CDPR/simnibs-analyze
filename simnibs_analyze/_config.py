@@ -22,6 +22,11 @@ class SphereROI(BaseModel):
     """ROI defined by a sphere centred on MNI coordinates."""
     method: Literal["sphere"]
     coords: Annotated[list[float], Field(min_length=3, max_length=3)]
+    folder_pattern: Optional[str] = None
+    """Glob fragment used to find SimNIBS output folders for this ROI.
+    If omitted, the ROI key name is used (e.g. 'fef' → 'simulation_simulation_fef_*').
+    Set this when the folder name differs from the ROI key (e.g. ROI 'ips-left' but
+    folders are named '…ips_left…' → folder_pattern: 'ips_left')."""
 
 
 class AtlasROI(BaseModel):
@@ -29,6 +34,8 @@ class AtlasROI(BaseModel):
     method: Literal["atlas"]
     atlas: Literal["harvard-oxford", "aal", "destrieux"]
     regions: Union[str, list[str]]
+    folder_pattern: Optional[str] = None
+    """See SphereROI.folder_pattern."""
 
 
 # Discriminated union: Pydantic inspects the `method` field to pick the right model.
@@ -42,6 +49,16 @@ ROIDef = Annotated[Union[SphereROI, AtlasROI], Field(discriminator="method")]
 class TargetGenerationConfig(BaseModel):
     radius_mm: float = Field(default=10.0, gt=0)
     rois: dict[str, ROIDef]
+
+    @field_validator("rois")
+    @classmethod
+    def _no_underscores_in_roi_names(cls, v: dict) -> dict:
+        bad = [k for k in v if "_" in k]
+        if bad:
+            raise ValueError(
+                f"ROI names must not contain underscores (use hyphens instead): {bad}"
+            )
+        return v
 
 
 class PathsConfig(BaseModel):

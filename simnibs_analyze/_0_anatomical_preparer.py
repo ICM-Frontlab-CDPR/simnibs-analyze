@@ -132,6 +132,7 @@ class AnatomicalPreparer:
         self,
         m2m_dir: Path,
         output_dir: Path,
+        if_exists: str = "overwrite",
     ) -> "AnatomicalPreparer":
         """
         Subject-level processing: skull-strip the T1.
@@ -168,7 +169,8 @@ class AnatomicalPreparer:
             t1_path = get_t1_conform(m2m_dir)
             mask_path = get_brainmask(m2m_dir)
             self.stripped_t1_path = self._skull_strip(
-                t1_path, mask_path, out_path=output_dir / "T1_subject_brain.nii.gz"
+                t1_path, mask_path, out_path=output_dir / "T1_subject_brain.nii.gz",
+                if_exists=if_exists,
             )
         except FileNotFoundError as e:
             logger.warning(f"Skull-stripping (subject) skipped — {e}")
@@ -181,7 +183,8 @@ class AnatomicalPreparer:
         try:
             mni_tissues_path = get_mni_tissues(m2m_dir)
             self.mni_stripped_t1_path = self._skull_strip(
-                self._template_path, mni_tissues_path, out_path=output_dir / "T1_MNI_brain.nii.gz"
+                self._template_path, mni_tissues_path, out_path=output_dir / "T1_MNI_brain.nii.gz",
+                if_exists=if_exists,
             )
         except FileNotFoundError as e:
             logger.warning(f"Skull-stripping (MNI) skipped — {e}")
@@ -397,6 +400,7 @@ class AnatomicalPreparer:
         t1_path: Path,
         mask_path: Path,
         out_path: Optional[Path] = None,
+        if_exists: str = "overwrite",
     ) -> Path:
         """
         Apply a brain mask to a T1 image and save the result.
@@ -454,7 +458,7 @@ class AnatomicalPreparer:
             stem = t1_path.name.replace(".nii.gz", "").replace(".nii", "")
             out_path = t1_path.parent / f"{stem}_brain.nii.gz"
         out_path = Path(out_path)
-        save_nifti(stripped_img, out_path)
+        save_nifti(stripped_img, out_path, if_exists=if_exists)
         logger.info(f"Skull-stripped T1 saved → {out_path}")
         return out_path
     

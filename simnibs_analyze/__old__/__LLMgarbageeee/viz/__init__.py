@@ -25,17 +25,17 @@ from .group_figures import GroupVisualizer
 
 __all__ = [
     # Utilitaires
-    'load_nifti',
-    'extract_slice',
+    "load_nifti",
+    "extract_slice",
     # Plots atomiques
-    'plot_segmentation_overlay',
-    'plot_efield_slice',
-    'plot_efield_difference',
-    'plot_roi_overlay',
-    'plot_histogram',
-    'plot_boxplot_comparison',
-    'plot_paired_data',
+    "plot_segmentation_overlay",
+    "plot_efield_slice",
+    "plot_efield_difference",
+    "plot_roi_overlay",
+    "plot_histogram",
+    "plot_boxplot_comparison",
+    "plot_paired_data",
     # Visualiseurs
-    'SubjectVisualizer',
-    'GroupVisualizer',
+    "SubjectVisualizer",
+    "GroupVisualizer",
 ]

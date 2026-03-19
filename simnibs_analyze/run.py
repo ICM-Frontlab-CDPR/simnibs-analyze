@@ -45,8 +45,6 @@ from _config import PipelineConfig
 logger = get_logger(__name__)
 
 
-
-
 def process_subject_condition(
     subject: str,
     condition: str,
@@ -79,7 +77,9 @@ def process_subject_condition(
         return results
 
     simulation_dirs = find_simulation_dirs(
-        subject_dir, condition, mode,
+        subject_dir,
+        condition,
+        mode,
         folder_pattern=config.target_generation.rois[condition].folder_pattern,
     )
     if not simulation_dirs:
@@ -87,7 +87,9 @@ def process_subject_condition(
         return results
 
     try:
-        roi_mask_path = get_roi_mask_path(simnibs_output, condition, space=space, subject=subject)
+        roi_mask_path = get_roi_mask_path(
+            simnibs_output, condition, space=space, subject=subject
+        )
     except (FileNotFoundError, ValueError) as e:
         logger.error(str(e))
         return results
@@ -107,84 +109,136 @@ def process_subject_condition(
             # ── Preprocessing INTRA-ROI ──────────────────────────────────
             if skip_preprocessing:
                 if not paths["intra_cleaned"].exists():
-                    logger.warning(f"Preprocessed file not found, skipping: {paths['intra_cleaned']}")
+                    logger.warning(
+                        f"Preprocessed file not found, skipping: {paths['intra_cleaned']}"
+                    )
                     continue
                 logger.info(f"Using existing file: {paths['intra_cleaned'].name}")
             else:
                 if paths["intra_cleaned"].exists() and paths["intra_masked"].exists():
                     if if_exists == "skip":
-                        logger.info(f"Already preprocessed, skipping: {paths['intra_cleaned'].name}")
+                        logger.info(
+                            f"Already preprocessed, skipping: {paths['intra_cleaned'].name}"
+                        )
                         pass  # will fall through to feature extraction below
                     elif if_exists == "error":
-                        logger.error(f"Output exists (if_exists='error'): {paths['intra_cleaned'].name}")
+                        logger.error(
+                            f"Output exists (if_exists='error'): {paths['intra_cleaned'].name}"
+                        )
                         return []
                     else:
                         try:
-                            preproc = Preprocessor(**preproc_kwargs).run(efield_path, roi_mask_path)
+                            preproc = Preprocessor(**preproc_kwargs).run(
+                                efield_path, roi_mask_path
+                            )
                             save_nifti(preproc.masked_img, paths["intra_masked"])
                             save_nifti(preproc.cleaned_img, paths["intra_cleaned"])
-                            logger.info(f"✓ Intra-ROI preprocessing: {paths['intra_cleaned'].name}")
+                            logger.info(
+                                f"✓ Intra-ROI preprocessing: {paths['intra_cleaned'].name}"
+                            )
                         except Exception as e:
-                            logger.error(f"✗ Intra-ROI preprocessing failed ({efield_path.name}): {e}")
+                            logger.error(
+                                f"✗ Intra-ROI preprocessing failed ({efield_path.name}): {e}"
+                            )
                             continue
                 else:
                     try:
-                        preproc = Preprocessor(**preproc_kwargs).run(efield_path, roi_mask_path)
+                        preproc = Preprocessor(**preproc_kwargs).run(
+                            efield_path, roi_mask_path
+                        )
                         save_nifti(preproc.masked_img, paths["intra_masked"])
                         save_nifti(preproc.cleaned_img, paths["intra_cleaned"])
-                        logger.info(f"✓ Intra-ROI preprocessing: {paths['intra_cleaned'].name}")
+                        logger.info(
+                            f"✓ Intra-ROI preprocessing: {paths['intra_cleaned'].name}"
+                        )
                     except Exception as e:
-                        logger.error(f"✗ Intra-ROI preprocessing failed ({efield_path.name}): {e}")
+                        logger.error(
+                            f"✗ Intra-ROI preprocessing failed ({efield_path.name}): {e}"
+                        )
                         continue
 
             # ── Preprocessing EXTRA-ROI ──────────────────────────────────
             if skip_preprocessing:
                 if not paths["extra_cleaned"].exists():
-                    logger.warning(f"Extra preprocessed file not found, skipping: {paths['extra_cleaned']}")
+                    logger.warning(
+                        f"Extra preprocessed file not found, skipping: {paths['extra_cleaned']}"
+                    )
                     continue
             else:
                 if paths["extra_cleaned"].exists() and paths["extra_masked"].exists():
                     if if_exists == "skip":
-                        logger.info(f"Already preprocessed, skipping: {paths['extra_cleaned'].name}")
+                        logger.info(
+                            f"Already preprocessed, skipping: {paths['extra_cleaned'].name}"
+                        )
                         pass
                     elif if_exists == "error":
-                        logger.error(f"Output exists (if_exists='error'): {paths['extra_cleaned'].name}")
+                        logger.error(
+                            f"Output exists (if_exists='error'): {paths['extra_cleaned'].name}"
+                        )
                         return []
                     else:
                         try:
                             extra_mask = Preprocessor.build_extra_mask(roi_mask_path)
-                            extra_masked_img = Preprocessor(**preproc_kwargs).run(efield_path, extra_mask).masked_img
+                            extra_masked_img = (
+                                Preprocessor(**preproc_kwargs)
+                                .run(efield_path, extra_mask)
+                                .masked_img
+                            )
                             save_nifti(extra_masked_img, paths["extra_masked"])
-                            save_nifti(extra_masked_img, paths["extra_cleaned"])  # cleaned = masked
-                            logger.info(f"✓ Extra-ROI preprocessing: {paths['extra_masked'].name}")
+                            save_nifti(
+                                extra_masked_img, paths["extra_cleaned"]
+                            )  # cleaned = masked
+                            logger.info(
+                                f"✓ Extra-ROI preprocessing: {paths['extra_masked'].name}"
+                            )
                         except Exception as e:
-                            logger.error(f"✗ Extra-ROI preprocessing failed ({efield_path.name}): {e}")
+                            logger.error(
+                                f"✗ Extra-ROI preprocessing failed ({efield_path.name}): {e}"
+                            )
                             continue
                 else:
                     try:
                         extra_mask = Preprocessor.build_extra_mask(roi_mask_path)
-                        extra_masked_img = Preprocessor(**preproc_kwargs).run(efield_path, extra_mask).masked_img
+                        extra_masked_img = (
+                            Preprocessor(**preproc_kwargs)
+                            .run(efield_path, extra_mask)
+                            .masked_img
+                        )
                         save_nifti(extra_masked_img, paths["extra_masked"])
-                        save_nifti(extra_masked_img, paths["extra_cleaned"])  # cleaned = masked
-                        logger.info(f"✓ Extra-ROI preprocessing: {paths['extra_masked'].name}")
+                        save_nifti(
+                            extra_masked_img, paths["extra_cleaned"]
+                        )  # cleaned = masked
+                        logger.info(
+                            f"✓ Extra-ROI preprocessing: {paths['extra_masked'].name}"
+                        )
                     except Exception as e:
-                        logger.error(f"✗ Extra-ROI preprocessing failed ({efield_path.name}): {e}")
+                        logger.error(
+                            f"✗ Extra-ROI preprocessing failed ({efield_path.name}): {e}"
+                        )
                         continue
 
             # ── Feature extraction ───────────────────────────────────────
             try:
-                row_intra = FeatureExtractor().run(
-                    paths["intra_cleaned"],
-                    roi_path=None,
-                    subject=subject,
-                    condition=f"{condition}_{mode}",
-                ).row
-                row_extra = FeatureExtractor().run(
-                    paths["extra_cleaned"],
-                    roi_path=None,
-                    subject=None,
-                    condition=None,
-                ).row
+                row_intra = (
+                    FeatureExtractor()
+                    .run(
+                        paths["intra_cleaned"],
+                        roi_path=None,
+                        subject=subject,
+                        condition=f"{condition}_{mode}",
+                    )
+                    .row
+                )
+                row_extra = (
+                    FeatureExtractor()
+                    .run(
+                        paths["extra_cleaned"],
+                        roi_path=None,
+                        subject=None,
+                        condition=None,
+                    )
+                    .row
+                )
 
                 # Merge: intra columns without prefix, extra columns with extra_ prefix
                 row = {**row_intra}
@@ -206,12 +260,16 @@ def process_subject_condition(
                 )
                 results.append(row)
             except Exception as e:
-                logger.error(f"✗ Feature extraction failed ({subject}/{condition}/{mode}): {e}")
+                logger.error(
+                    f"✗ Feature extraction failed ({subject}/{condition}/{mode}): {e}"
+                )
 
     return results
 
 
-def run_analysis(features_csv: Path, config: PipelineConfig, space: str, if_exists: str = "overwrite") -> None:
+def run_analysis(
+    features_csv: Path, config: PipelineConfig, space: str, if_exists: str = "overwrite"
+) -> None:
     """Inter/intra-subject analysis and simulation vs optimisation scatter plot."""
     logger.step("INTER/INTRA-SUBJECT ANALYSIS")
 
@@ -227,7 +285,9 @@ def run_analysis(features_csv: Path, config: PipelineConfig, space: str, if_exis
     logger.info(f"Loaded: {len(df)} rows from {features_csv}")
 
     # Inter-subject
-    inter = Analysis(df).inter_subject_summary(metric=metric, condition_col=condition_col)
+    inter = Analysis(df).inter_subject_summary(
+        metric=metric, condition_col=condition_col
+    )
     inter_csv = get_inter_subject_summary_csv_path(results_dir, space)
     if check_output(inter_csv, if_exists):
         save_dataframe(inter, inter_csv, index=False)
@@ -286,7 +346,10 @@ def run_analysis(features_csv: Path, config: PipelineConfig, space: str, if_exis
 
     # Scatter simulation vs optimization
     Visualizer(analysis_dir, if_exists=if_exists).plot_simulation_vs_optimization(
-        df, metric=metric, subject_col=subject_col, condition_col=condition_col,
+        df,
+        metric=metric,
+        subject_col=subject_col,
+        condition_col=condition_col,
         output_tag=space,
     )
     logger.info("✓ Simulation vs optimisation scatter plot created")
@@ -303,14 +366,24 @@ def run_viz(config: PipelineConfig, space: str, if_exists: str = "overwrite") ->
     conditions: List[str] = config.stim_conditions
     modes: List[str] = config.mode
 
-    viz = Visualizer(output_dir=results_dir, cmap="hot", threshold_percentile=50.0,
-                     bins=50, camera_position="xy", if_exists=if_exists)
+    viz = Visualizer(
+        output_dir=results_dir,
+        cmap="hot",
+        threshold_percentile=50.0,
+        bins=50,
+        camera_position="xy",
+        if_exists=if_exists,
+    )
 
     # ── Masques ROI ─────────────────────────────────────────────────────
     mni_target_dir = simnibs_output / "mni_target"
     mask_paths = sorted(mni_target_dir.glob("*_mask_space-mni.nii.gz"))
     if space == SPACE_MNI and mask_paths:
-        mni_template = nib.load(str(config.paths.mni_template)) if config.paths.mni_template else None
+        mni_template = (
+            nib.load(str(config.paths.mni_template))
+            if config.paths.mni_template
+            else None
+        )
         mask_imgs = [nib.load(str(p)) for p in mask_paths]
         roi_names = [p.name.replace("_mask_space-mni.nii.gz", "") for p in mask_paths]
         viz.visualize_roi_masks(mask_imgs, roi_names, mni_template)
@@ -335,18 +408,30 @@ def run_viz(config: PipelineConfig, space: str, if_exists: str = "overwrite") ->
             for subject in subjects:
                 subject_paths = get_subject_paths(simnibs_output, subject)
                 sim_dirs = find_simulation_dirs(
-                    subject_paths["subject_dir"], condition, mode,
-                    folder_pattern=config.target_generation.rois[condition].folder_pattern,
+                    subject_paths["subject_dir"],
+                    condition,
+                    mode,
+                    folder_pattern=config.target_generation.rois[
+                        condition
+                    ].folder_pattern,
                 )
                 if not sim_dirs:
                     continue
                 efields = find_efield_files(sim_dirs[0], mode, space=space)
                 if not efields:
                     continue
-                file_info.setdefault((condition, mode), []).append((subject, efields[0]))
+                file_info.setdefault((condition, mode), []).append(
+                    (subject, efields[0])
+                )
     if file_info:
-        brain_bgs = mni_brain_bg_by_subject if space == SPACE_MNI else subject_brain_bg_by_subject
-        viz.efields_figures(file_info, t1_brain_by_subject=brain_bgs or None, space=space)
+        brain_bgs = (
+            mni_brain_bg_by_subject
+            if space == SPACE_MNI
+            else subject_brain_bg_by_subject
+        )
+        viz.efields_figures(
+            file_info, t1_brain_by_subject=brain_bgs or None, space=space
+        )
         logger.info(f"✓ 3D e-field figures generated ({space.upper()})")
     else:
         logger.warning(f"No e-fields found for space={space}, figures skipped")
@@ -359,8 +444,12 @@ def run_viz(config: PipelineConfig, space: str, if_exists: str = "overwrite") ->
             for condition in conditions:
                 subject_paths = get_subject_paths(simnibs_output, subject)
                 sim_dirs = find_simulation_dirs(
-                    subject_paths["subject_dir"], condition, mode,
-                    folder_pattern=config.target_generation.rois[condition].folder_pattern,
+                    subject_paths["subject_dir"],
+                    condition,
+                    mode,
+                    folder_pattern=config.target_generation.rois[
+                        condition
+                    ].folder_pattern,
                 )
                 if not sim_dirs:
                     continue
@@ -424,11 +513,15 @@ def main(
 
     if not skip_target_generation:
         logger.step("STEP 0: ROI MASK GENERATION (MNI)")
-        existing_masks = all((mni_target_dir / f"{roi}_mask_space-mni.nii.gz").exists() for roi in rois)
+        existing_masks = all(
+            (mni_target_dir / f"{roi}_mask_space-mni.nii.gz").exists() for roi in rois
+        )
         if existing_masks and if_exists == "skip":
             logger.info(f"✓ ROI masks already present, skipping: {mni_target_dir}")
         elif existing_masks and if_exists == "error":
-            logger.error(f"ROI masks already present in {mni_target_dir} (if_exists='error')")
+            logger.error(
+                f"ROI masks already present in {mni_target_dir} (if_exists='error')"
+            )
             return 1
         else:
             try:
@@ -445,13 +538,15 @@ def main(
 
     if skip_features:
         if not features_csv.exists():
-            logger.error(f"all_features_{space_tag(space)}.csv not found: {features_csv}")
+            logger.error(
+                f"all_features_{space_tag(space)}.csv not found: {features_csv}"
+            )
             return 1
         logger.info(f"Feature extraction skipped — using {features_csv}")
     else:
         all_features: List[Dict] = []
         stats = {"total": 0, "success": 0, "failed": 0}
-        
+
         logger.info(f"Computing in {space.upper()} space")
 
         for subject in config.subjects:
@@ -462,8 +557,11 @@ def main(
 
             if space == SPACE_NATIVE and skip_target_generation:
                 missing = [
-                    roi for roi in rois
-                    if not (subject_target_dir / f"{roi}_mask_space-native.nii.gz").exists()
+                    roi
+                    for roi in rois
+                    if not (
+                        subject_target_dir / f"{roi}_mask_space-native.nii.gz"
+                    ).exists()
                 ]
                 if missing:
                     logger.warning(
@@ -471,32 +569,39 @@ def main(
                         "Subject skipped to avoid ambiguous outputs."
                     )
                     continue
-            
+
             if not skip_target_generation and m2m_dir.exists():
                 # Always generate T1 skull-stripped in both spaces
                 gen.run(m2m_dir, subject_target_dir, if_exists=if_exists)
-                
+
                 # If working in native space, generate native-space ROI masks
                 if space == SPACE_NATIVE:
                     logger.info("Generating native-space ROI masks...")
                     try:
-                        gen.create_subject_roi_from_mni(m2m_dir, subject_target_dir, if_exists=if_exists)
+                        gen.create_subject_roi_from_mni(
+                            m2m_dir, subject_target_dir, if_exists=if_exists
+                        )
                         logger.info(f"✓ Native-space ROI masks generated for {subject}")
                     except Exception as e:
                         logger.warning(f"Native-space ROI generation failed: {e}")
-                        logger.warning(f"Subject {subject} skipped to avoid mixing spaces")
+                        logger.warning(
+                            f"Subject {subject} skipped to avoid mixing spaces"
+                        )
                         continue
             elif space == SPACE_NATIVE and not m2m_dir.exists():
                 logger.warning(
                     f"m2m not found for {subject}: {m2m_dir}. Subject skipped in native space."
                 )
                 continue
-            
+
             for condition in config.stim_conditions:
                 for mode in config.mode:
                     logger.info(f"--- {subject} / {condition} / {mode} ---")
                     rows = process_subject_condition(
-                        subject, condition, mode, config,
+                        subject,
+                        condition,
+                        mode,
+                        config,
                         skip_preprocessing=skip_preprocessing,
                         space=space,
                         if_exists=if_exists,
@@ -518,7 +623,9 @@ def main(
             return 1
         save_rows(all_features, features_csv)
         logger.info(f"✓ {len(all_features)} features saved → {features_csv}")
-        logger.info(f"  Successes: {stats['success']}/{stats['total']}, failures: {stats['failed']}")
+        logger.info(
+            f"  Successes: {stats['success']}/{stats['total']}, failures: {stats['failed']}"
+        )
 
     # ── Step 3: Analysis ──────────────────────────────────────────────────
     if not skip_analysis:
@@ -549,7 +656,9 @@ Examples:
   python run.py --config my_config.yaml
         """,
     )
-    parser.add_argument("--config", type=Path, default=Path(__file__).parent / "config.yaml")
+    parser.add_argument(
+        "--config", type=Path, default=Path(__file__).parent / "config.yaml"
+    )
     parser.add_argument("--skip-target-generation", action="store_true")
     parser.add_argument("--skip-preprocessing", action="store_true")
     parser.add_argument("--skip-features", action="store_true")
@@ -560,11 +669,13 @@ Examples:
 
 if __name__ == "__main__":
     _args = _parse_args()
-    raise SystemExit(main(
-        config_path=_args.config,
-        skip_target_generation=_args.skip_target_generation,
-        skip_preprocessing=_args.skip_preprocessing,
-        skip_features=_args.skip_features,
-        skip_analysis=_args.skip_analysis,
-        skip_viz=_args.skip_viz,
-    ))
+    raise SystemExit(
+        main(
+            config_path=_args.config,
+            skip_target_generation=_args.skip_target_generation,
+            skip_preprocessing=_args.skip_preprocessing,
+            skip_features=_args.skip_features,
+            skip_analysis=_args.skip_analysis,
+            skip_viz=_args.skip_viz,
+        )
+    )

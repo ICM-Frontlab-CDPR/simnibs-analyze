@@ -10,10 +10,9 @@ from typing import Iterable, Dict, Any
 
 import numpy as np
 import nibabel as nib
-import pandas as pd
 from nilearn.image import resample_to_img
 
-from _pipeline_io import load_img, validate_binary, save_rows, check_output
+from _pipeline_io import load_img, validate_binary, save_rows
 
 
 class FeatureExtractor:
@@ -104,9 +103,7 @@ class FeatureExtractor:
 
         # Resample ROI mask if grids differ
         if efield_data.shape != roi_data.shape:
-            roi_img = resample_to_img(
-                roi_img, full_efield_img, interpolation="nearest"
-            )
+            roi_img = resample_to_img(roi_img, full_efield_img, interpolation="nearest")
             roi_data = np.squeeze(roi_img.get_fdata())
 
         validate_binary(roi_data, name="ROI mask")
@@ -191,14 +188,23 @@ class FeatureExtractor:
 
 def _parse_args(argv: Iterable[str] | None = None):
     parser = argparse.ArgumentParser(description="Extract ROI e-field features to CSV")
-    parser.add_argument("--efield", nargs="+", required=True,
-                        help="Path(s) to preprocessed ROI e-field NIfTI")
-    parser.add_argument("--roi", default=None,
-                        help="ROI mask path (optional if already masked)")
+    parser.add_argument(
+        "--efield",
+        nargs="+",
+        required=True,
+        help="Path(s) to preprocessed ROI e-field NIfTI",
+    )
+    parser.add_argument(
+        "--roi", default=None, help="ROI mask path (optional if already masked)"
+    )
     parser.add_argument("--out", required=True, help="Output CSV path")
     parser.add_argument("--subject", default=None, help="Subject ID")
-    parser.add_argument("--condition", default=None, help="Condition label (e.g., simu/opti)")
-    parser.add_argument("--if-exists", choices=["overwrite", "skip", "error"], default="overwrite")
+    parser.add_argument(
+        "--condition", default=None, help="Condition label (e.g., simu/opti)"
+    )
+    parser.add_argument(
+        "--if-exists", choices=["overwrite", "skip", "error"], default="overwrite"
+    )
     return parser.parse_args(argv)
 
 
@@ -216,17 +222,4 @@ def main(argv: Iterable[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-	raise SystemExit(main())
-    
-
-    
-
-
-
-
-
-
-
-
-
-
+    raise SystemExit(main())

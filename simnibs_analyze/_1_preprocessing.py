@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import argparse
@@ -11,7 +10,8 @@ from nilearn import image, masking
 
 from _pipeline_io import load_img
 
-#TODO add condition on mni-space or subject space (should be defined in a get_fpath function)
+
+# TODO add condition on mni-space or subject space (should be defined in a get_fpath function)
 class Preprocessor:
     """
     Preprocess an e-field image within a ROI.
@@ -169,17 +169,28 @@ def _parse_args(argv: Iterable[str] | None = None):
     parser = argparse.ArgumentParser(description="Preprocess e-field in ROI")
     parser.add_argument("--efield", required=True, help="Path to e-field NIfTI")
     parser.add_argument("--roi", required=True, help="Path to ROI mask NIfTI")
-    parser.add_argument("--out", required=True, help="Output path for cleaned ROI NIfTI")
-    parser.add_argument("--smooth-fwhm", type=float, default=2.0, help="FWHM for smoothing")
+    parser.add_argument(
+        "--out", required=True, help="Output path for cleaned ROI NIfTI"
+    )
+    parser.add_argument(
+        "--smooth-fwhm", type=float, default=2.0, help="FWHM for smoothing"
+    )
     parser.add_argument("--outlier-method", choices=["iqr", "z"], default="iqr")
-    parser.add_argument("--portion", type=float, default=None,
-                        help="Central portion to keep (e.g., 0.95)")
-    parser.add_argument("--if-exists", choices=["overwrite", "skip", "error"], default="overwrite")
+    parser.add_argument(
+        "--portion",
+        type=float,
+        default=None,
+        help="Central portion to keep (e.g., 0.95)",
+    )
+    parser.add_argument(
+        "--if-exists", choices=["overwrite", "skip", "error"], default="overwrite"
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: Iterable[str] | None = None) -> int:
     from _pipeline_io import save_nifti
+
     args = _parse_args(argv)
     out = Path(args.out)
     preproc = Preprocessor(

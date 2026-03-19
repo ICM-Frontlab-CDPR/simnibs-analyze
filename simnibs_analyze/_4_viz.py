@@ -8,10 +8,10 @@ import nibabel as nib
 import numpy as np
 import pandas as pd
 import pyvista as pv
-from nilearn import plotting, image as nl_image
+from nilearn import plotting
 
 from _logging import get_logger
-from _pipeline_io import space_tag, check_output, save_figure
+from _pipeline_io import space_tag, save_figure
 
 logger = get_logger(__name__)
 
@@ -127,9 +127,13 @@ class Visualizer:
             t1_grid.origin = t1_origin
             t1_grid.cell_data["t1"] = t1_data.flatten(order="F")
             nonzero_t1 = t1_data[t1_data > 0]
-            iso_val = float(np.percentile(nonzero_t1, 20)) if nonzero_t1.size > 0 else 0.1
+            iso_val = (
+                float(np.percentile(nonzero_t1, 20)) if nonzero_t1.size > 0 else 0.1
+            )
             brain_surface = t1_grid.cell_data_to_point_data().contour([iso_val])
-            plotter.add_mesh(brain_surface, color="white", opacity=0.15, smooth_shading=True)
+            plotter.add_mesh(
+                brain_surface, color="white", opacity=0.15, smooth_shading=True
+            )
 
         # ── Volume e-field ────────────────────────────────────────────────
         if vmin is not None and vmax is not None:
@@ -226,10 +230,16 @@ class Visualizer:
                 row, col = divmod(idx, n_cols)
                 axes[row, col].axis("off")
 
-            fig.suptitle(f"{roi} – {mode} ({space.upper()})", fontsize=16, fontweight="bold")
+            fig.suptitle(
+                f"{roi} – {mode} ({space.upper()})", fontsize=16, fontweight="bold"
+            )
             plt.tight_layout()
-            out_path = output_dir / f"efields_3d_{roi}_{mode}_{tag}_{self.camera_position}.png"
-            save_figure(out_path, if_exists=self.if_exists, dpi=300, bbox_inches="tight")
+            out_path = (
+                output_dir / f"efields_3d_{roi}_{mode}_{tag}_{self.camera_position}.png"
+            )
+            save_figure(
+                out_path, if_exists=self.if_exists, dpi=300, bbox_inches="tight"
+            )
             logger.info(f"  Saved: {out_path}")
 
         logger.info(f"All 3D figures saved in {output_dir}")
@@ -276,20 +286,47 @@ class Visualizer:
                 masked_data = nib.load(str(masked_path)).get_fdata().ravel()
                 masked_data = masked_data[masked_data > 0]
                 cleaned_data = nib.load(str(cleaned_path)).get_fdata().ravel()
-                cleaned_data = cleaned_data[np.isfinite(cleaned_data) & (cleaned_data > 0)]
+                cleaned_data = cleaned_data[
+                    np.isfinite(cleaned_data) & (cleaned_data > 0)
+                ]
 
                 ax = axes[row_idx, col]
                 if masked_data.size > 0 or cleaned_data.size > 0:
-                    all_vals = np.concatenate([a for a in [masked_data, cleaned_data] if a.size > 0])
+                    all_vals = np.concatenate(
+                        [a for a in [masked_data, cleaned_data] if a.size > 0]
+                    )
                     xrange = (float(all_vals.min()), float(all_vals.max()))
                 else:
                     xrange = None
                 if masked_data.size > 0:
-                    ax.hist(masked_data, bins=self.bins, range=xrange, alpha=0.6, label="Before", color="red", density=True)
+                    ax.hist(
+                        masked_data,
+                        bins=self.bins,
+                        range=xrange,
+                        alpha=0.6,
+                        label="Before",
+                        color="red",
+                        density=True,
+                    )
                 if cleaned_data.size > 0:
-                    ax.hist(cleaned_data, bins=self.bins, range=xrange, alpha=0.6, label="After", color="blue", density=True)
+                    ax.hist(
+                        cleaned_data,
+                        bins=self.bins,
+                        range=xrange,
+                        alpha=0.6,
+                        label="After",
+                        color="blue",
+                        density=True,
+                    )
                 if masked_data.size == 0 and cleaned_data.size == 0:
-                    ax.text(0.5, 0.5, "No data", ha="center", va="center", transform=ax.transAxes)
+                    ax.text(
+                        0.5,
+                        0.5,
+                        "No data",
+                        ha="center",
+                        va="center",
+                        transform=ax.transAxes,
+                    )
                 ax.set_xlabel("E-field (V/m)", fontsize=10)
                 ax.set_ylabel("Density", fontsize=10)
                 ax.set_title(f"{roi} | {mode}", fontsize=11)
@@ -307,7 +344,9 @@ class Visualizer:
             )
             plt.tight_layout()
             out_path = output_dir / f"efields_histograms_{subject}_{region}_{tag}.png"
-            save_figure(out_path, if_exists=self.if_exists, dpi=300, bbox_inches="tight")
+            save_figure(
+                out_path, if_exists=self.if_exists, dpi=300, bbox_inches="tight"
+            )
             logger.info(f"  Saved: {out_path}")
 
         logger.info(f"All histograms saved in {output_dir}")
@@ -346,7 +385,9 @@ class Visualizer:
                 figure=fig,
             )
             out_path = output_dir / f"{roi_name}_mask_visualization.png"
-            save_figure(out_path, if_exists=self.if_exists, dpi=150, bbox_inches="tight")
+            save_figure(
+                out_path, if_exists=self.if_exists, dpi=150, bbox_inches="tight"
+            )
             logger.info(f"  Saved: {out_path}")
 
         if len(mask_imgs) > 1:
@@ -384,7 +425,9 @@ class Visualizer:
 
             out_path = output_dir / "all_masks_combined.png"
             plt.tight_layout()
-            save_figure(out_path, if_exists=self.if_exists, dpi=150, bbox_inches="tight")
+            save_figure(
+                out_path, if_exists=self.if_exists, dpi=150, bbox_inches="tight"
+            )
             logger.info(f"  Combined view saved: {out_path}")
 
         logger.info(f"All mask visualisations saved in {output_dir}")
@@ -438,8 +481,14 @@ class Visualizer:
                 index=subject_col, columns="type", values=metric, aggfunc="first"
             ).dropna()
 
-            if pivot.empty or "simulation" not in pivot.columns or "optimization" not in pivot.columns:
-                missing = [c for c in ("simulation", "optimization") if c not in pivot.columns]
+            if (
+                pivot.empty
+                or "simulation" not in pivot.columns
+                or "optimization" not in pivot.columns
+            ):
+                missing = [
+                    c for c in ("simulation", "optimization") if c not in pivot.columns
+                ]
                 logger.warning(
                     f"plot_simulation_vs_optimization: ROI '{roi}' skipped — "
                     f"missing data: {missing}. "
@@ -462,7 +511,9 @@ class Visualizer:
 
             min_val = min(pivot["simulation"].min(), pivot["optimization"].min())
             max_val = max(pivot["simulation"].max(), pivot["optimization"].max())
-            ax.plot([min_val, max_val], [min_val, max_val], "k--", alpha=0.3, label="y=x")
+            ax.plot(
+                [min_val, max_val], [min_val, max_val], "k--", alpha=0.3, label="y=x"
+            )
             ax.set_xlabel(f"Simulation {metric} (V/m)")
             ax.set_ylabel(f"Optimization {metric} (V/m)")
             ax.set_title(f"ROI: {roi}")

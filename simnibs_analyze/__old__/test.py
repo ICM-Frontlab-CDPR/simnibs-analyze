@@ -1,5 +1,3 @@
-from nilearn import plotting
-
 # Fichier à visualiser
 nii_file = "/Users/hippolyte.dreyfus/Desktop/hemianotACS/Data/derivatives/simnibs-config-healthyV2/0001/simulations/simulation_simulation_fef_hemianotacs_bc8ae6ee/mni_volumes/0001_TDCS_1_scalar_MNI_magnE.nii.gz"
 
@@ -20,7 +18,6 @@ nii_file = "/Users/hippolyte.dreyfus/Desktop/hemianotACS/Data/derivatives/simnib
 #     view="lateral",   # lateral, medial, dorsal, ventral
 #     colorbar=True
 # )
-
 
 
 import pyvista as pv

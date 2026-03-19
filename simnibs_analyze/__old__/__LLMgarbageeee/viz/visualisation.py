@@ -99,4 +99,4 @@ PRINCIPES
 from .subject_figures import SubjectVisualizer
 from .group_figures import GroupVisualizer
 
-__all__ = ['SubjectVisualizer', 'GroupVisualizer']
+__all__ = ["SubjectVisualizer", "GroupVisualizer"]

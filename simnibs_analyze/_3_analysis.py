@@ -58,11 +58,15 @@ class Analysis:
         for col in [subject_col, condition_col, metric]:
             if col not in self.df.columns:
                 raise KeyError(f"Missing column: {col}")
-        pivot = self.df.pivot_table(index=subject_col, columns=condition_col, values=metric)
+        pivot = self.df.pivot_table(
+            index=subject_col, columns=condition_col, values=metric
+        )
         if cond_a not in pivot.columns or cond_b not in pivot.columns:
             raise KeyError(f"Missing conditions: {cond_a} or {cond_b}")
         diff = pivot[cond_b] - pivot[cond_a]
-        return diff.reset_index().rename(columns={0: "diff", cond_b: cond_b, cond_a: cond_a})
+        return diff.reset_index().rename(
+            columns={0: "diff", cond_b: cond_b, cond_a: cond_a}
+        )
 
     # -------------------------------------------------------------------------
     # E-field clustering
@@ -109,11 +113,12 @@ class Analysis:
         df = self.df.copy()
         intensity_threshold = df[intensity_col].median()
 
-        specificity = np.where(df[ratio_col] > specificity_threshold, "specific", "diffuse")
+        specificity = np.where(
+            df[ratio_col] > specificity_threshold, "specific", "diffuse"
+        )
         intensity = np.where(df[intensity_col] > intensity_threshold, "high", "low")
         df["cluster"] = [f"{s}_{i}" for s, i in zip(specificity, intensity)]
         return df
-
 
     def correlate_with():
         # compute statistics between stim success and others variables (patient response / anatomic variables)
@@ -129,7 +134,9 @@ def _parse_args(argv: Iterable[str] | None = None):
     parser.add_argument("--condition-col", default="condition")
     parser.add_argument("--cond-a", default="simu")
     parser.add_argument("--cond-b", default="opti")
-    parser.add_argument("--if-exists", choices=["overwrite", "skip", "error"], default="overwrite")
+    parser.add_argument(
+        "--if-exists", choices=["overwrite", "skip", "error"], default="overwrite"
+    )
     return parser.parse_args(argv)
 
 
@@ -138,7 +145,9 @@ def main(argv: Iterable[str] | None = None) -> int:
     out_dir = Path(args.out_dir)
     analysis = Analysis(load_csvs([Path(p) for p in args.inputs]))
 
-    inter = analysis.inter_subject_summary(metric=args.metric, condition_col=args.condition_col)
+    inter = analysis.inter_subject_summary(
+        metric=args.metric, condition_col=args.condition_col
+    )
     inter_csv = out_dir / "inter_subject_summary.csv"
     inter_csv.parent.mkdir(parents=True, exist_ok=True)
     if check_output(inter_csv, args.if_exists):
@@ -160,4 +169,3 @@ def main(argv: Iterable[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -25,7 +25,14 @@ from nilearn import datasets, image
 from nilearn.image import new_img_like
 from scipy.ndimage import binary_fill_holes
 
-from _pipeline_io import save_nifti, save_ants_image, check_output, get_t1_conform, get_brainmask, get_mni_tissues
+from _pipeline_io import (
+    save_nifti,
+    save_ants_image,
+    check_output,
+    get_t1_conform,
+    get_brainmask,
+    get_mni_tissues,
+)
 from _logging import get_logger
 
 logger = get_logger(__name__)
@@ -51,7 +58,9 @@ class AnatomicalPreparer:
     ) -> None:
         self.radius_mm = radius_mm
         self.mask_imgs: Dict[str, nib.Nifti1Image] = {}
-        self._mni_brain_mask_path = Path(mni_brain_mask_path) if mni_brain_mask_path else None
+        self._mni_brain_mask_path = (
+            Path(mni_brain_mask_path) if mni_brain_mask_path else None
+        )
 
         if reference_img_path is not None:
             logger.info(f"Loading reference image: {reference_img_path}")
@@ -169,7 +178,9 @@ class AnatomicalPreparer:
             t1_path = get_t1_conform(m2m_dir)
             mask_path = get_brainmask(m2m_dir)
             self.stripped_t1_path = self._skull_strip(
-                t1_path, mask_path, out_path=output_dir / "T1_subject_brain.nii.gz",
+                t1_path,
+                mask_path,
+                out_path=output_dir / "T1_subject_brain.nii.gz",
                 if_exists=if_exists,
             )
         except FileNotFoundError as e:
@@ -183,7 +194,9 @@ class AnatomicalPreparer:
         try:
             mni_tissues_path = get_mni_tissues(m2m_dir)
             self.mni_stripped_t1_path = self._skull_strip(
-                self._template_path, mni_tissues_path, out_path=output_dir / "T1_MNI_brain.nii.gz",
+                self._template_path,
+                mni_tissues_path,
+                out_path=output_dir / "T1_MNI_brain.nii.gz",
                 if_exists=if_exists,
             )
         except FileNotFoundError as e:
@@ -214,9 +227,9 @@ class AnatomicalPreparer:
         radius_vox = radius_mm / voxel_size
 
         shape = template_img.shape
-        x, y, z = np.ogrid[:shape[0], :shape[1], :shape[2]]
+        x, y, z = np.ogrid[: shape[0], : shape[1], : shape[2]]
         dist_sq = (x - vox[0]) ** 2 + (y - vox[1]) ** 2 + (z - vox[2]) ** 2
-        data[dist_sq <= radius_vox ** 2] = 1
+        data[dist_sq <= radius_vox**2] = 1
 
         return new_img_like(template_img, data, affine=affine)
 
@@ -253,7 +266,9 @@ class AnatomicalPreparer:
             region_names = [region_names]
 
         _FETCHERS = {
-            "harvard-oxford": lambda: nl_datasets.fetch_atlas_harvard_oxford("cort-maxprob-thr25-1mm"),
+            "harvard-oxford": lambda: nl_datasets.fetch_atlas_harvard_oxford(
+                "cort-maxprob-thr25-1mm"
+            ),
             "aal": lambda: nl_datasets.fetch_atlas_aal(),
             "destrieux": lambda: nl_datasets.fetch_atlas_destrieux_2009(),
         }
@@ -265,7 +280,9 @@ class AnatomicalPreparer:
         # Disable SSL verification for atlas downloads (macOS cert issue).
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         _orig_send = HTTPAdapter.send
-        HTTPAdapter.send = lambda self, *a, **kw: _orig_send(self, *a, **{**kw, "verify": False})
+        HTTPAdapter.send = lambda self, *a, **kw: _orig_send(
+            self, *a, **{**kw, "verify": False}
+        )
         try:
             atlas_data = _FETCHERS[atlas_name]()
         finally:
@@ -299,14 +316,14 @@ class AnatomicalPreparer:
         mask_img = nib.Nifti1Image(mask_data, atlas_img.affine)
 
         # Resample to pipeline template if voxel grids differ
-        if (
-            atlas_img.shape[:3] != template_img.shape[:3]
-            or not np.allclose(atlas_img.affine, template_img.affine)
+        if atlas_img.shape[:3] != template_img.shape[:3] or not np.allclose(
+            atlas_img.affine, template_img.affine
         ):
-            mask_img = image.resample_to_img(mask_img, template_img, interpolation="nearest")
+            mask_img = image.resample_to_img(
+                mask_img, template_img, interpolation="nearest"
+            )
 
         return mask_img
-
 
     def create_subject_roi_from_mni(
         self,
@@ -355,7 +372,9 @@ class AnatomicalPreparer:
 
         # Load MNI masks from disk in all cases to keep behavior deterministic.
         simnibs_output_dir = m2m_dir.parent.parent
-        mni_output_dir = getattr(self, "mni_output_dir", simnibs_output_dir / "mni_target")
+        mni_output_dir = getattr(
+            self, "mni_output_dir", simnibs_output_dir / "mni_target"
+        )
         self.mni_output_dir = mni_output_dir
         mni_mask_paths = sorted(mni_output_dir.glob("*_mask_space-mni.nii.gz"))
         if not mni_mask_paths:
@@ -430,7 +449,10 @@ class AnatomicalPreparer:
         mask_img = nib.load(str(mask_path))
 
         # Resample mask to T1 space if needed
-        if not np.allclose(mask_img.affine, t1_img.affine) or mask_img.shape != t1_img.shape:
+        if (
+            not np.allclose(mask_img.affine, t1_img.affine)
+            or mask_img.shape != t1_img.shape
+        ):
             mask_img = image.resample_to_img(mask_img, t1_img, interpolation="nearest")
 
         mask_raw = np.asarray(mask_img.dataobj)
@@ -461,13 +483,12 @@ class AnatomicalPreparer:
         save_nifti(stripped_img, out_path, if_exists=if_exists)
         logger.info(f"Skull-stripped T1 saved → {out_path}")
         return out_path
-    
-    
-    
+
 
 # ---------------------------------------------------------------------------
 # CLI entry point
 # ---------------------------------------------------------------------------
+
 
 def _parse_args(argv=None):
     parser = argparse.ArgumentParser(
@@ -492,10 +513,13 @@ def main(argv=None) -> int:
     args = _parse_args(argv)
 
     from _config import load_and_validate
+
     cfg = load_and_validate(args.config)
     rois = cfg.target_generation.rois
     if not rois:
-        logger.error("No 'target_generation.rois' section found in config — nothing to generate.")
+        logger.error(
+            "No 'target_generation.rois' section found in config — nothing to generate."
+        )
         return 1
 
     output_dir = args.output or (cfg.paths.simnibs_output / "mni_target")

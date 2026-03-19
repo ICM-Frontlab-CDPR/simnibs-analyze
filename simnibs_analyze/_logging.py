@@ -19,15 +19,17 @@ import logging
 import rich.console
 import rich.theme
 
-_THEME = rich.theme.Theme({
-    "asctime":  "green",
-    "name":     "dim cyan",
-    "debug":    "dim",
-    "info":     "white",
-    "warning":  "yellow",
-    "error":    "bold red",
-    "step":     "bold cyan",
-})
+_THEME = rich.theme.Theme(
+    {
+        "asctime": "green",
+        "name": "dim cyan",
+        "debug": "dim",
+        "info": "white",
+        "warning": "yellow",
+        "error": "bold red",
+        "step": "bold cyan",
+    }
+)
 
 # Shared console — lazy so pytest capture still works
 _console: rich.console.Console | None = None

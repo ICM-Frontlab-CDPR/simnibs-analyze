@@ -18,8 +18,10 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 # ROI definitions  (target_generation.rois)
 # ---------------------------------------------------------------------------
 
+
 class SphereROI(BaseModel):
     """ROI defined by a sphere centred on MNI coordinates."""
+
     method: Literal["sphere"]
     coords: Annotated[list[float], Field(min_length=3, max_length=3)]
     folder_pattern: Optional[str] = None
@@ -31,6 +33,7 @@ class SphereROI(BaseModel):
 
 class AtlasROI(BaseModel):
     """ROI defined by one or more parcels from a brain atlas."""
+
     method: Literal["atlas"]
     atlas: Literal["harvard-oxford", "aal", "destrieux"]
     regions: Union[str, list[str]]
@@ -45,6 +48,7 @@ ROIDef = Annotated[Union[SphereROI, AtlasROI], Field(discriminator="method")]
 # ---------------------------------------------------------------------------
 # Sections
 # ---------------------------------------------------------------------------
+
 
 class TargetGenerationConfig(BaseModel):
     radius_mm: float = Field(default=10.0, gt=0)
@@ -99,6 +103,7 @@ class RunningConfig(BaseModel):
 # Root model
 # ---------------------------------------------------------------------------
 
+
 class PipelineConfig(BaseModel):
     subjects: list[str]
     stim_conditions: list[str]
@@ -128,9 +133,11 @@ class PipelineConfig(BaseModel):
 # Helper
 # ---------------------------------------------------------------------------
 
+
 def load_and_validate(config_path: Path) -> PipelineConfig:
     """Load a YAML config file and return a validated PipelineConfig."""
     import yaml
+
     with open(config_path) as f:
         raw = yaml.safe_load(f)
     return PipelineConfig.model_validate(raw)
@@ -145,13 +152,17 @@ if __name__ == "__main__":
     import sys
 
     parser = argparse.ArgumentParser(description="Validate a pipeline config.yaml")
-    parser.add_argument("--config", type=Path, default=Path(__file__).parent / "config.yaml")
+    parser.add_argument(
+        "--config", type=Path, default=Path(__file__).parent / "config.yaml"
+    )
     args = parser.parse_args()
 
     try:
         cfg = load_and_validate(args.config)
-        print(f"✓ Config valid — {len(cfg.subjects)} subject(s), "
-              f"{len(cfg.target_generation.rois)} ROI(s), space={cfg.space}")
+        print(
+            f"✓ Config valid — {len(cfg.subjects)} subject(s), "
+            f"{len(cfg.target_generation.rois)} ROI(s), space={cfg.space}"
+        )
     except Exception as e:
         print(f"✗ Invalid config:\n{e}", file=sys.stderr)
         sys.exit(1)

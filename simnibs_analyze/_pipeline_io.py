@@ -7,11 +7,13 @@ CSV and YAML configuration reading/writing.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional, List, Dict, Any, Iterable, Tuple, Union
-import numpy as np
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+
 import nibabel as nib
+import numpy as np
 import pandas as pd
 
+from _config import PipelineConfig
 from _logging import get_logger
 
 logger = get_logger(__name__)
@@ -23,6 +25,7 @@ SPACE_NATIVE = "native"
 # ---------------------------------------------------------------------------
 # Output naming context
 # ---------------------------------------------------------------------------
+
 
 class OutputContext:
     """
@@ -68,7 +71,7 @@ class OutputContext:
         self.condition = condition
         self.mode = mode
         self.space = space
-        self.roi_name = roi_name or condition   # default: same as condition
+        self.roi_name = roi_name or condition  # default: same as condition
         self.base_name = base_name
         self.results_dir = results_dir
         self.simnibs_output = simnibs_output
@@ -111,12 +114,20 @@ def get_features_csv_path(results_dir: Path, space: str) -> Path:
 
 def get_inter_subject_summary_csv_path(results_dir: Path, space: str) -> Path:
     """Return the inter-subject summary CSV path for a given space."""
-    return get_analysis_dir(results_dir, space) / f"inter_subject_summary_{space_tag(space)}.csv"
+    return (
+        get_analysis_dir(results_dir, space)
+        / f"inter_subject_summary_{space_tag(space)}.csv"
+    )
 
 
-def get_intra_subject_diff_csv_path(results_dir: Path, space: str, condition: str) -> Path:
+def get_intra_subject_diff_csv_path(
+    results_dir: Path, space: str, condition: str
+) -> Path:
     """Return the intra-subject diff CSV path for a condition and space."""
-    return get_analysis_dir(results_dir, space) / f"intra_subject_diff_{condition}_{space_tag(space)}.csv"
+    return (
+        get_analysis_dir(results_dir, space)
+        / f"intra_subject_diff_{condition}_{space_tag(space)}.csv"
+    )
 
 
 def get_clusters_csv_path(results_dir: Path, space: str) -> Path:
@@ -124,17 +135,15 @@ def get_clusters_csv_path(results_dir: Path, space: str) -> Path:
     return get_analysis_dir(results_dir, space) / f"clusters_{space_tag(space)}.csv"
 
 
-def load_config(config_path: Path) -> "PipelineConfig":
+def load_config(config_path: Path) -> PipelineConfig:
     """Load and validate the YAML configuration file via Pydantic models."""
     from _config import load_and_validate
+
     return load_and_validate(config_path)
 
 
 def find_raw_efield(
-    simnibs_output_dir: Path,
-    subject: str,
-    roi: str,
-    mode: str
+    simnibs_output_dir: Path, subject: str, roi: str, mode: str
 ) -> Optional[Path]:
     """
     Find the raw (unprocessed) e-field file in the SimNIBS output directory.
@@ -188,7 +197,9 @@ def find_raw_efield(
     return efield_files[0] if efield_files else None
 
 
-def find_simulation_dirs(subject_dir: Path, condition: str, mode: str, folder_pattern: str | None = None) -> List[Path]:
+def find_simulation_dirs(
+    subject_dir: Path, condition: str, mode: str, folder_pattern: str | None = None
+) -> List[Path]:
     """
     Find all simulation/optimization directories for a given condition.
     Handles hashes in folder names.
@@ -232,7 +243,9 @@ def find_simulation_dirs(subject_dir: Path, condition: str, mode: str, folder_pa
     return found_dirs
 
 
-def find_efield_files(simulation_dir: Path, mode: str, space: str = SPACE_MNI) -> List[Path]:
+def find_efield_files(
+    simulation_dir: Path, mode: str, space: str = SPACE_MNI
+) -> List[Path]:
     """
     Find e-field files in a simulation/optimization directory.
 
@@ -255,13 +268,17 @@ def find_efield_files(simulation_dir: Path, mode: str, space: str = SPACE_MNI) -
 
     if space == SPACE_NATIVE:
         if mode == "optimization":
-            volumes_dir = simulation_dir / "simulation_with_optimal_montage" / "subject_volumes"
+            volumes_dir = (
+                simulation_dir / "simulation_with_optimal_montage" / "subject_volumes"
+            )
         else:
             volumes_dir = simulation_dir / "subject_volumes"
         glob_pattern = "*_scalar_magnE.nii.gz"
     else:
         if mode == "optimization":
-            volumes_dir = simulation_dir / "simulation_with_optimal_montage" / "mni_volumes"
+            volumes_dir = (
+                simulation_dir / "simulation_with_optimal_montage" / "mni_volumes"
+            )
         else:
             volumes_dir = simulation_dir / "mni_volumes"
         glob_pattern = "*_scalar_MNI_magnE.nii.gz"
@@ -332,7 +349,9 @@ def get_brainmask(
 
     if space == SPACE_MNI:
         if mni_mask_path is None:
-            raise ValueError("mni_mask_path is required when space='mni' (config['paths']['mni_brain_mask'])")
+            raise ValueError(
+                "mni_mask_path is required when space='mni' (config['paths']['mni_brain_mask'])"
+            )
         path = Path(mni_mask_path)
     else:
         if m2m_dir is None:
@@ -399,7 +418,11 @@ def get_roi_mask_path(
             / f"{condition}_mask_{space_tag(space)}.nii.gz"
         )
     else:
-        mask_path = simnibs_output_dir / "mni_target" / f"{condition}_mask_{space_tag(space)}.nii.gz"
+        mask_path = (
+            simnibs_output_dir
+            / "mni_target"
+            / f"{condition}_mask_{space_tag(space)}.nii.gz"
+        )
 
     if not mask_path.exists():
         raise FileNotFoundError(f"ROI mask not found ({space} space): {mask_path}")
@@ -447,9 +470,9 @@ def get_preproc_paths(preproc_dir: Path, base_name: str, roi_name: str) -> dict:
         ``extra_masked``,  ``extra_cleaned``
     """
     return {
-        "intra_masked":  preproc_dir / f"{base_name}_{roi_name}_masked.nii.gz",
+        "intra_masked": preproc_dir / f"{base_name}_{roi_name}_masked.nii.gz",
         "intra_cleaned": preproc_dir / f"{base_name}_{roi_name}_cleaned.nii.gz",
-        "extra_masked":  preproc_dir / f"{base_name}_extra_{roi_name}_masked.nii.gz",
+        "extra_masked": preproc_dir / f"{base_name}_extra_{roi_name}_masked.nii.gz",
         "extra_cleaned": preproc_dir / f"{base_name}_extra_{roi_name}_cleaned.nii.gz",
     }
 
@@ -520,7 +543,9 @@ def check_output(path: Path, if_exists: str = "overwrite") -> bool:
     return True
 
 
-def save_nifti(img: nib.spatialimages.SpatialImage, output_path: Path, if_exists: str = "overwrite") -> None:
+def save_nifti(
+    img: nib.spatialimages.SpatialImage, output_path: Path, if_exists: str = "overwrite"
+) -> None:
     """Save a NIfTI image to disk, creating parent directories as needed."""
     output_path = Path(output_path)
     if not check_output(output_path, if_exists):
@@ -565,7 +590,9 @@ def save_rows(rows: List[Dict], out_csv: Path, if_exists: str = "overwrite") -> 
     pd.DataFrame(rows).to_csv(out_csv, index=False)
 
 
-def save_dataframe(df: pd.DataFrame, out_path: Path, if_exists: str = "overwrite", **to_csv_kwargs) -> None:
+def save_dataframe(
+    df: pd.DataFrame, out_path: Path, if_exists: str = "overwrite", **to_csv_kwargs
+) -> None:
     """Save a DataFrame to CSV, creating parent directories as needed."""
     out_path = Path(out_path)
     if not check_output(out_path, if_exists):
@@ -574,9 +601,10 @@ def save_dataframe(df: pd.DataFrame, out_path: Path, if_exists: str = "overwrite
     df.to_csv(out_path, **to_csv_kwargs)
 
 
-def save_ants_image(img: "ants.ANTsImage", out_path: Path, if_exists: str = "overwrite") -> None:
+def save_ants_image(img: Any, out_path: Path, if_exists: str = "overwrite") -> None:
     """Save an ANTsPy image to disk, creating parent directories as needed."""
     import ants
+
     out_path = Path(out_path)
     if not check_output(out_path, if_exists):
         return
@@ -591,6 +619,7 @@ def save_figure(out_path: Path, if_exists: str = "overwrite", **savefig_kwargs) 
     Closes the figure in both cases.
     """
     import matplotlib.pyplot as plt
+
     out_path = Path(out_path)
     if not check_output(out_path, if_exists):
         logger.debug(f"  skip figure (exists): {out_path.name}")

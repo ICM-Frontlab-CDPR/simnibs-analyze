@@ -34,6 +34,7 @@ SPACES = ("mni", "native")
 # Loading
 # ---------------------------------------------------------------------------
 
+
 def load_all_features(results_dir: Path, spaces: tuple = SPACES) -> pd.DataFrame:
     """Load and concatenate all_features CSVs found in *results_dir*/analysis/."""
     frames = []
@@ -41,19 +42,22 @@ def load_all_features(results_dir: Path, spaces: tuple = SPACES) -> pd.DataFrame
         path = get_features_csv_path(results_dir, space)
         if path.exists():
             df = pd.read_csv(path)
-            df["space"] = space          # ensure column present even if missing
+            df["space"] = space  # ensure column present even if missing
             frames.append(df)
             logger.info(f"Loaded {len(df)} rows from {path.name}")
         else:
             logger.info(f"Not found (skipped): {path.name}")
     if not frames:
-        raise FileNotFoundError(f"No all_features_*.csv found in {results_dir}/analysis/")
+        raise FileNotFoundError(
+            f"No all_features_*.csv found in {results_dir}/analysis/"
+        )
     return pd.concat(frames, ignore_index=True)
 
 
 # ---------------------------------------------------------------------------
 # Comparison 1 — space (mni vs native)
 # ---------------------------------------------------------------------------
+
 
 def compare_spaces(
     df: pd.DataFrame,
@@ -93,7 +97,7 @@ def plot_space_comparison(
     width = 0.35
 
     fig, ax = plt.subplots(figsize=(max(6, len(conditions) * 1.5), 5))
-    bars_mni = ax.bar(
+    ax.bar(
         [i - width / 2 for i in x],
         summary["mean_mni"],
         width,
@@ -102,7 +106,7 @@ def plot_space_comparison(
         capsize=4,
         alpha=0.8,
     )
-    bars_nat = ax.bar(
+    ax.bar(
         [i + width / 2 for i in x],
         summary["mean_native"],
         width,
@@ -127,6 +131,7 @@ def plot_space_comparison(
 # Comparison 2 — ROI method
 # ---------------------------------------------------------------------------
 
+
 def compare_roi_methods(
     df: pd.DataFrame,
     roi_pairs: List[tuple],
@@ -150,17 +155,19 @@ def compare_roi_methods(
     for cond_a, cond_b in roi_pairs:
         sub_a = df[df[condition_col] == cond_a][metric].dropna()
         sub_b = df[df[condition_col] == cond_b][metric].dropna()
-        rows.append({
-            "cond_a": cond_a,
-            "cond_b": cond_b,
-            "mean_a": sub_a.mean(),
-            "std_a": sub_a.std(),
-            "n_a": len(sub_a),
-            "mean_b": sub_b.mean(),
-            "std_b": sub_b.std(),
-            "n_b": len(sub_b),
-            "delta_mean": sub_a.mean() - sub_b.mean(),
-        })
+        rows.append(
+            {
+                "cond_a": cond_a,
+                "cond_b": cond_b,
+                "mean_a": sub_a.mean(),
+                "std_a": sub_a.std(),
+                "n_a": len(sub_a),
+                "mean_b": sub_b.mean(),
+                "std_b": sub_b.std(),
+                "n_b": len(sub_b),
+                "delta_mean": sub_a.mean() - sub_b.mean(),
+            }
+        )
     return pd.DataFrame(rows)
 
 
@@ -210,6 +217,7 @@ def plot_roi_method_comparison(
 # Entry point
 # ---------------------------------------------------------------------------
 
+
 def run(
     results_dir: Path,
     metric: str = "mean",
@@ -226,7 +234,9 @@ def run(
     n_spaces = df["space"].nunique()
     if n_spaces >= 2:
         space_summary = compare_spaces(df, metric=metric)
-        save_dataframe(space_summary, out_dir / f"space_comparison_{metric}.csv", index=False)
+        save_dataframe(
+            space_summary, out_dir / f"space_comparison_{metric}.csv", index=False
+        )
         plot_space_comparison(
             space_summary,
             metric=metric,
@@ -239,7 +249,9 @@ def run(
     # ── ROI method comparison ───────────────────────────────────────────────
     if roi_pairs:
         roi_summary = compare_roi_methods(df, roi_pairs=roi_pairs, metric=metric)
-        save_dataframe(roi_summary, out_dir / f"roi_method_comparison_{metric}.csv", index=False)
+        save_dataframe(
+            roi_summary, out_dir / f"roi_method_comparison_{metric}.csv", index=False
+        )
         plot_roi_method_comparison(
             roi_summary,
             metric=metric,
@@ -251,18 +263,31 @@ def run(
 
 
 def _parse_args(argv=None):
-    parser = argparse.ArgumentParser(description="Meta-analysis across spaces and ROI methods.")
-    parser.add_argument("--results-dir", type=Path, required=True,
-                        help="Root results directory (contains analysis/)")
-    parser.add_argument("--metric", default="mean",
-                        help="Feature column to compare (default: mean)")
-    parser.add_argument("--spaces", nargs="+", default=list(SPACES),
-                        help="Spaces to load (default: mni native)")
+    parser = argparse.ArgumentParser(
+        description="Meta-analysis across spaces and ROI methods."
+    )
     parser.add_argument(
-        "--roi-pairs", nargs="+", default=[],
+        "--results-dir",
+        type=Path,
+        required=True,
+        help="Root results directory (contains analysis/)",
+    )
+    parser.add_argument(
+        "--metric", default="mean", help="Feature column to compare (default: mean)"
+    )
+    parser.add_argument(
+        "--spaces",
+        nargs="+",
+        default=list(SPACES),
+        help="Spaces to load (default: mni native)",
+    )
+    parser.add_argument(
+        "--roi-pairs",
+        nargs="+",
+        default=[],
         metavar="A:B",
         help="Pairs of conditions to compare as ROI methods, e.g. "
-             "fef_simulation:HA-fef_simulation fef_simulation:AAL-fef_simulation",
+        "fef_simulation:HA-fef_simulation fef_simulation:AAL-fef_simulation",
     )
     return parser.parse_args(argv)
 

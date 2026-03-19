@@ -115,7 +115,7 @@ class Visualizer:
 
         plotter = pv.Plotter(off_screen=True)
 
-        # ── Fond anatomique (surface du cerveau) ──────────────────────────
+        # ── Anatomical background (brain surface) ─────────────────────────
         if brain_bg_path is not None:
             t1_img = nib.as_closest_canonical(nib.load(str(brain_bg_path)))
             t1_data = np.squeeze(t1_img.get_fdata())
@@ -184,15 +184,15 @@ class Visualizer:
                     all_nonzero.append(nonzero)
 
         if not all_nonzero:
-            logger.warning("Aucune donnée non-nulle trouvée, abandon de efields_figures.")
+            logger.warning("No non-zero data found, skipping efields_figures.")
             return
 
         all_values = np.concatenate(all_nonzero)
         vmin, vmax = float(np.min(all_values)), float(np.max(all_values))
-        logger.info(f"Échelle de couleur globale : {vmin:.3f} – {vmax:.3f} V/m")
+        logger.info(f"Global colour scale: {vmin:.3f} – {vmax:.3f} V/m")
 
         for (roi, mode), subject_files in file_info_by_roi_mode.items():
-            logger.info(f"Génération de la figure : {roi} – {mode}")
+            logger.info(f"Generating figure: {roi} – {mode}")
             n_subjects = len(subject_files)
             n_cols = min(6, n_subjects)
             n_rows = (n_subjects + n_cols - 1) // n_cols
@@ -230,9 +230,9 @@ class Visualizer:
             plt.tight_layout()
             out_path = output_dir / f"efields_3d_{roi}_{mode}_{tag}_{self.camera_position}.png"
             save_figure(out_path, if_exists=self.if_exists, dpi=300, bbox_inches="tight")
-            logger.info(f"  Sauvegardé : {out_path}")
+            logger.info(f"  Saved: {out_path}")
 
-        logger.info(f"Toutes les figures 3D dans {output_dir}")
+        logger.info(f"All 3D figures saved in {output_dir}")
 
     def efields_histograms(
         self,
@@ -248,16 +248,16 @@ class Visualizer:
         data_by_subject :
             Mapping ``subject → [(roi, mode, masked_path, cleaned_path), ...]``.
         region :
-            Label inclus dans le titre et le nom de fichier (``"intra"`` ou ``"extra"``).
+            Label included in the figure title and filename (``"intra"`` or ``"extra"``).
         space :
-            ``'mni'`` ou ``'native'`` — suffixe de nom de fichier.
+            ``'mni'`` or ``'native'`` — filename suffix.
         """
         output_dir = self.output_dir / "preprocess"
         output_dir.mkdir(parents=True, exist_ok=True)
         tag = space_tag(space)
 
         for subject, subject_data in data_by_subject.items():
-            logger.info(f"Histogrammes {region}-ROI pour {subject}")
+            logger.info(f"{region}-ROI histograms for {subject}")
             n_plots = len(subject_data)
             n_cols = min(3, n_plots)
             n_rows = (n_plots + n_cols - 1) // n_cols
@@ -285,13 +285,13 @@ class Visualizer:
                 else:
                     xrange = None
                 if masked_data.size > 0:
-                    ax.hist(masked_data, bins=self.bins, range=xrange, alpha=0.6, label="Avant", color="red", density=True)
+                    ax.hist(masked_data, bins=self.bins, range=xrange, alpha=0.6, label="Before", color="red", density=True)
                 if cleaned_data.size > 0:
-                    ax.hist(cleaned_data, bins=self.bins, range=xrange, alpha=0.6, label="Après", color="blue", density=True)
+                    ax.hist(cleaned_data, bins=self.bins, range=xrange, alpha=0.6, label="After", color="blue", density=True)
                 if masked_data.size == 0 and cleaned_data.size == 0:
-                    ax.text(0.5, 0.5, "Aucune donnée", ha="center", va="center", transform=ax.transAxes)
+                    ax.text(0.5, 0.5, "No data", ha="center", va="center", transform=ax.transAxes)
                 ax.set_xlabel("E-field (V/m)", fontsize=10)
-                ax.set_ylabel("Densité", fontsize=10)
+                ax.set_ylabel("Density", fontsize=10)
                 ax.set_title(f"{roi} | {mode}", fontsize=11)
                 ax.legend(fontsize=8)
                 ax.grid(True, alpha=0.3)
@@ -308,9 +308,9 @@ class Visualizer:
             plt.tight_layout()
             out_path = output_dir / f"efields_histograms_{subject}_{region}_{tag}.png"
             save_figure(out_path, if_exists=self.if_exists, dpi=300, bbox_inches="tight")
-            logger.info(f"  Sauvegardé : {out_path}")
+            logger.info(f"  Saved: {out_path}")
 
-        logger.info(f"Tous les histogrammes dans {output_dir}")
+        logger.info(f"All histograms saved in {output_dir}")
 
     def visualize_roi_masks(
         self,
@@ -334,7 +334,7 @@ class Visualizer:
         output_dir.mkdir(parents=True, exist_ok=True)
 
         for mask_img, roi_name in zip(mask_imgs, roi_names):
-            logger.info(f"Visualisation du masque : {roi_name}")
+            logger.info(f"Visualising mask: {roi_name}")
             fig = plt.figure(figsize=(12, 10))
             plotting.plot_roi(
                 mask_img,
@@ -347,10 +347,10 @@ class Visualizer:
             )
             out_path = output_dir / f"{roi_name}_mask_visualization.png"
             save_figure(out_path, if_exists=self.if_exists, dpi=150, bbox_inches="tight")
-            logger.info(f"  Sauvegardé : {out_path}")
+            logger.info(f"  Saved: {out_path}")
 
         if len(mask_imgs) > 1:
-            logger.info("Création d'une vue combinée de tous les masques")
+            logger.info("Creating combined view of all masks")
             fig = plt.figure(figsize=(16, 12))
             fig.suptitle("All ROI Masks – MNI Space", fontsize=18, fontweight="bold")
 
@@ -385,9 +385,9 @@ class Visualizer:
             out_path = output_dir / "all_masks_combined.png"
             plt.tight_layout()
             save_figure(out_path, if_exists=self.if_exists, dpi=150, bbox_inches="tight")
-            logger.info(f"  Vue combinée sauvegardée : {out_path}")
+            logger.info(f"  Combined view saved: {out_path}")
 
-        logger.info(f"Toutes les visualisations de masques dans {output_dir}")
+        logger.info(f"All mask visualisations saved in {output_dir}")
 
     def plot_simulation_vs_optimization(
         self,
@@ -441,9 +441,9 @@ class Visualizer:
             if pivot.empty or "simulation" not in pivot.columns or "optimization" not in pivot.columns:
                 missing = [c for c in ("simulation", "optimization") if c not in pivot.columns]
                 logger.warning(
-                    f"plot_simulation_vs_optimization: ROI '{roi}' ignorée — "
-                    f"données manquantes : {missing}. "
-                    "Assurez-vous que mode: [simulation, optimization] est configuré."
+                    f"plot_simulation_vs_optimization: ROI '{roi}' skipped — "
+                    f"missing data: {missing}. "
+                    "Make sure mode: [simulation, optimization] is configured."
                 )
                 continue
 
@@ -475,4 +475,4 @@ class Visualizer:
         suffix = f"_{tagged}" if tagged else ""
         out_path = output_dir / f"simulation_vs_optimization{suffix}.png"
         save_figure(out_path, if_exists=self.if_exists, dpi=150, bbox_inches="tight")
-        logger.info(f"Sauvegardé : {out_path}")
+        logger.info(f"Saved: {out_path}")

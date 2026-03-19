@@ -163,7 +163,7 @@ class AnatomicalPreparer:
 
         # ── Subject-space skull-strip ──────────────────────────────────
         # T1 source : m2m_<subject>/segmentation/T1_bias_corrected.nii.gz
-        # Masque    : m2m_<subject>/label_prep/tissue_labeling_upsampled.nii.gz
+        # Mask      : m2m_<subject>/label_prep/tissue_labeling_upsampled.nii.gz
         # Output    : subject_target/T1_subject_brain.nii.gz
         try:
             t1_path = get_t1_conform(m2m_dir)
@@ -179,7 +179,7 @@ class AnatomicalPreparer:
         # T1 source : templates/MNI152_T1_1mm.nii.gz  (self._template_path)
         # Masque    : m2m_<subject>/toMNI/final_tissues_MNI.nii.gz
         # Output    : subject_target/T1_MNI_brain.nii.gz
-        # → même espace que les e-fields (*_scalar_MNI_magnE.nii.gz), pas de resampling.
+        # → same space as the e-fields (*_scalar_MNI_magnE.nii.gz), no resampling.
         try:
             mni_tissues_path = get_mni_tissues(m2m_dir)
             self.mni_stripped_t1_path = self._skull_strip(

@@ -11,7 +11,7 @@ from nilearn import image, masking
 
 from _pipeline_io import load_img
 
-#TODO add condition sur mni-space ou subject space (c'est dans un get_fpath que ça doit etre défini)
+#TODO add condition on mni-space or subject space (should be defined in a get_fpath function)
 class Preprocessor:
     """
     Preprocess an e-field image within a ROI.
@@ -46,17 +46,17 @@ class Preprocessor:
     @staticmethod
     def build_extra_mask(roi_mask_path: Path) -> nib.Nifti1Image:
         """
-        Construit le masque extra-ROI en inversant le masque ROI binaire.
+        Build the extra-ROI mask by inverting the binary ROI mask.
 
         Parameters
         ----------
         roi_mask_path : Path
-            Chemin vers le masque ROI binaire.
+            Path to the binary ROI mask.
 
         Returns
         -------
         nib.Nifti1Image
-            Image binaire : 1 partout sauf dans la ROI.
+            Binary image: 1 everywhere except inside the ROI.
         """
         return image.math_img("1 - img", img=load_img(roi_mask_path))
 
@@ -69,17 +69,17 @@ class Preprocessor:
         portion: float | None = None,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Filtre les outliers sur un vecteur 1D.
-        - method="iqr": conserve les valeurs dans [Q1 - iqr_factor*IQR, Q3 + iqr_factor*IQR]
-        - method="z": conserve les valeurs avec |z| <= z_thresh (z-score robuste)
-        - portion: si défini, garde la portion centrale (ex: 0.95 garde 2.5%-97.5%)
+        Filter outliers on a 1-D vector.
+        - method="iqr": keep values in [Q1 - iqr_factor*IQR, Q3 + iqr_factor*IQR]
+        - method="z": keep values with |z| <= z_thresh (robust z-score)
+        - portion: if set, keep the central portion (e.g. 0.95 keeps 2.5%–97.5%)
 
         Returns
         -------
         filtered_values : np.ndarray
-            Valeurs filtrées (NaN sur les outliers).
+            Filtered values (NaN on outliers).
         keep_mask : np.ndarray
-            Masque booléen des valeurs conservées.
+            Boolean mask of retained values.
         """
         vals = np.asarray(values, dtype=float)
         keep = np.ones(vals.shape, dtype=bool)
@@ -148,10 +148,10 @@ class Preprocessor:
         roi_values = masking.apply_mask(efield, roi)
         self.masked_img = masking.unmask(roi_values, roi)
 
-        # Calculer les bornes outliers uniquement sur les voxels non-nuls (valeurs
-        # cérébrales réelles). Cela évite que les zéros du background, présents quand
-        # le masque couvre tout le volume (ex: extra-ROI), ne compriment l'IQR et
-        # ne classent tous les vrais signaux comme outliers.
+        # Compute outlier bounds only on non-zero voxels (real brain signal).
+        # This prevents background zeros, present when the mask covers the full
+        # volume (e.g. extra-ROI), from compressing the IQR and classifying all
+        # true signal values as outliers.
         nonzero_idx = roi_values > 0
         nonzero_vals = roi_values[nonzero_idx]
         self.filtered_values = roi_values.copy().astype(float)

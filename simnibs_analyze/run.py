@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Pipeline principal d'analyse des e-fields SimNIBS.
-Orchestre target generation, preprocessing, feature extraction, analysis et visualisation.
+Main SimNIBS e-field analysis pipeline.
+Orchestrates target generation, preprocessing, feature extraction, analysis and visualisation.
 """
 
 from __future__ import annotations
@@ -57,17 +57,17 @@ def process_subject_condition(
     if_exists: str = "overwrite",
 ) -> List[Dict]:
     """
-    Préprocesse et extrait les features de tous les e-fields pour un sujet/condition/mode.
+    Preprocess and extract features from all e-fields for a subject/condition/mode.
 
     Parameters
     ----------
     space : str
-        ``'mni'`` (défaut) ou ``'native'`` — espace de travail pour les efields et ROI masks.
+        ``'mni'`` (default) or ``'native'`` — working space for e-fields and ROI masks.
 
     Returns
     -------
     List[Dict]
-        Lignes de features extraites (une par fichier e-field trouvé).
+        Extracted feature rows (one per e-field file found).
     """
     results: List[Dict] = []
     simnibs_output = config.paths.simnibs_output
@@ -75,7 +75,7 @@ def process_subject_condition(
     subject_dir = subject_paths["subject_dir"]
 
     if not subject_dir.exists():
-        logger.warning(f"Répertoire sujet introuvable : {subject_dir}")
+        logger.warning(f"Subject directory not found: {subject_dir}")
         return results
 
     simulation_dirs = find_simulation_dirs(
@@ -83,7 +83,7 @@ def process_subject_condition(
         folder_pattern=config.target_generation.rois[condition].folder_pattern,
     )
     if not simulation_dirs:
-        logger.warning(f"Aucune simulation trouvée pour {subject}/{condition}/{mode}")
+        logger.warning(f"No simulation found for {subject}/{condition}/{mode}")
         return results
 
     try:
@@ -107,13 +107,13 @@ def process_subject_condition(
             # ── Preprocessing INTRA-ROI ──────────────────────────────────
             if skip_preprocessing:
                 if not paths["intra_cleaned"].exists():
-                    logger.warning(f"Fichier preprocessed introuvable, skip : {paths['intra_cleaned']}")
+                    logger.warning(f"Preprocessed file not found, skipping: {paths['intra_cleaned']}")
                     continue
-                logger.info(f"Utilisation fichier existant : {paths['intra_cleaned'].name}")
+                logger.info(f"Using existing file: {paths['intra_cleaned'].name}")
             else:
                 if paths["intra_cleaned"].exists() and paths["intra_masked"].exists():
                     if if_exists == "skip":
-                        logger.info(f"Déjà preprocessé, skip : {paths['intra_cleaned'].name}")
+                        logger.info(f"Already preprocessed, skipping: {paths['intra_cleaned'].name}")
                         pass  # will fall through to feature extraction below
                     elif if_exists == "error":
                         logger.error(f"Output exists (if_exists='error'): {paths['intra_cleaned'].name}")
@@ -123,29 +123,29 @@ def process_subject_condition(
                             preproc = Preprocessor(**preproc_kwargs).run(efield_path, roi_mask_path)
                             save_nifti(preproc.masked_img, paths["intra_masked"])
                             save_nifti(preproc.cleaned_img, paths["intra_cleaned"])
-                            logger.info(f"✓ Preprocessing intra-ROI : {paths['intra_cleaned'].name}")
+                            logger.info(f"✓ Intra-ROI preprocessing: {paths['intra_cleaned'].name}")
                         except Exception as e:
-                            logger.error(f"✗ Preprocessing intra-ROI échoué ({efield_path.name}) : {e}")
+                            logger.error(f"✗ Intra-ROI preprocessing failed ({efield_path.name}): {e}")
                             continue
                 else:
                     try:
                         preproc = Preprocessor(**preproc_kwargs).run(efield_path, roi_mask_path)
                         save_nifti(preproc.masked_img, paths["intra_masked"])
                         save_nifti(preproc.cleaned_img, paths["intra_cleaned"])
-                        logger.info(f"✓ Preprocessing intra-ROI : {paths['intra_cleaned'].name}")
+                        logger.info(f"✓ Intra-ROI preprocessing: {paths['intra_cleaned'].name}")
                     except Exception as e:
-                        logger.error(f"✗ Preprocessing intra-ROI échoué ({efield_path.name}) : {e}")
+                        logger.error(f"✗ Intra-ROI preprocessing failed ({efield_path.name}): {e}")
                         continue
 
             # ── Preprocessing EXTRA-ROI ──────────────────────────────────
             if skip_preprocessing:
                 if not paths["extra_cleaned"].exists():
-                    logger.warning(f"Fichier extra preprocessed introuvable, skip : {paths['extra_cleaned']}")
+                    logger.warning(f"Extra preprocessed file not found, skipping: {paths['extra_cleaned']}")
                     continue
             else:
                 if paths["extra_cleaned"].exists() and paths["extra_masked"].exists():
                     if if_exists == "skip":
-                        logger.info(f"Déjà preprocessé, skip : {paths['extra_cleaned'].name}")
+                        logger.info(f"Already preprocessed, skipping: {paths['extra_cleaned'].name}")
                         pass
                     elif if_exists == "error":
                         logger.error(f"Output exists (if_exists='error'): {paths['extra_cleaned'].name}")
@@ -156,9 +156,9 @@ def process_subject_condition(
                             extra_masked_img = Preprocessor(**preproc_kwargs).run(efield_path, extra_mask).masked_img
                             save_nifti(extra_masked_img, paths["extra_masked"])
                             save_nifti(extra_masked_img, paths["extra_cleaned"])  # cleaned = masked
-                            logger.info(f"✓ Preprocessing extra-ROI : {paths['extra_masked'].name}")
+                            logger.info(f"✓ Extra-ROI preprocessing: {paths['extra_masked'].name}")
                         except Exception as e:
-                            logger.error(f"✗ Preprocessing extra-ROI échoué ({efield_path.name}) : {e}")
+                            logger.error(f"✗ Extra-ROI preprocessing failed ({efield_path.name}): {e}")
                             continue
                 else:
                     try:
@@ -166,9 +166,9 @@ def process_subject_condition(
                         extra_masked_img = Preprocessor(**preproc_kwargs).run(efield_path, extra_mask).masked_img
                         save_nifti(extra_masked_img, paths["extra_masked"])
                         save_nifti(extra_masked_img, paths["extra_cleaned"])  # cleaned = masked
-                        logger.info(f"✓ Preprocessing extra-ROI : {paths['extra_masked'].name}")
+                        logger.info(f"✓ Extra-ROI preprocessing: {paths['extra_masked'].name}")
                     except Exception as e:
-                        logger.error(f"✗ Preprocessing extra-ROI échoué ({efield_path.name}) : {e}")
+                        logger.error(f"✗ Extra-ROI preprocessing failed ({efield_path.name}): {e}")
                         continue
 
             # ── Feature extraction ───────────────────────────────────────
@@ -186,14 +186,14 @@ def process_subject_condition(
                     condition=None,
                 ).row
 
-                # Fusion : colonnes intra sans préfixe, extra avec préfixe extra_
+                # Merge: intra columns without prefix, extra columns with extra_ prefix
                 row = {**row_intra}
                 for k in ["mean", "median", "std", "min", "max", "n_voxels"]:
                     if k in row_extra:
                         row[f"extra_{k}"] = row_extra[k]
                 row["space"] = space
 
-                # Ratio calculé depuis les valeurs nettoyées
+                # Ratio computed from cleaned values
                 intra_mean = row.get("mean", 0.0)
                 extra_mean = row.get("extra_mean", 1e-10)
                 row["efield_ratio_mean"] = intra_mean / max(float(extra_mean), 1e-10)
@@ -206,14 +206,14 @@ def process_subject_condition(
                 )
                 results.append(row)
             except Exception as e:
-                logger.error(f"✗ Feature extraction échouée ({subject}/{condition}/{mode}) : {e}")
+                logger.error(f"✗ Feature extraction failed ({subject}/{condition}/{mode}): {e}")
 
     return results
 
 
 def run_analysis(features_csv: Path, config: PipelineConfig, space: str, if_exists: str = "overwrite") -> None:
-    """Analyse inter/intra-sujets et scatter plot simulation vs optimization."""
-    logger.step("ANALYSE INTER/INTRA-SUJETS")
+    """Inter/intra-subject analysis and simulation vs optimisation scatter plot."""
+    logger.step("INTER/INTRA-SUBJECT ANALYSIS")
 
     results_dir = config.paths.results_dir
     analysis_dir = get_analysis_dir(results_dir, space)
@@ -224,16 +224,16 @@ def run_analysis(features_csv: Path, config: PipelineConfig, space: str, if_exis
     condition_col = config.analysis.condition_col
 
     df = pd.read_csv(features_csv)
-    logger.info(f"Chargement : {len(df)} lignes depuis {features_csv}")
+    logger.info(f"Loaded: {len(df)} rows from {features_csv}")
 
-    # Inter-sujet
+    # Inter-subject
     inter = Analysis(df).inter_subject_summary(metric=metric, condition_col=condition_col)
     inter_csv = get_inter_subject_summary_csv_path(results_dir, space)
     if check_output(inter_csv, if_exists):
         save_dataframe(inter, inter_csv, index=False)
-        logger.info(f"✓ Résumé inter-sujet : {inter_csv}")
+        logger.info(f"✓ Inter-subject summary: {inter_csv}")
 
-    # Intra-sujet (paires simulation / optimization)
+    # Intra-subject (simulation / optimization pairs)
     conditions = set(df[condition_col].unique())
     for cond in config.stim_conditions:
         sim_cond, opt_cond = f"{cond}_simulation", f"{cond}_optimization"
@@ -251,9 +251,9 @@ def run_analysis(features_csv: Path, config: PipelineConfig, space: str, if_exis
             diff_csv = get_intra_subject_diff_csv_path(results_dir, space, cond)
             if check_output(diff_csv, if_exists):
                 save_dataframe(diff_df, diff_csv, index=False)
-                logger.info(f"✓ Diff intra-sujet : {diff_csv}")
+                logger.info(f"✓ Intra-subject diff: {diff_csv}")
         except Exception as e:
-            logger.warning(f"Analyse intra-sujet impossible pour {cond} : {e}")
+            logger.warning(f"Intra-subject analysis not possible for {cond}: {e}")
 
     # Clustering
     cl_params = config.analysis.clustering
@@ -268,20 +268,20 @@ def run_analysis(features_csv: Path, config: PipelineConfig, space: str, if_exis
                 specificity_threshold=cl_threshold,
                 intensity_col=cl_intensity_col,
             )
-            # clusters.csv conserve toutes les colonnes originales (efield_path, subject,
-            # condition, stats…) + cluster — le lien avec les e-fields est donc direct.
+            # clusters.csv retains all original columns (efield_path, subject,
+            # condition, stats…) + cluster — the link to e-fields is therefore direct.
             clusters_csv = get_clusters_csv_path(results_dir, space)
             if check_output(clusters_csv, if_exists):
                 save_dataframe(clustered_df, clusters_csv, index=False)
-                logger.info(f"✓ Clusters sauvegardés : {clusters_csv}")
+                logger.info(f"✓ Clusters saved: {clusters_csv}")
             dist = clustered_df["cluster"].value_counts().to_dict()
-            logger.info(f"  Distribution : {dist}")
+            logger.info(f"  Distribution: {dist}")
         except Exception as e:
-            logger.warning(f"Clustering échoué : {e}")
+            logger.warning(f"Clustering failed: {e}")
     else:
         logger.warning(
-            f"Colonne '{ratio_col}' absente de {features_csv.name} — clustering ignoré. "
-            "Assurez-vous que compute_efield_ratio est appelé lors de l'extraction."
+            f"Column '{ratio_col}' not found in {features_csv.name} — clustering skipped. "
+            "Make sure compute_efield_ratio is called during feature extraction."
         )
 
     # Scatter simulation vs optimization
@@ -289,13 +289,13 @@ def run_analysis(features_csv: Path, config: PipelineConfig, space: str, if_exis
         df, metric=metric, subject_col=subject_col, condition_col=condition_col,
         output_tag=space,
     )
-    logger.info("✓ Scatter simulation vs optimization créé")
-    logger.step("ANALYSE TERMINÉE")
+    logger.info("✓ Simulation vs optimisation scatter plot created")
+    logger.step("ANALYSIS COMPLETE")
 
 
 def run_viz(config: PipelineConfig, space: str, if_exists: str = "overwrite") -> None:
-    """Collecte les chemins (IO) puis génère toutes les visualisations."""
-    logger.step("GÉNÉRATION DES VISUALISATIONS")
+    """Collect paths (I/O) then generate all visualisations."""
+    logger.step("GENERATING VISUALISATIONS")
 
     simnibs_output = config.paths.simnibs_output
     results_dir = config.paths.results_dir
@@ -314,10 +314,10 @@ def run_viz(config: PipelineConfig, space: str, if_exists: str = "overwrite") ->
         mask_imgs = [nib.load(str(p)) for p in mask_paths]
         roi_names = [p.name.replace("_mask_space-mni.nii.gz", "") for p in mask_paths]
         viz.visualize_roi_masks(mask_imgs, roi_names, mni_template)
-        logger.info("✓ Masques ROI visualisés")
+        logger.info("✓ ROI masks visualised")
 
-    # ── Figures 3D e-fields ─────────────────────────────────────────────
-    # Brain backgrounds par sujet (produits par AnatomicalPreparer.run())
+    # ── 3D e-field figures ────────────────────────────────────────────────────────
+    # Brain backgrounds per subject (produced by AnatomicalPreparer.run())
     mni_brain_bg_by_subject: Dict[str, Path] = {}
     subject_brain_bg_by_subject: Dict[str, Path] = {}
     for subject in subjects:
@@ -347,9 +347,9 @@ def run_viz(config: PipelineConfig, space: str, if_exists: str = "overwrite") ->
     if file_info:
         brain_bgs = mni_brain_bg_by_subject if space == SPACE_MNI else subject_brain_bg_by_subject
         viz.efields_figures(file_info, t1_brain_by_subject=brain_bgs or None, space=space)
-        logger.info(f"✓ Figures 3D e-fields générées ({space.upper()})")
+        logger.info(f"✓ 3D e-field figures generated ({space.upper()})")
     else:
-        logger.warning(f"Aucun e-field trouvé pour space={space}, figures skippées")
+        logger.warning(f"No e-fields found for space={space}, figures skipped")
 
     # ── Histogrammes preprocessing ───────────────────────────────────────
     intra_data: Dict = {}
@@ -378,11 +378,11 @@ def run_viz(config: PipelineConfig, space: str, if_exists: str = "overwrite") ->
                         )
     if intra_data:
         viz.efields_histograms(intra_data, region="intra", space=space)
-        logger.info("✓ Histogrammes intra-ROI générés")
+        logger.info("✓ Intra-ROI histograms generated")
     if extra_data:
         viz.efields_histograms(extra_data, region="extra", space=space)
-        logger.info("✓ Histogrammes extra-ROI générés")
-    logger.step("VISUALISATIONS TERMINÉES")
+        logger.info("✓ Extra-ROI histograms generated")
+    logger.step("VISUALISATIONS COMPLETE")
 
 
 def main(
@@ -393,17 +393,17 @@ def main(
     skip_analysis: bool = False,
     skip_viz: bool = False,
 ) -> int:
-    """Point d'entrée principal du pipeline."""
-    logger.step("DÉMARRAGE DU PIPELINE D'ANALYSE E-FIELD")
-    logger.info(f"Config : {config_path}")
+    """Main pipeline entry point."""
+    logger.step("STARTING E-FIELD ANALYSIS PIPELINE")
+    logger.info(f"Config: {config_path}")
 
     config: PipelineConfig = load_config(config_path)
     space = config.space
 
-    logger.info(f"Sujets     : {config.subjects}")
+    logger.info(f"Subjects   : {config.subjects}")
     logger.info(f"Conditions : {config.stim_conditions}")
     logger.info(f"Modes      : {config.mode}")
-    logger.info(f"Espace     : {space}")
+    logger.info(f"Space      : {space}")
 
     results_dir = config.paths.results_dir
     simnibs_output = config.paths.simnibs_output
@@ -413,7 +413,7 @@ def main(
 
     results_dir.mkdir(parents=True, exist_ok=True)
 
-    # ── Étape 0 : Setup targets (une fois, indépendant des sujets) ────────
+    # ── Step 0: Setup targets (once, independent of subjects) ──────────────
     rois = config.target_generation.rois
     mni_target_dir = simnibs_output / "mni_target"
     gen = AnatomicalPreparer(
@@ -423,31 +423,31 @@ def main(
     )
 
     if not skip_target_generation:
-        logger.step("ÉTAPE 0 : GÉNÉRATION DES MASQUES ROI MNI")
+        logger.step("STEP 0: ROI MASK GENERATION (MNI)")
         existing_masks = all((mni_target_dir / f"{roi}_mask_space-mni.nii.gz").exists() for roi in rois)
         if existing_masks and if_exists == "skip":
-            logger.info(f"✓ Masques ROI déjà présents, skip : {mni_target_dir}")
+            logger.info(f"✓ ROI masks already present, skipping: {mni_target_dir}")
         elif existing_masks and if_exists == "error":
-            logger.error(f"Masques ROI déjà présents dans {mni_target_dir} (if_exists='error')")
+            logger.error(f"ROI masks already present in {mni_target_dir} (if_exists='error')")
             return 1
         else:
             try:
                 gen.setup_mni_rois(rois, mni_target_dir, if_exists=if_exists)
             except Exception as e:
-                logger.error(f"✗ Target generation échouée : {e}")
+                logger.error(f"✗ Target generation failed: {e}")
                 return 1
     else:
-        logger.info("Génération des masques ROI skippée")
+        logger.info("ROI mask generation skipped")
 
-    # ── Étapes 1+2 : Preprocessing + Feature extraction ─────────────────
+    # ── Steps 1+2: Preprocessing + Feature extraction ─────────────────────────
     analysis_dir = get_analysis_dir(results_dir, space)
     features_csv = get_features_csv_path(results_dir, space)
 
     if skip_features:
         if not features_csv.exists():
-            logger.error(f"all_features_{space_tag(space)}.csv introuvable : {features_csv}")
+            logger.error(f"all_features_{space_tag(space)}.csv not found: {features_csv}")
             return 1
-        logger.info(f"Feature extraction skippée — utilisation de {features_csv}")
+        logger.info(f"Feature extraction skipped — using {features_csv}")
     else:
         all_features: List[Dict] = []
         stats = {"total": 0, "success": 0, "failed": 0}
@@ -455,7 +455,7 @@ def main(
         logger.info(f"Computing in {space.upper()} space")
 
         for subject in config.subjects:
-            logger.step(f"SUJET : {subject}")
+            logger.step(f"SUBJECT: {subject}")
             subject_paths = get_subject_paths(simnibs_output, subject)
             m2m_dir = subject_paths["m2m_dir"]
             subject_target_dir = subject_paths["subject_target_dir"]
@@ -467,8 +467,8 @@ def main(
                 ]
                 if missing:
                     logger.warning(
-                        f"Masques ROI native-space manquants pour {subject} ({missing}) avec --skip-target-generation. "
-                        "Sujet ignoré pour éviter des outputs ambigus."
+                        f"Missing native-space ROI masks for {subject} ({missing}) with --skip-target-generation. "
+                        "Subject skipped to avoid ambiguous outputs."
                     )
                     continue
             
@@ -484,11 +484,11 @@ def main(
                         logger.info(f"✓ Native-space ROI masks generated for {subject}")
                     except Exception as e:
                         logger.warning(f"Native-space ROI generation failed: {e}")
-                        logger.warning(f"Subject {subject} ignoré pour éviter un mélange d'espaces")
+                        logger.warning(f"Subject {subject} skipped to avoid mixing spaces")
                         continue
             elif space == SPACE_NATIVE and not m2m_dir.exists():
                 logger.warning(
-                    f"m2m introuvable pour {subject}: {m2m_dir}. Sujet ignoré en espace native."
+                    f"m2m not found for {subject}: {m2m_dir}. Subject skipped in native space."
                 )
                 continue
             
@@ -509,44 +509,44 @@ def main(
                         stats["failed"] += 1
 
         if not all_features:
-            logger.warning("Aucune feature extraite !")
+            logger.warning("No features extracted!")
             return 1
 
         analysis_dir.mkdir(parents=True, exist_ok=True)
         if features_csv.exists() and if_exists == "error":
-            logger.error(f"{features_csv.name} existe déjà (if_exists='error')")
+            logger.error(f"{features_csv.name} already exists (if_exists='error')")
             return 1
         save_rows(all_features, features_csv)
-        logger.info(f"✓ {len(all_features)} features sauvegardées → {features_csv}")
-        logger.info(f"  Succès : {stats['success']}/{stats['total']}, échecs : {stats['failed']}")
+        logger.info(f"✓ {len(all_features)} features saved → {features_csv}")
+        logger.info(f"  Successes: {stats['success']}/{stats['total']}, failures: {stats['failed']}")
 
-    # ── Étape 3 : Analyse ────────────────────────────────────────────────
+    # ── Step 3: Analysis ──────────────────────────────────────────────────
     if not skip_analysis:
         run_analysis(features_csv, config, space=space, if_exists=if_exists)
     else:
-        logger.info("Analyse skippée")
+        logger.info("Analysis skipped")
 
-    # ── Étape 4 : Visualisations ─────────────────────────────────────────
+    # ── Step 4: Visualisations ────────────────────────────────────────────────
     if not skip_viz:
         run_viz(config, space=space, if_exists=if_exists)
     else:
-        logger.info("Visualisations skippées")
+        logger.info("Visualisations skipped")
 
-    logger.step("PIPELINE TERMINÉ")
+    logger.step("PIPELINE COMPLETE")
     return 0
 
 
 def _parse_args(argv=None):
     parser = argparse.ArgumentParser(
-        description="Pipeline d'analyse des e-fields SimNIBS",
+        description="SimNIBS e-field analysis pipeline",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Exemples :
-  python run.py                                                    # run complet
-  python run.py --skip-preprocessing                              # réutilise les fichiers preprocessés
-  python run.py --skip-preprocessing --skip-features              # réutilise all_features.csv
-  python run.py --skip-preprocessing --skip-features --skip-analysis  # viz seulement
-  python run.py --config mon_config.yaml
+Examples:
+  python run.py                                                    # full run
+  python run.py --skip-preprocessing                              # reuse existing preprocessed files
+  python run.py --skip-preprocessing --skip-features              # reuse all_features.csv
+  python run.py --skip-preprocessing --skip-features --skip-analysis  # viz only
+  python run.py --config my_config.yaml
         """,
     )
     parser.add_argument("--config", type=Path, default=Path(__file__).parent / "config.yaml")

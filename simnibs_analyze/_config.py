@@ -153,5 +153,5 @@ if __name__ == "__main__":
         print(f"✓ Config valid — {len(cfg.subjects)} subject(s), "
               f"{len(cfg.target_generation.rois)} ROI(s), space={cfg.space}")
     except Exception as e:
-        print(f"✗ Config invalide :\n{e}", file=sys.stderr)
+        print(f"✗ Invalid config:\n{e}", file=sys.stderr)
         sys.exit(1)

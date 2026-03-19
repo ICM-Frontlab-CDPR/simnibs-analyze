@@ -1,5 +1,5 @@
 """
-Passer des efields preprocessed à des valeurs dans des fichiers csv.
+Convert preprocessed e-fields to scalar values stored in CSV files.
 """
 
 from __future__ import annotations
@@ -45,12 +45,12 @@ class FeatureExtractor:
             mask = mask_img.get_fdata().astype(bool)
             values = data[mask]
         else:
-            # Pour les fichiers preprocessed, on prend seulement les valeurs non-nulles
-            # (les valeurs en dehors de la ROI sont à 0 après unmask)
+            # For preprocessed files, take only non-zero values
+            # (values outside the ROI are set to 0 after unmasking)
             values = data.ravel()
-            # Filtrer les zéros ET les NaN
+            # Filter out zeros AND NaNs
             values = values[(values != 0) & np.isfinite(values)]
-        # Pour les fichiers bruts, on filtre juste les NaN
+        # For raw files, filter out NaNs only
         if roi_mask is not None:
             values = values[np.isfinite(values)]
         return values
@@ -102,7 +102,7 @@ class FeatureExtractor:
         efield_data = np.squeeze(full_efield_img.get_fdata(dtype=np.float32))
         roi_data = np.squeeze(roi_img.get_fdata())
 
-        # Rééchantillonner le masque ROI si les grilles diffèrent
+        # Resample ROI mask if grids differ
         if efield_data.shape != roi_data.shape:
             roi_img = resample_to_img(
                 roi_img, full_efield_img, interpolation="nearest"

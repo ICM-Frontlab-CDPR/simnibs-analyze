@@ -1,7 +1,7 @@
 """
-Module I/O du pipeline SimNIBS.
-Centralise toutes les opérations d'entrées/sorties : recherche de fichiers,
-chargement d'images NIfTI, lecture/écriture de CSV et de configuration YAML.
+SimNIBS pipeline I/O module.
+Centralises all input/output operations: file discovery, NIfTI image loading,
+CSV and YAML configuration reading/writing.
 """
 
 from __future__ import annotations
@@ -26,32 +26,31 @@ SPACE_NATIVE = "native"
 
 class OutputContext:
     """
-    Regroupe tous les paramètres nécessaires pour construire les noms de
-    fichiers de sortie du pipeline.  À instancier dans la boucle principale
-    (run.py) et à passer aux fonctions de save / get_*_path.
+    Groups all parameters needed to build pipeline output filenames.
+    Instantiate in the main loop (run.py) and pass to save / get_*_path functions.
 
-    Paramètres
+    Parameters
     ----------
     subject : str
-        Identifiant du sujet (ex: '0008').
+        Subject identifier (e.g. '0008').
     condition : str
-        Nom de la ROI / condition de stimulation (ex: 'fef', 'ips-left').
-        Utilisé dans les noms de fichiers preprocessés et de masques.
+        ROI / stimulation condition name (e.g. 'fef', 'ips-left').
+        Used in preprocessed filenames and mask names.
     mode : str
-        'simulation' ou 'optimization'.
+        'simulation' or 'optimization'.
     space : str
-        'mni' ou 'native'.
+        'mni' or 'native'.
     roi_name : str
-        Clé ROI telle que définie dans config.yaml → target_generation.rois.
-        En général identique à *condition* ; utile si on veut distinguer la
-        clé config du nom de fichier.
+        ROI key as defined in config.yaml → target_generation.rois.
+        Usually identical to *condition*; useful to distinguish the config key
+        from the filename.
     base_name : str or None
-        Stem du fichier e-field source (ex: 'sub-0008_scalar_MNI_magnE').
-        Nécessaire pour get_preproc_paths.  Renseigné après find_efield_files.
+        Stem of the source e-field file (e.g. 'sub-0008_scalar_MNI_magnE').
+        Required for get_preproc_paths.  Set after find_efield_files.
     results_dir : Path or None
-        Répertoire racine des résultats (config.paths.results_dir).
+        Root results directory (config.paths.results_dir).
     simnibs_output : Path or None
-        Répertoire racine des sorties SimNIBS (config.paths.simnibs_output).
+        Root SimNIBS output directory (config.paths.simnibs_output).
     """
 
     def __init__(
@@ -80,7 +79,7 @@ def normalize_space(space: str) -> str:
     normalized = str(space).lower().strip()
     if normalized not in {SPACE_MNI, SPACE_NATIVE}:
         raise ValueError(
-            f"Paramètre 'space' invalide: {space}. Valeurs autorisées: {SPACE_MNI}, {SPACE_NATIVE}"
+            f"Invalid 'space' parameter: {space}. Allowed values: {SPACE_MNI}, {SPACE_NATIVE}"
         )
     return normalized
 
@@ -126,7 +125,7 @@ def get_clusters_csv_path(results_dir: Path, space: str) -> Path:
 
 
 def load_config(config_path: Path) -> "PipelineConfig":
-    """Charge et valide le fichier de configuration YAML via les modèles Pydantic."""
+    """Load and validate the YAML configuration file via Pydantic models."""
     from _config import load_and_validate
     return load_and_validate(config_path)
 
@@ -138,23 +137,23 @@ def find_raw_efield(
     mode: str
 ) -> Optional[Path]:
     """
-    Trouve le fichier e-field brut (non préprocessé) dans la sortie SimNIBS.
+    Find the raw (unprocessed) e-field file in the SimNIBS output directory.
 
     Parameters
     ----------
     simnibs_output_dir : Path
-        Répertoire de sortie SimNIBS
+        SimNIBS output directory.
     subject : str
-        ID du sujet
+        Subject ID.
     roi : str
-        Nom de la ROI
+        ROI name.
     mode : str
-        Mode (simulation ou optimization)
+        Mode (simulation or optimization).
 
     Returns
     -------
     Path or None
-        Chemin vers le fichier ou None si non trouvé
+        Path to the file, or None if not found.
     """
     subject_dir = simnibs_output_dir / subject
 
@@ -191,27 +190,27 @@ def find_raw_efield(
 
 def find_simulation_dirs(subject_dir: Path, condition: str, mode: str, folder_pattern: str | None = None) -> List[Path]:
     """
-    Trouve tous les répertoires de simulation/optimization pour une condition donnée.
-    Gère les hashes dans les noms de dossiers.
+    Find all simulation/optimization directories for a given condition.
+    Handles hashes in folder names.
 
     Parameters
     ----------
     subject_dir : Path
-        Répertoire du sujet (ex: 001-CC)
+        Subject directory (e.g. 001-CC).
     condition : str
-        Condition de stimulation (ex: fef, ips-left).
-        Utilisé comme fragment de recherche si *folder_pattern* n'est pas fourni.
+        Stimulation condition (e.g. fef, ips-left).
+        Used as the search fragment if *folder_pattern* is not provided.
     mode : str
-        Mode (simulation ou optimization)
+        Mode (simulation or optimization).
     folder_pattern : str or None
-        Fragment glob à utiliser à la place du nom de condition pour chercher les
-        dossiers SimNIBS.  Utile quand le nom de ROI diffère du nom de dossier
-        (ex: ROI 'ips-left' mais dossiers nommés '…ips_left…').
+        Glob fragment to use instead of the condition name when searching
+        SimNIBS folders.  Useful when the ROI name differs from the folder name
+        (e.g. ROI 'ips-left' but folders named '…ips_left…').
 
     Returns
     -------
     List[Path]
-        Liste des répertoires trouvés
+        List of matching directories.
     """
     fragment = folder_pattern if folder_pattern is not None else condition
     pattern = f"*{mode}_{fragment}*"
@@ -222,35 +221,35 @@ def find_simulation_dirs(subject_dir: Path, condition: str, mode: str, folder_pa
         base_dir = subject_dir / "optimizations"
 
     if not base_dir.exists():
-        logger.warning(f"Répertoire {mode} non trouvé: {base_dir}")
+        logger.warning(f"{mode} directory not found: {base_dir}")
         return []
 
     found_dirs = list(base_dir.glob(pattern))
 
     if not found_dirs:
-        logger.warning(f"Aucune {mode} trouvée pour pattern: {pattern} dans {base_dir}")
+        logger.warning(f"No {mode} found for pattern: {pattern} in {base_dir}")
 
     return found_dirs
 
 
 def find_efield_files(simulation_dir: Path, mode: str, space: str = SPACE_MNI) -> List[Path]:
     """
-    Trouve les fichiers e-field dans le répertoire de simulation/optimization.
+    Find e-field files in a simulation/optimization directory.
 
     Parameters
     ----------
     simulation_dir : Path
-        Répertoire de la simulation ou optimization
+        Simulation or optimization directory.
     mode : str
-        Mode (simulation ou optimization)
+        Mode (simulation or optimization).
     space : str
-        ``'mni'`` (défaut) : fichiers ``*_scalar_MNI_magnE.nii.gz`` dans ``mni_volumes/``.
-        ``'native'`` : fichiers ``*_scalar_magnE.nii.gz`` dans ``subject_volumes/``.
+        ``'mni'`` (default): ``*_scalar_MNI_magnE.nii.gz`` files in ``mni_volumes/``.
+        ``'native'``: ``*_scalar_magnE.nii.gz`` files in ``subject_volumes/``.
 
     Returns
     -------
     List[Path]
-        Liste des fichiers e-field trouvés
+        List of e-field files found.
     """
     space = normalize_space(space)
 
@@ -268,13 +267,13 @@ def find_efield_files(simulation_dir: Path, mode: str, space: str = SPACE_MNI) -
         glob_pattern = "*_scalar_MNI_magnE.nii.gz"
 
     if not volumes_dir.exists():
-        logger.warning(f"Répertoire {space}_volumes non trouvé: {volumes_dir}")
+        logger.warning(f"{space}_volumes directory not found: {volumes_dir}")
         return []
 
     efield_files = list(volumes_dir.glob(glob_pattern))
 
     if not efield_files:
-        logger.warning(f"Aucun fichier e-field trouvé dans {volumes_dir}")
+        logger.warning(f"No e-field files found in {volumes_dir}")
 
     return efield_files
 
@@ -284,14 +283,14 @@ def get_t1_conform(
     filename: str = "segmentation/T1_bias_corrected.nii.gz",
 ) -> Path:
     """
-    Retourne le chemin du T1 dans ``m2m_dir``.
+    Return the path to the T1 file inside ``m2m_dir``.
 
     Parameters
     ----------
     m2m_dir : Path
-        Répertoire ``m2m_<subject>`` produit par SimNIBS.
+        ``m2m_<subject>`` directory produced by SimNIBS.
     filename : str
-        Chemin relatif du fichier T1 (default: ``segmentation/T1_bias_corrected.nii.gz``).
+        Relative path to the T1 file (default: ``segmentation/T1_bias_corrected.nii.gz``).
 
     Raises
     ------
@@ -299,7 +298,7 @@ def get_t1_conform(
     """
     path = Path(m2m_dir) / filename
     if not path.exists():
-        raise FileNotFoundError(f"T1 non trouvé : {path}")
+        raise FileNotFoundError(f"T1 not found: {path}")
     return path
 
 
@@ -310,20 +309,20 @@ def get_brainmask(
     mni_mask_path: Optional[Path] = None,
 ) -> Path:
     """
-    Retourne le chemin du masque cerveau.
+    Return the path to the brain mask.
 
     Parameters
     ----------
     m2m_dir : Path or None
-        Répertoire ``m2m_<subject>`` produit par SimNIBS. Ignoré si ``space='mni'``.
+        ``m2m_<subject>`` directory produced by SimNIBS. Ignored when ``space='mni'``.
     filename : str
-        Chemin relatif du fichier masque dans ``m2m_dir`` (espace sujet uniquement).
+        Relative path to the mask file inside ``m2m_dir`` (subject space only).
     space : str
-        ``'native'`` (défaut) : masque dans ``m2m_dir``.
-        ``'mni'`` : masque MNI passé via ``mni_mask_path`` (lu depuis config).
+        ``'native'`` (default): mask inside ``m2m_dir``.
+        ``'mni'``: MNI mask passed via ``mni_mask_path`` (read from config).
     mni_mask_path : Path or None
-        Chemin du masque MNI, requis si ``space='mni'``.
-        Doit provenir de ``config['paths']['mni_brain_mask']``.
+        MNI mask path, required when ``space='mni'``.
+        Must come from ``config['paths']['mni_brain_mask']``.
 
     Raises
     ------
@@ -333,27 +332,27 @@ def get_brainmask(
 
     if space == SPACE_MNI:
         if mni_mask_path is None:
-            raise ValueError("mni_mask_path est requis pour space='mni' (config['paths']['mni_brain_mask'])")
+            raise ValueError("mni_mask_path is required when space='mni' (config['paths']['mni_brain_mask'])")
         path = Path(mni_mask_path)
     else:
         if m2m_dir is None:
-            raise ValueError("m2m_dir est requis pour space='native'")
+            raise ValueError("m2m_dir is required when space='native'")
         path = Path(m2m_dir) / filename
     if not path.exists():
-        raise FileNotFoundError(f"Masque cerveau non trouvé : {path}")
+        raise FileNotFoundError(f"Brain mask not found: {path}")
     return path
 
 
 def get_mni_tissues(m2m_dir: Path) -> Path:
     """
-    Retourne le chemin de la segmentation tissulaire en espace MNI.
+    Return the path to the tissue segmentation in MNI space.
 
-    Produit par SimNIBS dans ``toMNI/final_tissues_MNI.nii.gz``.
-    Labels : 1=WM, 2=GM, 3=CSF, 4=Bone, 5=Scalp …
+    Produced by SimNIBS at ``toMNI/final_tissues_MNI.nii.gz``.
+    Labels: 1=WM, 2=GM, 3=CSF, 4=Bone, 5=Scalp …
     """
     path = Path(m2m_dir) / "toMNI" / "final_tissues_MNI.nii.gz"
     if not path.exists():
-        raise FileNotFoundError(f"Tissues MNI non trouvés : {path}")
+        raise FileNotFoundError(f"MNI tissues not found: {path}")
     return path
 
 
@@ -364,35 +363,35 @@ def get_roi_mask_path(
     subject: Optional[str] = None,
 ) -> Path:
     """
-    Récupère le chemin du masque ROI pour une condition donnée.
+    Return the ROI mask path for a given condition.
 
     Parameters
     ----------
     simnibs_output_dir : Path
-        Répertoire de sortie SimNIBS
+        SimNIBS output directory.
     condition : str
-        Condition de stimulation
+        Stimulation condition.
     space : str
-        ``'mni'`` (défaut) : masques dans ``mni_target/``.
-        ``'native'`` : masques sujets dans ``<subject>/subject_target/``.
+        ``'mni'`` (default): masks in ``mni_target/``.
+        ``'native'``: subject masks in ``<subject>/subject_target/``.
     subject : str or None
-        ID sujet requis si ``space='native'``.
+        Subject ID, required when ``space='native'``.
 
     Returns
     -------
     Path
-        Chemin du masque ROI
-    
+        ROI mask path.
+
     Raises
     ------
     FileNotFoundError
-        Si le masque demandé n'existe pas.
+        If the requested mask does not exist.
     """
     space = normalize_space(space)
 
     if space == SPACE_NATIVE:
         if not subject:
-            raise ValueError("subject est requis pour space='native'")
+            raise ValueError("subject is required when space='native'")
         mask_path = (
             simnibs_output_dir
             / subject
@@ -403,23 +402,23 @@ def get_roi_mask_path(
         mask_path = simnibs_output_dir / "mni_target" / f"{condition}_mask_{space_tag(space)}.nii.gz"
 
     if not mask_path.exists():
-        raise FileNotFoundError(f"Masque ROI non trouvé ({space} space): {mask_path}")
+        raise FileNotFoundError(f"ROI mask not found ({space} space): {mask_path}")
 
     return mask_path
 
 
 def get_preproc_dir(sim_dir: Path, mode: str, space: str = SPACE_MNI) -> Path:
     """
-    Retourne le dossier de preprocessing pour un répertoire de simulation donné.
+    Return the preprocessing directory for a given simulation directory.
 
     Parameters
     ----------
     sim_dir : Path
-        Répertoire de simulation SimNIBS.
+        SimNIBS simulation directory.
     mode : str
-        ``'simulation'`` ou ``'optimization'``.
+        ``'simulation'`` or ``'optimization'``.
     space : str
-        ``'mni'`` (défaut) ou ``'native'``.
+        ``'mni'`` (default) or ``'native'``.
     """
     space = normalize_space(space)
     volumes_dir = "subject_volumes" if space == SPACE_NATIVE else "mni_volumes"
@@ -430,20 +429,20 @@ def get_preproc_dir(sim_dir: Path, mode: str, space: str = SPACE_MNI) -> Path:
 
 def get_preproc_paths(preproc_dir: Path, base_name: str, roi_name: str) -> dict:
     """
-    Retourne les chemins des fichiers preprocessés intra et extra-ROI.
+    Return the intra- and extra-ROI preprocessed file paths.
 
     Parameters
     ----------
     preproc_dir : Path
-        Dossier de sortie du preprocessing (ex: mni_volumes/).
+        Preprocessing output directory (e.g. mni_volumes/).
     base_name : str
-        Nom de base du fichier e-field (sans extension).
+        Base name of the e-field file (without extension).
     roi_name : str
-        Nom du ROI utilisé (ex: 'fef', 'ips_left').
+        ROI name used (e.g. 'fef', 'ips_left').
 
     Returns
     -------
-    dict avec les clés :
+    dict with keys:
         ``intra_masked``, ``intra_cleaned``,
         ``extra_masked``,  ``extra_cleaned``
     """
@@ -457,19 +456,19 @@ def get_preproc_paths(preproc_dir: Path, base_name: str, roi_name: str) -> dict:
 
 def load_nifti(path: Path) -> Tuple[np.ndarray, nib.Nifti1Image]:
     """
-    Charge un fichier NIfTI.
+    Load a NIfTI file.
 
     Parameters
     ----------
     path : Path
-        Chemin vers le fichier NIfTI
+        Path to the NIfTI file.
 
     Returns
     -------
     data : np.ndarray
-        Données du volume
+        Volume data array.
     img : nib.Nifti1Image
-        Image NIfTI complète
+        Full NIfTI image.
     """
     img = nib.load(str(path))
     data = img.get_fdata()

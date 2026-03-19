@@ -41,7 +41,7 @@ from _pipeline_io import (
 )
 from _logging import get_logger
 from _config import PipelineConfig
-from _citations import print_citations
+
 
 logger = get_logger(__name__)
 
@@ -484,7 +484,6 @@ def main(
     skip_viz: bool = False,
 ) -> int:
     """Main pipeline entry point."""
-    print_citations()
     logger.step("STARTING E-FIELD ANALYSIS PIPELINE")
     logger.info(f"Config: {config_path}")
 

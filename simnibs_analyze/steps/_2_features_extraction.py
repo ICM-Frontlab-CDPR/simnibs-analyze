@@ -12,7 +12,7 @@ import numpy as np
 import nibabel as nib
 from nilearn.image import resample_to_img
 
-from _pipeline_io import load_img, validate_binary, save_rows
+from .._pipeline_io import load_img, validate_binary, save_rows
 
 
 class FeatureExtractor:

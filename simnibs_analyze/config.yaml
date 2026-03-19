@@ -4,13 +4,13 @@ running:
 # Paths
 paths:
   simnibs_output: /Users/hippolyte.dreyfus/Desktop/hemianotACS/Data/derivatives/simnibs-config-healthyV2
-  results_dir: /Users/hippolyte.dreyfus/Desktop/hemianotACS/Data/derivatives/results-V3
+  results_dir: /Users/hippolyte.dreyfus/Desktop/hemianotACS/Data/derivatives/results-V4
   mni_template: /Users/hippolyte.dreyfus/Documents/simnibs-modular/templates/MNI152_T1_1mm.nii.gz #TODO here should be one template directory and IO is responsable to find ellements within it
   mni_brain_mask: /Users/hippolyte.dreyfus/Documents/simnibs-modular/templates/MNI152_T1_1mm_brain_mask.nii.gz
 
 
 # Configuration for hemianotACS e-field analysis pipeline
-subjects: ["0001", "0002", "0004", "0005", "0007", "0008", "0009", "0011", "0012", "0014", "0015", "0016", "0018", "0019", "0020", "0021", "0023", "0024", "0025", "0026", "0027", "0028", "0029", "0030", "0031", "0032", "0033", "0034", "0035", "0036", "0037", "0038", "0039", "0040", "0041", "0042"]
+subjects: ["0001", "0002", "0004"] # "0005", "0007", "0008", "0009", "0011", "0012", "0014", "0015", "0016", "0018", "0019", "0020", "0021", "0023", "0024", "0025", "0026", "0027", "0028", "0029", "0030", "0031", "0032", "0033", "0034", "0035", "0036", "0037", "0038", "0039", "0040", "0041", "0042"]
 stim_conditions: [fef, ips-left, ips-right] #TODO this should matched with the name of the simu or opti folder ??1!!
 mode: [simulation, optimization]
 space: native  # config values: 'mni' or 'native' ; output paths use suffixes like 'space-mni'/'space-native'

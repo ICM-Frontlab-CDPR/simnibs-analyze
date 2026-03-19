@@ -6,19 +6,26 @@ Orchestrates target generation, preprocessing, feature extraction, analysis and 
 
 from __future__ import annotations
 
+import sys
 import argparse
 from pathlib import Path
 from typing import Dict, List
 
+# Allow running as `python run.py` from within simnibs_analyze/
+# (has no effect when imported as part of the installed package)
+if __package__ is None or __package__ == "":
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    __package__ = "simnibs_analyze"  # noqa: A001
+
 import nibabel as nib
 import pandas as pd
 
-from _0_anatomical_preparer import AnatomicalPreparer
-from _1_preprocessing import Preprocessor
-from _2_features_extraction import FeatureExtractor
-from _3_analysis import Analysis
-from _4_viz import Visualizer
-from _pipeline_io import (
+from simnibs_analyze.steps._0_anatomical_preparer import AnatomicalPreparer
+from simnibs_analyze.steps._1_preprocessing import Preprocessor
+from simnibs_analyze.steps._2_features_extraction import FeatureExtractor
+from simnibs_analyze.steps._3_analysis import Analysis
+from simnibs_analyze.steps._4_viz import Visualizer
+from simnibs_analyze._pipeline_io import (
     SPACE_MNI,
     SPACE_NATIVE,
     check_output,
@@ -39,9 +46,8 @@ from _pipeline_io import (
     save_rows,
     space_tag,
 )
-from _logging import get_logger
-from _config import PipelineConfig
-
+from simnibs_analyze._logging import get_logger
+from simnibs_analyze._config import PipelineConfig
 
 logger = get_logger(__name__)
 

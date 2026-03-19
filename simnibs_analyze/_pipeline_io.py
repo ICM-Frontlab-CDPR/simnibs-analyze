@@ -13,8 +13,8 @@ import nibabel as nib
 import numpy as np
 import pandas as pd
 
-from _config import PipelineConfig
-from _logging import get_logger
+from ._config import PipelineConfig
+from ._logging import get_logger
 
 logger = get_logger(__name__)
 

@@ -10,8 +10,8 @@ import pandas as pd
 import pyvista as pv
 from nilearn import plotting
 
-from _logging import get_logger
-from _pipeline_io import space_tag, save_figure
+from .._logging import get_logger
+from .._pipeline_io import space_tag, save_figure
 
 logger = get_logger(__name__)
 

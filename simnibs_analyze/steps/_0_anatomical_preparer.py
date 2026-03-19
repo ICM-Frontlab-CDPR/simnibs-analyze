@@ -25,7 +25,7 @@ from nilearn import datasets, image
 from nilearn.image import new_img_like
 from scipy.ndimage import binary_fill_holes
 
-from _pipeline_io import (
+from .._pipeline_io import (
     save_nifti,
     save_ants_image,
     check_output,
@@ -33,7 +33,7 @@ from _pipeline_io import (
     get_brainmask,
     get_mni_tissues,
 )
-from _logging import get_logger
+from .._logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -512,7 +512,7 @@ def _parse_args(argv=None):
 def main(argv=None) -> int:
     args = _parse_args(argv)
 
-    from _config import load_and_validate
+    from .._config import load_and_validate
 
     cfg = load_and_validate(args.config)
     rois = cfg.target_generation.rois

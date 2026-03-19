@@ -8,7 +8,7 @@ import numpy as np
 import nibabel as nib
 from nilearn import image, masking
 
-from _pipeline_io import load_img
+from .._pipeline_io import load_img
 
 
 # TODO add condition on mni-space or subject space (should be defined in a get_fpath function)

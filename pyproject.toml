@@ -28,6 +28,9 @@ dev = [
     "pytest-cov",
     "ruff",
 ]
+citations = [
+    "duecredit>=0.9",
+]
 
 [project.scripts]
 simnibs-analyze = "simnibs_analyze.run:main"

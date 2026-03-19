@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+title: simnibs-analyze
+message: >-
+  If you use this software in your research, please cite it using
+  the metadata from this file.
+type: software
+authors:
+  - family-names: Dreyfus
+    given-names: Hippolyte
+    email: hippolytedreyfus@orange.fr
+    affiliation: "ICM Frontlab, Institut du Cerveau (ICM), Paris"
+  - family-names: Valero-Cabre
+    given-names: Antoni
+    affiliation: "ICM Frontlab, Institut du Cerveau (ICM), Paris"
+    # orcid: "https://orcid.org/0000-0000-0000-0000"  # add if available
+license: MIT
+repository-code: https://github.com/ICM-Frontlab-CDPR/simnibs-analyze
+version: 3.0.0
+date-released: "2026-03-19"
+abstract: >-
+  Modular pipeline for SimNIBS e-field analysis: NIfTI volume preprocessing,
+  intra/extra-ROI feature extraction, inter/intra-subject analysis and
+  visualisation. Designed for non-invasive brain stimulation studies
+  (TMS/tDCS) with MNI registration via ANTsPy.
+keywords:
+  - brain stimulation
+  - TMS
+  - tDCS
+  - SimNIBS
+  - e-field
+  - neuroimaging
+  - MNI

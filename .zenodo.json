@@ -1,0 +1,28 @@
+# .zenodo.json — metadata for Zenodo auto-archiving via GitHub releases
+# See: https://developers.zenodo.org/#add-metadata-to-your-github-repository-release
+{
+  "title": "simnibs-analyze",
+  "description": "Modular pipeline for SimNIBS e-field analysis: NIfTI volume preprocessing, intra/extra-ROI feature extraction, inter/intra-subject analysis and visualisation. Designed for non-invasive brain stimulation studies (TMS/tDCS) with MNI registration via ANTsPy.",
+  "license": "mit",
+  "upload_type": "software",
+  "creators": [
+    {
+      "name": "Dreyfus, Hippolyte",
+      "affiliation": "ICM Frontlab, Institut du Cerveau (ICM), Paris"
+    },
+    {
+      "name": "Valero-Cabre, Antoni",
+      "affiliation": "ICM Frontlab, Institut du Cerveau (ICM), Paris"
+    }
+  ],
+  "keywords": [
+    "brain stimulation",
+    "TMS",
+    "tDCS",
+    "SimNIBS",
+    "e-field",
+    "neuroimaging",
+    "MNI"
+  ],
+  "access_right": "open"
+}

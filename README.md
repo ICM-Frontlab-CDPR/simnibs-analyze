@@ -1,6 +1,19 @@
-# simnibs-pipeline
+# simnibs-analyze
 
-Pipeline d'analyse des e-fields SimNIBS : préprocessing des volumes NIfTI, extraction de features intra/extra-ROI, analyse inter/intra-sujets et visualisations. Conçu pour les études de stimulation cérébrale non-invasive (TMS/tDCS) avec registration MNI via ANTsPy.
+Post-processing and analysis pipeline for SimNIBS e-field outputs. Built for non-invasive brain stimulation studies (TMS/tDCS).
+
+## What it does
+
+Starting from SimNIBS outputs, the pipeline covers the full analysis workflow:
+
+- **Target definition** — generate ROI masks in MNI and subject space from MNI coordinates or atlas parcels (sphere, atlas-based)
+- **E-field preparation** — coregister, skull-strip, smooth, and mask NIfTI volumes; intra/extra-ROI decomposition
+- **E-field analysis** — extract scalar features (mean, max, percentiles, focality ratio) per subject and condition
+- **Single-subject optimisation assessment** — evaluate how well a given montage targets the intended ROI
+- **Simulation robustness** — assess sensitivity of the e-field distribution to input variability
+- **Stimulation method comparison** — contrast montages or stimulation parameters across conditions
+- **Group-level analysis** — inter-subject summary statistics, condition comparisons, and effect-size reporting
+- **Visualisation** — 2D slice overlays, 3D surface rendering, histograms, and group bar plots
 
 ## Installation
 

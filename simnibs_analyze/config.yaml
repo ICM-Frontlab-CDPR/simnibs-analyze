@@ -1,5 +1,5 @@
 running:
-  if_exists: "overwrite"   # "skip" | "overwrite" | "error"
+  if_exists: "skip"   # "skip" | "overwrite" | "error"
 
 # Paths
 paths:
@@ -13,13 +13,13 @@ paths:
 subjects: ["0001", "0002", "0004", "0005", "0007", "0008", "0009", "0011", "0012", "0014", "0015", "0016", "0018", "0019", "0020", "0021", "0023", "0024", "0025", "0026", "0027", "0028", "0029", "0030", "0031", "0032", "0033", "0034", "0035", "0036", "0037", "0038", "0039", "0040", "0041", "0042"]
 stim_conditions: [fef, ips-left, ips-right] #TODO this should matched with the name of the simu or opti folder ??1!!
 mode: [simulation, optimization]
-space: mni  # config values: 'mni' or 'native' ; output paths use suffixes like 'space-mni'/'space-native'
+space: native  # config values: 'mni' or 'native' ; output paths use suffixes like 'space-mni'/'space-native'
 
 # Target generation
 # method: sphere  → coords: [x_mni, y_mni, z_mni] (mm)
 # method: atlas   → atlas: <name>  ('harvard-oxford', 'aal', 'destrieux')
 #                   regions: <label>  (str or list of str)
-target_generation:
+target_generation: #TO MOVE INTO SIMNIBS INPUT !
   radius_mm: 5.0  # used for method: sphere
   rois:
     fef:
@@ -32,7 +32,7 @@ target_generation:
     ips-right:
       method: sphere
       coords: [25, -60, 52]
-      folder_pattern: ips_right
+      folder_pattern: ips_right #TO REMOVE WHEN FOLDER FROM SIMNIBS-MODULAR CORRECTLY GENERATED
     # atlas example:
     HA-fef:
       method: atlas

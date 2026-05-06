@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import nibabel as nib
 import numpy as np
 import pandas as pd
-import pyvista as pv
 from nilearn import plotting
 
 from .._logging import get_logger
@@ -59,7 +58,7 @@ class Visualizer:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _create_3d_view(
+    def _build_plotter(
         efield_path: Path,
         camera_position: str = "xy",
         cmap: str = "hot",
@@ -67,16 +66,16 @@ class Visualizer:
         vmin: Optional[float] = None,
         vmax: Optional[float] = None,
         brain_bg_path: Optional[Path] = None,
-    ) -> np.ndarray:
+        mask_path: Optional[Path] = None,
+        mask_color: str = "cyan",
+        mask_opacity: float = 0.3,
+        off_screen: bool = True,
+    ):  # -> pv.Plotter (lazy import, not annotated to avoid import at module level)
         """
-        Render an e-field NIfTI volume with PyVista (offscreen) and return an RGBA array.
+        Build and return a configured PyVista Plotter for e-field visualisation.
 
-        When ``brain_bg_path`` is provided, the brain surface is rendered as a
-        semi-transparent white mesh and the e-field is overlaid as a coloured
-        volume.  **Both must be in the same coordinate space** — for MNI e-fields
-        (``*_scalar_MNI_magnE.nii.gz``), pass the ``T1_MNI_brain.nii.gz`` produced
-        by :meth:`AnatomicalPreparer._make_mni_brain_bg`.  No resampling is
-        performed here.
+        Shared by :meth:`_create_3d_view` (offscreen static render) and
+        :meth:`view_efield_interactive` (interactive window).
 
         Parameters
         ----------
@@ -91,9 +90,19 @@ class Visualizer:
         vmin, vmax :
             Explicit colour scale limits. If both ``None``, PyVista auto-scales.
         brain_bg_path :
-            Optional path to a skull-stripped T1 **in the same space as the
-            e-field**.  Rendered as a semi-transparent brain surface behind the
-            e-field volume.
+            Optional skull-stripped T1 **in the same space**, rendered as a
+            semi-transparent white brain surface.
+        mask_path :
+            Optional binary mask NIfTI to colocalize with the e-field
+            (e.g. ``cereb_mask.nii.gz`` from SimNIBS surfaces/).  Rendered as
+            a semi-transparent coloured surface in the same space.
+        mask_color :
+            Colour of the mask surface mesh (default ``'cyan'``).
+        mask_opacity :
+            Opacity of the mask surface mesh (default 0.3).
+        off_screen :
+            If ``True``, creates an offscreen plotter (static PNG).
+            If ``False``, creates an interactive window plotter.
         """
         efield_img = nib.as_closest_canonical(nib.load(str(efield_path)))
         data = np.squeeze(efield_img.get_fdata())
@@ -103,9 +112,16 @@ class Visualizer:
                 thresh = np.percentile(nonzero, threshold_percentile)
                 data[data < thresh] = 0
 
-        efield_affine = efield_img.affine
+        try:
+            import pyvista as pv
+        except ImportError as exc:
+            raise ImportError(
+                "pyvista is required for 3D rendering. "
+                "Install it with: pip install pyvista"
+            ) from exc
+
         efield_spacing = efield_img.header.get_zooms()[:3]
-        efield_origin = efield_affine[:3, 3]
+        efield_origin = efield_img.affine[:3, 3]
 
         grid = pv.ImageData()
         grid.dimensions = np.array(data.shape) + 1
@@ -113,7 +129,7 @@ class Visualizer:
         grid.origin = efield_origin
         grid.cell_data["values"] = data.flatten(order="F")
 
-        plotter = pv.Plotter(off_screen=True)
+        plotter = pv.Plotter(off_screen=off_screen)
 
         # ── Anatomical background (brain surface) ─────────────────────────
         if brain_bg_path is not None:
@@ -135,6 +151,26 @@ class Visualizer:
                 brain_surface, color="white", opacity=0.15, smooth_shading=True
             )
 
+        # ── Mask surface overlay ──────────────────────────────────────────
+        if mask_path is not None:
+            mask_img = nib.as_closest_canonical(nib.load(str(mask_path)))
+            mask_data = np.squeeze(mask_img.get_fdata()).astype(np.float32)
+            mask_spacing = mask_img.header.get_zooms()[:3]
+            mask_origin = mask_img.affine[:3, 3]
+            mask_grid = pv.ImageData()
+            mask_grid.dimensions = np.array(mask_data.shape) + 1
+            mask_grid.spacing = mask_spacing
+            mask_grid.origin = mask_origin
+            mask_grid.cell_data["mask"] = mask_data.flatten(order="F")
+            mask_surface = mask_grid.threshold(0.5).extract_surface()
+            if mask_surface.n_points > 0:
+                plotter.add_mesh(
+                    mask_surface,
+                    color=mask_color,
+                    opacity=mask_opacity,
+                    smooth_shading=True,
+                )
+
         # ── Volume e-field ────────────────────────────────────────────────
         if vmin is not None and vmax is not None:
             plotter.add_volume(grid, cmap=cmap, clim=[vmin, vmax])
@@ -142,6 +178,35 @@ class Visualizer:
             plotter.add_volume(grid, cmap=cmap)
 
         plotter.camera_position = camera_position
+        return plotter
+
+    @staticmethod
+    def _create_3d_view(
+        efield_path: Path,
+        camera_position: str = "xy",
+        cmap: str = "hot",
+        threshold_percentile: float = 0.0,
+        vmin: Optional[float] = None,
+        vmax: Optional[float] = None,
+        brain_bg_path: Optional[Path] = None,
+        mask_path: Optional[Path] = None,
+        mask_color: str = "cyan",
+        mask_opacity: float = 0.3,
+    ) -> np.ndarray:
+        """Offscreen render — returns an RGBA array (used by :meth:`efields_figures`)."""
+        plotter = Visualizer._build_plotter(
+            efield_path=efield_path,
+            camera_position=camera_position,
+            cmap=cmap,
+            threshold_percentile=threshold_percentile,
+            vmin=vmin,
+            vmax=vmax,
+            brain_bg_path=brain_bg_path,
+            mask_path=mask_path,
+            mask_color=mask_color,
+            mask_opacity=mask_opacity,
+            off_screen=True,
+        )
         image = plotter.screenshot(return_img=True)
         plotter.close()
         return image
@@ -149,6 +214,87 @@ class Visualizer:
     # ------------------------------------------------------------------
     # Public methods
     # ------------------------------------------------------------------
+
+    def view_efield_interactive(
+        self,
+        efield_path: Path,
+        brain_bg_path: Optional[Path] = None,
+        mask_path: Optional[Path] = None,
+        mask_color: str = "cyan",
+        mask_opacity: float = 0.3,
+        threshold_percentile: Optional[float] = None,
+        vmin: Optional[float] = None,
+        vmax: Optional[float] = None,
+        cmap: Optional[str] = None,
+        camera_position: Optional[str] = None,
+        title: Optional[str] = None,
+    ) -> None:
+        """
+        Open an interactive, rotatable 3D PyVista window for a single e-field.
+
+        The window is fully interactive (rotate, zoom, pan) and blocks until
+        closed.  No extra dependencies beyond PyVista are required.
+
+        Parameters
+        ----------
+        efield_path :
+            Path to the e-field NIfTI file.
+        brain_bg_path :
+            Optional skull-stripped T1 in the same space, rendered as a
+            semi-transparent white brain surface.
+        mask_path :
+            Optional binary mask to colocalize (e.g.
+            ``m2m_<sub>/surfaces/cereb_mask.nii.gz``).  Rendered as a
+            semi-transparent coloured surface.
+        mask_color :
+            Colour of the mask surface (default ``'cyan'``).
+        mask_opacity :
+            Opacity of the mask surface in [0, 1] (default 0.3).
+        threshold_percentile :
+            Percentile cutoff for non-zero voxels.  Defaults to
+            ``self.threshold_percentile``.
+        vmin, vmax :
+            Explicit colour scale limits.  Auto-scales if both ``None``.
+        cmap :
+            Colormap override.  Defaults to ``self.cmap``.
+        camera_position :
+            Initial camera position override.  Defaults to
+            ``self.camera_position``.
+        title :
+            Window title.  Defaults to the e-field filename stem.
+
+        Examples
+        --------
+        >>> viz = Visualizer(output_dir="output/")
+        >>> viz.view_efield_interactive(
+        ...     efield_path="sub-0011_magnE.nii.gz",
+        ...     brain_bg_path="T1_brain.nii.gz",
+        ...     mask_path="m2m_0011/surfaces/cereb_mask.nii.gz",
+        ...     mask_color="yellow",
+        ...     mask_opacity=0.2,
+        ... )
+        """
+        plotter = self._build_plotter(
+            efield_path=Path(efield_path),
+            camera_position=camera_position or self.camera_position,
+            cmap=cmap or self.cmap,
+            threshold_percentile=(
+                threshold_percentile
+                if threshold_percentile is not None
+                else self.threshold_percentile
+            ),
+            vmin=vmin,
+            vmax=vmax,
+            brain_bg_path=Path(brain_bg_path) if brain_bg_path is not None else None,
+            mask_path=Path(mask_path) if mask_path is not None else None,
+            mask_color=mask_color,
+            mask_opacity=mask_opacity,
+            off_screen=False,
+        )
+        plotter.title = title or Path(efield_path).stem
+        logger.info(f"Opening interactive 3D viewer: {efield_path}")
+        plotter.show()
+
     def efields_figures(
         self,
         file_info_by_roi_mode: Dict[Tuple[str, str], List[Tuple[str, Path]]],

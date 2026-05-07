@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "simnibs-analyze"
-version = "3.0.0"
+version = "0.0.1"
 description = "Modular pipeline for brain stimulation modelling (tDCS/TMS) with SimNIBS"
 readme = "README.md"
 requires-python = ">=3.10"

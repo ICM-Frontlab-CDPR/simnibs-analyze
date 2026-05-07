@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
 import nibabel as nib
@@ -65,11 +65,11 @@ class Visualizer:
         threshold_percentile: float = 0.0,
         vmin: Optional[float] = None,
         vmax: Optional[float] = None,
-        brain_bg_path: Optional[Path] = None,
         mask_path: Optional[Path] = None,
         mask_color: str = "cyan",
         mask_opacity: float = 0.3,
         off_screen: bool = True,
+        component: Union[str, int] = "magnitude",
     ):  # -> pv.Plotter (lazy import, not annotated to avoid import at module level)
         """
         Build and return a configured PyVista Plotter for e-field visualisation.
@@ -89,9 +89,6 @@ class Visualizer:
             Voxels below this percentile of non-zero values are zeroed.
         vmin, vmax :
             Explicit colour scale limits. If both ``None``, PyVista auto-scales.
-        brain_bg_path :
-            Optional skull-stripped T1 **in the same space**, rendered as a
-            semi-transparent white brain surface.
         mask_path :
             Optional binary mask NIfTI to colocalize with the e-field
             (e.g. ``cereb_mask.nii.gz`` from SimNIBS surfaces/).  Rendered as
@@ -103,14 +100,49 @@ class Visualizer:
         off_screen :
             If ``True``, creates an offscreen plotter (static PNG).
             If ``False``, creates an interactive window plotter.
+        component :
+            How to reduce a 4D vector field (Ex/Ey/Ez) to a scalar volume.
+            ``'magnitude'`` (default) → computes ‖E‖ = √(Ex²+Ey²+Ez²).
+            ``0``, ``1``, ``2`` → extracts a single cartesian component
+            (Ex, Ey, Ez respectively); a diverging colormap (``coolwarm``) is
+            used automatically so that negative values are visible.
+            Ignored for 3D (scalar) inputs.
         """
+        _COMPONENT_LABELS = {0: "Ex", 1: "Ey", 2: "Ez"}
+
         efield_img = nib.as_closest_canonical(nib.load(str(efield_path)))
-        data = np.squeeze(efield_img.get_fdata())
-        if threshold_percentile > 0:
-            nonzero = data[data > 0]
-            if nonzero.size > 0:
-                thresh = np.percentile(nonzero, threshold_percentile)
-                data[data < thresh] = 0
+        raw = np.squeeze(efield_img.get_fdata())
+
+        # ── Cas 1 : fichier scalaire 3D (scalar_magnE, …) ─────────────────
+        if raw.ndim == 3:
+            logger.info(f"3D scalar e-field {raw.shape} — loading as-is")
+            data = raw
+            # cmap par défaut : hot (valeurs ≥ 0)
+
+        # ── Cas 2 : champ vectoriel 4D (scalar_E → Ex/Ey/Ez) ─────────────
+        elif raw.ndim == 4:
+            if component == "magnitude":
+                logger.info(
+                    f"4D vector e-field {raw.shape} — computing ‖E‖ "
+                    f"(tip: use scalar_magnE directly for faster loading)"
+                )
+                data = np.linalg.norm(raw, axis=-1)
+                # cmap par défaut : hot (valeurs ≥ 0)
+            elif isinstance(component, int) and 0 <= component <= 2:
+                label = _COMPONENT_LABELS[component]
+                logger.info(
+                    f"4D vector e-field {raw.shape} — extracting component "
+                    f"{label} (vol[{component}]), signed"
+                )
+                data = raw[..., component]
+                if cmap == "hot":
+                    cmap = "coolwarm"  # colormap divergente pour valeurs signées
+            else:
+                raise ValueError(
+                    f"component must be 'magnitude', 0, 1, or 2 — got {component!r}"
+                )
+        else:
+            raise ValueError(f"Unexpected e-field shape: {raw.shape}")
 
         try:
             import pyvista as pv
@@ -119,6 +151,10 @@ class Visualizer:
                 "pyvista is required for 3D rendering. "
                 "Install it with: pip install pyvista"
             ) from exc
+
+        # Les voxels à 0 (hors-cerveau, masque fond) → NaN = transparents en volume rendering
+        data = data.astype(float)
+        data[data == 0] = np.nan
 
         efield_spacing = efield_img.header.get_zooms()[:3]
         efield_origin = efield_img.affine[:3, 3]
@@ -130,26 +166,6 @@ class Visualizer:
         grid.cell_data["values"] = data.flatten(order="F")
 
         plotter = pv.Plotter(off_screen=off_screen)
-
-        # ── Anatomical background (brain surface) ─────────────────────────
-        if brain_bg_path is not None:
-            t1_img = nib.as_closest_canonical(nib.load(str(brain_bg_path)))
-            t1_data = np.squeeze(t1_img.get_fdata())
-            t1_spacing = t1_img.header.get_zooms()[:3]
-            t1_origin = t1_img.affine[:3, 3]
-            t1_grid = pv.ImageData()
-            t1_grid.dimensions = np.array(t1_data.shape) + 1
-            t1_grid.spacing = t1_spacing
-            t1_grid.origin = t1_origin
-            t1_grid.cell_data["t1"] = t1_data.flatten(order="F")
-            nonzero_t1 = t1_data[t1_data > 0]
-            iso_val = (
-                float(np.percentile(nonzero_t1, 20)) if nonzero_t1.size > 0 else 0.1
-            )
-            brain_surface = t1_grid.cell_data_to_point_data().contour([iso_val])
-            plotter.add_mesh(
-                brain_surface, color="white", opacity=0.15, smooth_shading=True
-            )
 
         # ── Mask surface overlay ──────────────────────────────────────────
         if mask_path is not None:
@@ -188,10 +204,10 @@ class Visualizer:
         threshold_percentile: float = 0.0,
         vmin: Optional[float] = None,
         vmax: Optional[float] = None,
-        brain_bg_path: Optional[Path] = None,
         mask_path: Optional[Path] = None,
         mask_color: str = "cyan",
         mask_opacity: float = 0.3,
+        component: Union[str, int] = "magnitude",
     ) -> np.ndarray:
         """Offscreen render — returns an RGBA array (used by :meth:`efields_figures`)."""
         plotter = Visualizer._build_plotter(
@@ -201,11 +217,11 @@ class Visualizer:
             threshold_percentile=threshold_percentile,
             vmin=vmin,
             vmax=vmax,
-            brain_bg_path=brain_bg_path,
             mask_path=mask_path,
             mask_color=mask_color,
             mask_opacity=mask_opacity,
             off_screen=True,
+            component=component,
         )
         image = plotter.screenshot(return_img=True)
         plotter.close()
@@ -218,7 +234,6 @@ class Visualizer:
     def view_efield_interactive(
         self,
         efield_path: Path,
-        brain_bg_path: Optional[Path] = None,
         mask_path: Optional[Path] = None,
         mask_color: str = "cyan",
         mask_opacity: float = 0.3,
@@ -228,6 +243,7 @@ class Visualizer:
         cmap: Optional[str] = None,
         camera_position: Optional[str] = None,
         title: Optional[str] = None,
+        component: Union[str, int] = "magnitude",
     ) -> None:
         """
         Open an interactive, rotatable 3D PyVista window for a single e-field.
@@ -239,9 +255,6 @@ class Visualizer:
         ----------
         efield_path :
             Path to the e-field NIfTI file.
-        brain_bg_path :
-            Optional skull-stripped T1 in the same space, rendered as a
-            semi-transparent white brain surface.
         mask_path :
             Optional binary mask to colocalize (e.g.
             ``m2m_<sub>/surfaces/cereb_mask.nii.gz``).  Rendered as a
@@ -268,10 +281,9 @@ class Visualizer:
         >>> viz = Visualizer(output_dir="output/")
         >>> viz.view_efield_interactive(
         ...     efield_path="sub-0011_magnE.nii.gz",
-        ...     brain_bg_path="T1_brain.nii.gz",
         ...     mask_path="m2m_0011/surfaces/cereb_mask.nii.gz",
-        ...     mask_color="yellow",
-        ...     mask_opacity=0.2,
+        ...     mask_color="cyan",
+        ...     mask_opacity=0.3,
         ... )
         """
         plotter = self._build_plotter(
@@ -285,13 +297,14 @@ class Visualizer:
             ),
             vmin=vmin,
             vmax=vmax,
-            brain_bg_path=Path(brain_bg_path) if brain_bg_path is not None else None,
             mask_path=Path(mask_path) if mask_path is not None else None,
             mask_color=mask_color,
             mask_opacity=mask_opacity,
             off_screen=False,
+            component=component,
         )
-        plotter.title = title or Path(efield_path).stem
+        comp_label = {0: " [Ex]", 1: " [Ey]", 2: " [Ez]"}.get(component, "")
+        plotter.title = (title or Path(efield_path).stem) + comp_label
         logger.info(f"Opening interactive 3D viewer: {efield_path}")
         plotter.show()
 
@@ -358,7 +371,6 @@ class Visualizer:
             for idx, (subject, efield_path) in enumerate(subject_files):
                 row, col = divmod(idx, n_cols)
                 ax = axes[row, col]
-                brain_bg = (t1_brain_by_subject or {}).get(subject)
                 image = self._create_3d_view(
                     efield_path=efield_path,
                     camera_position=self.camera_position,
@@ -366,7 +378,6 @@ class Visualizer:
                     threshold_percentile=self.threshold_percentile,
                     vmin=vmin,
                     vmax=vmax,
-                    brain_bg_path=brain_bg,
                 )
                 ax.imshow(image)
                 ax.axis("off")

@@ -39,7 +39,6 @@ from simnibs_analyze._pipeline_io import (
     get_preproc_dir,
     get_preproc_paths,
     get_roi_mask_path,
-    get_subject_paths,
     get_subject_paths_from_config,
     load_config,
     save_dataframe,
@@ -95,6 +94,7 @@ def process_subject_condition(
 
     try:
         from simnibs_analyze._pipeline_io import get_simu_root
+
         roi_mask_path = get_roi_mask_path(
             get_simu_root(config.paths), condition, space=space, subject=subject
         )
@@ -504,6 +504,7 @@ def main(
 
     results_dir = config.paths.results_dir
     from simnibs_analyze._pipeline_io import get_simu_root
+
     simu_root = get_simu_root(config.paths)
 
     if_exists = config.running.if_exists

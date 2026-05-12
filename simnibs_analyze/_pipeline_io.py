@@ -133,12 +133,11 @@ def get_subject_paths_from_config(paths_config, subject: str) -> Dict[str, Path]
         "m2m_dir": preps_subject_dir / f"m2m_{subject}",
         "subject_target_dir": simu_subject_dir / "subject_target",
     }
-    }
 
 
 def get_analysis_dir(results_dir: Path, space: str) -> Path:
     """Return the shared analysis output directory."""
-    return Path(results_dir) / "analysis"
+    return Path(results_dir) / "3-analysis"
 
 
 def get_features_csv_path(results_dir: Path, space: str) -> Path:

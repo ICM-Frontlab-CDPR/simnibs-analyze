@@ -352,15 +352,34 @@ def run_analysis(
             "Make sure compute_efield_ratio is called during feature extraction."
         )
 
-    # Scatter simulation vs optimization
-    Visualizer(analysis_dir, if_exists=if_exists).plot_simulation_vs_optimization(
+    viz_analysis = Visualizer(analysis_dir, if_exists=if_exists)
+
+    # Résumé par condition (fonctionne avec simulation seule ou les deux)
+    viz_analysis.plot_simulation_summary(
         df,
         metric=metric,
         subject_col=subject_col,
         condition_col=condition_col,
         output_tag=space,
     )
-    logger.info("✓ Simulation vs optimisation scatter plot created")
+    logger.info("✓ Simulation summary figure created")
+
+    # Scatter simulation vs optimisation (seulement si les deux modes sont présents)
+    has_both_modes = (
+        df[condition_col].str.contains("simulation").any()
+        and df[condition_col].str.contains("optimization").any()
+    )
+    if has_both_modes:
+        viz_analysis.plot_simulation_vs_optimization(
+            df,
+            metric=metric,
+            subject_col=subject_col,
+            condition_col=condition_col,
+            output_tag=space,
+        )
+        logger.info("✓ Simulation vs optimisation scatter plot created")
+    else:
+        logger.info("Simulation vs optimisation scatter skipped (single mode dataset)")
     logger.step("ANALYSIS COMPLETE")
 
 
@@ -368,7 +387,9 @@ def run_viz(config: PipelineConfig, space: str, if_exists: str = "overwrite") ->
     """Collect paths (I/O) then generate all visualisations."""
     logger.step("GENERATING VISUALISATIONS")
 
-    simnibs_output = config.paths.simnibs_output
+    from simnibs_analyze._pipeline_io import get_simu_root
+
+    simu_root = get_simu_root(config.paths)
     results_dir = config.paths.results_dir
     subjects: List[str] = config.subjects
     conditions: List[str] = config.stim_conditions
@@ -384,7 +405,7 @@ def run_viz(config: PipelineConfig, space: str, if_exists: str = "overwrite") ->
     )
 
     # ── Masques ROI ─────────────────────────────────────────────────────
-    mni_target_dir = simnibs_output / "mni_target"
+    mni_target_dir = simu_root / "mni_target"
     mask_paths = sorted(mni_target_dir.glob("*_mask_space-mni.nii.gz"))
     if space == SPACE_MNI and mask_paths:
         mni_template = (

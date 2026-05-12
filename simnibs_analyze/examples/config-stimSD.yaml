@@ -1,11 +1,11 @@
 running:
-  if_exists: "skip"   # "skip" | "overwrite" | "error"
+  if_exists: "overwrite"   # "skip" | "overwrite" | "error"
 
 # Paths — structure séparée preps / simu / results
 paths:
   simnibs_preps: /Users/hippolyte.dreyfus/Desktop/_stimSD/Data/derivatives/mri/simnibs-preps
   simnibs_simu:  /Users/hippolyte.dreyfus/Desktop/_stimSD/Data/derivatives/mri/simnibs-simu
-  results_dir:   /Users/hippolyte.dreyfus/Desktop/_stimSD/Data/derivatives/mri/simnibs-analyze
+  results_dir:   /Users/hippolyte.dreyfus/Desktop/_stimSD/Data/derivatives/mri/simnibs-analyze-V2
   mni_template:  /Users/hippolyte.dreyfus/Documents/simnibs-modular/templates/MNI152_T1_1mm.nii.gz
   mni_brain_mask: /Users/hippolyte.dreyfus/Documents/simnibs-modular/templates/MNI152_T1_1mm_brain_mask.nii.gz
 

@@ -11,4 +11,5 @@ outputs/
 *.__pycache__
 *.pyc
 .ruff_cache
-*.egg-info* 
+*.egg-info*    
+*dist/simnibs*

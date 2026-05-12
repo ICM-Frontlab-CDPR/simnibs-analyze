@@ -40,6 +40,7 @@ from simnibs_analyze._pipeline_io import (
     get_preproc_paths,
     get_roi_mask_path,
     get_subject_paths,
+    get_subject_paths_from_config,
     load_config,
     save_dataframe,
     save_nifti,
@@ -75,8 +76,7 @@ def process_subject_condition(
         Extracted feature rows (one per e-field file found).
     """
     results: List[Dict] = []
-    simnibs_output = config.paths.simnibs_output
-    subject_paths = get_subject_paths(simnibs_output, subject)
+    subject_paths = get_subject_paths_from_config(config.paths, subject)
     subject_dir = subject_paths["subject_dir"]
 
     if not subject_dir.exists():
@@ -94,8 +94,9 @@ def process_subject_condition(
         return results
 
     try:
+        from simnibs_analyze._pipeline_io import get_simu_root
         roi_mask_path = get_roi_mask_path(
-            simnibs_output, condition, space=space, subject=subject
+            get_simu_root(config.paths), condition, space=space, subject=subject
         )
     except (FileNotFoundError, ValueError) as e:
         logger.error(str(e))
@@ -401,7 +402,7 @@ def run_viz(config: PipelineConfig, space: str, if_exists: str = "overwrite") ->
     mni_brain_bg_by_subject: Dict[str, Path] = {}
     subject_brain_bg_by_subject: Dict[str, Path] = {}
     for subject in subjects:
-        subject_paths = get_subject_paths(simnibs_output, subject)
+        subject_paths = get_subject_paths_from_config(config.paths, subject)
         mni_bg = subject_paths["subject_target_dir"] / "T1_MNI_brain.nii.gz"
         subj_bg = subject_paths["subject_target_dir"] / "T1_subject_brain.nii.gz"
         if mni_bg.exists():
@@ -413,7 +414,7 @@ def run_viz(config: PipelineConfig, space: str, if_exists: str = "overwrite") ->
     for mode in modes:
         for condition in conditions:
             for subject in subjects:
-                subject_paths = get_subject_paths(simnibs_output, subject)
+                subject_paths = get_subject_paths_from_config(config.paths, subject)
                 sim_dirs = find_simulation_dirs(
                     subject_paths["subject_dir"],
                     condition,
@@ -449,7 +450,7 @@ def run_viz(config: PipelineConfig, space: str, if_exists: str = "overwrite") ->
     for subject in subjects:
         for mode in modes:
             for condition in conditions:
-                subject_paths = get_subject_paths(simnibs_output, subject)
+                subject_paths = get_subject_paths_from_config(config.paths, subject)
                 sim_dirs = find_simulation_dirs(
                     subject_paths["subject_dir"],
                     condition,
@@ -502,16 +503,17 @@ def main(
     logger.info(f"Space      : {space}")
 
     results_dir = config.paths.results_dir
-    simnibs_output = config.paths.simnibs_output
+    from simnibs_analyze._pipeline_io import get_simu_root
+    simu_root = get_simu_root(config.paths)
 
     if_exists = config.running.if_exists
     logger.info(f"if_exists = '{if_exists}'")
 
     results_dir.mkdir(parents=True, exist_ok=True)
 
-    # ── Step 0: Setup targets (once, independent of subjects) ──────────────
+    # ── Step 0: Setup targets (once, independent of subjects) ────────────
     rois = config.target_generation.rois
-    mni_target_dir = simnibs_output / "mni_target"
+    mni_target_dir = simu_root / "mni_target"
     gen = AnatomicalPreparer(
         reference_img_path=config.paths.mni_template,
         radius_mm=config.target_generation.radius_mm,
@@ -558,7 +560,7 @@ def main(
 
         for subject in config.subjects:
             logger.step(f"SUBJECT: {subject}")
-            subject_paths = get_subject_paths(simnibs_output, subject)
+            subject_paths = get_subject_paths_from_config(config.paths, subject)
             m2m_dir = subject_paths["m2m_dir"]
             subject_target_dir = subject_paths["subject_target_dir"]
 

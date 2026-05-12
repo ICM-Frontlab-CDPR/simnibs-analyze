@@ -66,10 +66,34 @@ class TargetGenerationConfig(BaseModel):
 
 
 class PathsConfig(BaseModel):
-    simnibs_output: Path
+    # ── Nouvelles clés (préféré) ───────────────────────────────────────────
+    simnibs_preps: Optional[Path] = None
+    """Dossier des résultats charm/segmentation  →  {sub}/m2m_{sub}/"""
+    simnibs_simu: Optional[Path] = None
+    """Dossier des résultats de simulation/optimisation  →  {sub}/simulations/"""
+
+    # ── Compatibilité ascendante (ancien pipeline, un seul dossier racine) ─
+    simnibs_output: Optional[Path] = None
+    """Deprecated : utiliser simnibs_preps + simnibs_simu."""
+
+    # ── Sorties pipeline ──────────────────────────────────────────────────
     results_dir: Path
+    """Dossier de sortie : CSVs, figures, statistiques."""
+
+    # ── Templates ─────────────────────────────────────────────────────────
     mni_template: Optional[Path] = None
     mni_brain_mask: Optional[Path] = None
+
+    @model_validator(mode="after")
+    def _validate_input_paths(self) -> "PathsConfig":
+        split = self.simnibs_preps is not None and self.simnibs_simu is not None
+        legacy = self.simnibs_output is not None
+        if not split and not legacy:
+            raise ValueError(
+                "Specify either 'simnibs_output' (legacy) OR both "
+                "'simnibs_preps' + 'simnibs_simu'."
+            )
+        return self
 
 
 class PreprocessingConfig(BaseModel):

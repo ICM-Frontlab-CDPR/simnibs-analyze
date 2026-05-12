@@ -1,0 +1,62 @@
+running:
+  if_exists: "skip"   # "skip" | "overwrite" | "error"
+
+# Paths — structure séparée preps / simu / results
+paths:
+  simnibs_preps: /Users/hippolyte.dreyfus/Desktop/_stimSD/Data/derivatives/mri/simnibs-preps
+  simnibs_simu:  /Users/hippolyte.dreyfus/Desktop/_stimSD/Data/derivatives/mri/simnibs-simu
+  results_dir:   /Users/hippolyte.dreyfus/Desktop/_stimSD/Data/derivatives/mri/simnibs-analyze
+  mni_template:  /Users/hippolyte.dreyfus/Documents/simnibs-modular/templates/MNI152_T1_1mm.nii.gz
+  mni_brain_mask: /Users/hippolyte.dreyfus/Documents/simnibs-modular/templates/MNI152_T1_1mm_brain_mask.nii.gz
+
+subjects:
+  - "0001"
+  - "0005"
+  - "0006"
+  - "0007"
+  - "0008"
+  - "0010"
+  - "0014"
+  - "0016"
+  - "0017"
+  - "0018"
+  - "0020"
+  - "0021"
+  - "0022"
+  - "0030"
+  - "0031"
+  - "0032"
+
+# Montage AF7 (anode) – FT8 (cathode) → cible fonctionnelle : DLPFC gauche
+stim_conditions: [stimSD]
+mode: [simulation]
+space: mni
+
+# ROI : sphère MNI DLPFC gauche (sous AF7)
+target_generation:
+  radius_mm: 10.0
+  rois:
+    stimSD:
+      method: sphere
+      coords: [-46, 36, 20]   # DLPFC gauche, MNI
+
+# Preprocessing
+preprocessing:
+  smooth_fwhm: 2.0
+  outlier_method: iqr
+  portion: null
+
+# Feature extraction
+feature_extraction:
+  metrics: [mean, median, std, min, max]
+
+# Analysis
+analysis:
+  metric: mean
+  subject_col: subject
+  condition_col: condition
+  clustering:
+    method: mean
+    specificity_threshold: 1.5
+    intensity_col: mean
+

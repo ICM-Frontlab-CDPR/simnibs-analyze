@@ -19,7 +19,7 @@ Starting from SimNIBS outputs, the pipeline covers the full analysis workflow:
 
 ```bash
 # TODO: publication sur PyPI
-pip install simnibs-pipeline
+pip install simnibs-analyze
 ```
 
 En attendant, cloner le dépôt et installer les dépendances manuellement :
@@ -32,11 +32,11 @@ pip install -e .
 
 ## Documentation
 
-| Ressource                                        | Description                                  |
-| ------------------------------------------------ | -------------------------------------------- |
-| [Documentation API](docs/api/simnibs_pipeline.html) | Classes et fonctions (généré par pdoc)    |
-| [Référence config.yaml](docs/configuration.md)    | Toutes les clés du fichier de configuration |
-| [Structure des outputs](docs/output_structure.md) | Fichiers générés dans simnibs_output/ et results_dir/ |
+| Ressource                                        | Description                                              |
+| ------------------------------------------------ | -------------------------------------------------------- |
+| [Documentation API](docs/api/simnibs_pipeline.html) | Classes et fonctions (généré par pdoc)                |
+| [Référence config.yaml](docs/configuration.md)    | Toutes les clés du fichier de configuration             |
+| [Structure des outputs](docs/output_structure.md)   | Fichiers générés dans simnibs_output/ et results_dir/ |
 
 <!-- ## Citation
 

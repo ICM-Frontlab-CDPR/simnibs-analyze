@@ -33,7 +33,7 @@ citations = [
 ]
 
 [project.scripts]
-simnibs-analyze = "simnibs_analyze.run:main"
+simnibs-analyze = "simnibs_analyze.run:cli"
 
 [tool.setuptools.packages.find]
 where = ["."]

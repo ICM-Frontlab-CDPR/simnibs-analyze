@@ -698,8 +698,9 @@ Examples:
     return parser.parse_args(argv)
 
 
-if __name__ == "__main__":
-    _args = _parse_args()
+def cli(argv=None) -> None:
+    """CLI entry point: simnibs-analyze --config path/to/config.yaml"""
+    _args = _parse_args(argv)
     raise SystemExit(
         main(
             config_path=_args.config,
@@ -710,3 +711,7 @@ if __name__ == "__main__":
             skip_viz=_args.skip_viz,
         )
     )
+
+
+if __name__ == "__main__":
+    cli()

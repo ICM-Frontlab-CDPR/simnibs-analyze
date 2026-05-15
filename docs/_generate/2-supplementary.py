@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+"""
+Étape 2 — Génération de la landing page et vérifications supplémentaires.
+
+- Crée docs/index.html (landing page custom pointant vers docs/api/)
+- Crée docs/.nojekyll si absent
+- Ne touche pas à docs/assets/ ni à docs/api/
+
+Usage (direct):        python docs/_generate/2-supplementary.py
+Usage (orchestrateur): python generate_docs_for_githubPages.py
+"""
+from pathlib import Path
+
+ROOT = Path(__file__).parent.parent.parent   # simnibs-analyze/
+DOCS_DIR = ROOT / "docs"
+
+LANDING_HTML = """\
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>simnibs-analyze — Documentation</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 4rem auto; padding: 0 1.5rem; color: #222; }
+    h1 { font-size: 2rem; margin-bottom: .25rem; }
+    p.sub { color: #555; margin-top: 0; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-top: 2rem; }
+    .card { border: 1px solid #ddd; border-radius: 8px; padding: 1.25rem 1.5rem; text-decoration: none; color: inherit; transition: box-shadow .15s; }
+    .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.12); }
+    .card h2 { font-size: 1.1rem; margin: 0 0 .4rem; }
+    .card p { font-size: .9rem; color: #555; margin: 0; }
+    footer { margin-top: 3rem; font-size: .8rem; color: #999; }
+  </style>
+</head>
+<body>
+  <h1>simnibs-analyze</h1>
+  <p class="sub">Pipeline d'analyse des champs électriques SimNIBS (tDCS / TMS)</p>
+
+  <div class="cards">
+    <a class="card" href="api/simnibs_analyze.html">
+      <h2>📖 Référence API</h2>
+      <p>Documentation auto-générée de tous les modules du package.</p>
+    </a>
+    <a class="card" href="assets/global-env.svg">
+      <h2>🗺 Environnement global</h2>
+      <p>Vue d'ensemble de l'architecture du pipeline.</p>
+    </a>
+  </div>
+
+  <footer>Généré automatiquement — simnibs-analyze</footer>
+</body>
+</html>
+"""
+
+
+def run() -> None:
+    DOCS_DIR.mkdir(parents=True, exist_ok=True)
+
+    # .nojekyll — désactive Jekyll sur GitHub Pages
+    nojekyll = DOCS_DIR / ".nojekyll"
+    if not nojekyll.exists():
+        nojekyll.touch()
+        print("  ✓ .nojekyll créé")
+
+    # Landing page — toujours régénérée
+    index = DOCS_DIR / "index.html"
+    index.write_text(LANDING_HTML, encoding="utf-8")
+    print(f"  ✓ Landing page écrite : {index}")
+
+    print(f"\n✓ [2-supplementary] docs/ prêt pour GitHub Pages")
+
+
+if __name__ == "__main__":
+    run()

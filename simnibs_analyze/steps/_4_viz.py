@@ -26,7 +26,7 @@ class Visualizer:
     ----------
     output_dir :
         Base output directory.  Each method writes into a named sub-directory
-        (``simu/``, ``preprocess/``, ``targets/``, ``analysis/``).
+        (``1-simu/``, ``2-preprocess/``, ``0-targets/``, ``3-analysis/``).
     cmap :
         Matplotlib / PyVista colormap for e-field figures.
     threshold_percentile :
@@ -330,7 +330,7 @@ class Visualizer:
             ``'mni'`` or ``'native'`` — included in the output filename so
             figures from both spaces are saved without overwriting each other.
         """
-        output_dir = self.output_dir / "simu"
+        output_dir = self.output_dir / "1-simu"
         output_dir.mkdir(parents=True, exist_ok=True)
         tag = space_tag(space)
 
@@ -419,7 +419,7 @@ class Visualizer:
         space :
             ``'mni'`` or ``'native'`` — filename suffix.
         """
-        output_dir = self.output_dir / "preprocess"
+        output_dir = self.output_dir / "2-preprocess"
         output_dir.mkdir(parents=True, exist_ok=True)
         tag = space_tag(space)
 
@@ -526,7 +526,7 @@ class Visualizer:
         mni_template :
             MNI background image (already loaded).
         """
-        output_dir = self.output_dir / "targets"
+        output_dir = self.output_dir / "0-targets"
         output_dir.mkdir(parents=True, exist_ok=True)
 
         for mask_img, roi_name in zip(mask_imgs, roi_names):
@@ -614,7 +614,7 @@ class Visualizer:
         output_tag :
             Optional suffix added to output filename (e.g., ``"mni"`` or ``"native"``).
         """
-        output_dir = self.output_dir / "figures"
+        output_dir = self.output_dir / "3-analysis"
         output_dir.mkdir(parents=True, exist_ok=True)
 
         df = df.copy()
@@ -682,5 +682,107 @@ class Visualizer:
         tagged = space_tag(output_tag) if output_tag else ""
         suffix = f"_{tagged}" if tagged else ""
         out_path = output_dir / f"simulation_vs_optimization{suffix}.png"
+        save_figure(out_path, if_exists=self.if_exists, dpi=150, bbox_inches="tight")
+        logger.info(f"Saved: {out_path}")
+
+    def plot_simulation_summary(
+        self,
+        df: pd.DataFrame,
+        metric: str = "mean",
+        subject_col: str = "subject",
+        condition_col: str = "condition",
+        output_tag: str = "",
+    ) -> None:
+        """
+        Per-condition summary figure (boxplot + stripplot) showing e-field values
+        across subjects for each mode (simulation and/or optimization).
+
+        Works with simulation-only datasets, unlike
+        :meth:`plot_simulation_vs_optimization` which requires both modes.
+
+        Parameters
+        ----------
+        df :
+            Features DataFrame with at least ``subject``, ``condition``, and
+            ``<metric>`` columns.
+        metric :
+            Numeric column to plot on the y-axis (default ``'mean'``).
+        subject_col :
+            Column containing subject identifiers.
+        condition_col :
+            Column containing condition labels (e.g. ``'stimSD_simulation'``).
+        output_tag :
+            Optional suffix added to the output filename.
+        """
+        output_dir = self.output_dir / "3-analysis"
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        if metric not in df.columns:
+            logger.warning(
+                f"plot_simulation_summary: metric '{metric}' not in DataFrame columns "
+                f"({list(df.columns)}). Skipped."
+            )
+            return
+
+        df = df.copy()
+        df["mode"] = df[condition_col].apply(
+            lambda x: "optimization" if "optimization" in x else "simulation"
+        )
+        df["roi"] = df[condition_col].apply(
+            lambda x: x.replace("_simulation", "").replace("_optimization", "")
+        )
+
+        rois = sorted(df["roi"].unique())
+        modes = sorted(df["mode"].unique())
+        n_rois = len(rois)
+
+        fig, axes = plt.subplots(
+            1, n_rois, figsize=(max(5, 4 * n_rois), 5), squeeze=False
+        )
+        axes = axes[0]
+
+        palette = {"simulation": "#4C8BE2", "optimization": "#E2824C"}
+
+        for ax, roi in zip(axes, rois):
+            df_roi = df[df["roi"] == roi].copy()
+
+            # boxplot per mode
+            positions = {m: i for i, m in enumerate(modes)}
+            for mode, grp in df_roi.groupby("mode"):
+                vals = grp[metric].dropna().values
+                pos = positions[mode]
+                ax.boxplot(
+                    vals,
+                    positions=[pos],
+                    widths=0.4,
+                    patch_artist=True,
+                    boxprops=dict(facecolor=palette.get(mode, "#aaa"), alpha=0.4),
+                    medianprops=dict(color="black", linewidth=2),
+                    whiskerprops=dict(color="gray"),
+                    capprops=dict(color="gray"),
+                    flierprops=dict(marker="", linestyle="none"),
+                    showfliers=False,
+                )
+                # individual points
+                jitter = (np.random.default_rng(42).random(len(vals)) - 0.5) * 0.2
+                ax.scatter(
+                    np.full(len(vals), pos) + jitter,
+                    vals,
+                    color=palette.get(mode, "#aaa"),
+                    alpha=0.8,
+                    s=60,
+                    zorder=3,
+                )
+
+            ax.set_xticks(list(positions.values()))
+            ax.set_xticklabels(list(positions.keys()), rotation=15, ha="right")
+            ax.set_ylabel(f"E-field {metric} (V/m)")
+            ax.set_title(f"ROI: {roi}")
+            ax.grid(True, axis="y", alpha=0.3)
+
+        plt.tight_layout()
+        tagged = space_tag(output_tag) if output_tag else ""
+        suffix = f"_{tagged}" if tagged else ""
+        out_path = output_dir / f"simulation_summary{suffix}.png"
         save_figure(out_path, if_exists=self.if_exists, dpi=150, bbox_inches="tight")
         logger.info(f"Saved: {out_path}")

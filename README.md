@@ -1,6 +1,9 @@
 # simnibs-analyze
 
-Post-processing and analysis pipeline for SimNIBS e-field outputs. Built for non-invasive brain stimulation studies (TMS/tDCS).
+Post-processing and analysis pipeline for SimNIBS e-field outputs. 
+
+Built to facilitate the analysis of simnibs simulations in the context of non-invasive brain stimulation studies (TMS/tDCS).
+
 
 ## What it does
 
@@ -19,24 +22,37 @@ Starting from SimNIBS outputs, the pipeline covers the full analysis workflow:
 
 ```bash
 # TODO: publication sur PyPI
-pip install simnibs-pipeline
+pip install simnibs-analyze
 ```
 
-En attendant, cloner le dépôt et installer les dépendances manuellement :
 
-```bash
-git clone <repo>
-cd simnibs-pipeline
-pip install -e .
-```
+## **Prerequisite Data (Input structure from simnibs):**
+
+You need to have already run:
+
+- simnibs-simulation or/ andsimnibs-optimization folder
+- simnibs-m2m folder
+
+## Quick start:
+
+- prepare a config file : use examples from (add link)
+- then run:
+  simnibs-analyze --config="pathToYourConfig.yaml"
+
+
+## Other parameters of the pipeline:
+
+
 
 ## Documentation
 
-| Ressource                                        | Description                                  |
-| ------------------------------------------------ | -------------------------------------------- |
-| [Documentation API](docs/api/simnibs_pipeline.html) | Classes et fonctions (généré par pdoc)    |
-| [Référence config.yaml](docs/configuration.md)    | Toutes les clés du fichier de configuration |
-| [Structure des outputs](docs/output_structure.md) | Fichiers générés dans simnibs_output/ et results_dir/ |
+For more detailed usecases, and if you need to run particular function of the pipeline:
+
+| Ressource                                        | Description                                              |
+| ------------------------------------------------ | -------------------------------------------------------- |
+| [Documentation API](docs/api/simnibs_pipeline.html) | Classes et fonctions (généré par pdoc)                |
+| [Référence config.yaml](docs/configuration.md)    | Toutes les clés du fichier de configuration             |
+| [Structure des outputs](docs/output_structure.md)   | Fichiers générés dans simnibs_output/ et results_dir/ |
 
 <!-- ## Citation
 

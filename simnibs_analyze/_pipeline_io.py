@@ -92,6 +92,20 @@ def space_tag(space: str) -> str:
     return f"space-{normalize_space(space)}"
 
 
+def get_preps_root(paths_config) -> Path:
+    """Retourne la racine des segmentations charm (m2m_*)."""
+    if paths_config.simnibs_preps is not None:
+        return Path(paths_config.simnibs_preps)
+    return Path(paths_config.simnibs_output)
+
+
+def get_simu_root(paths_config) -> Path:
+    """Retourne la racine des simulations/optimisations."""
+    if paths_config.simnibs_simu is not None:
+        return Path(paths_config.simnibs_simu)
+    return Path(paths_config.simnibs_output)
+
+
 def get_subject_paths(simnibs_output_dir: Path, subject: str) -> Dict[str, Path]:
     """Return canonical subject-level paths used across the pipeline."""
     subject_dir = Path(simnibs_output_dir) / subject
@@ -102,9 +116,28 @@ def get_subject_paths(simnibs_output_dir: Path, subject: str) -> Dict[str, Path]
     }
 
 
+def get_subject_paths_from_config(paths_config, subject: str) -> Dict[str, Path]:
+    """
+    Return canonical subject-level paths, handling split preps/simu directories.
+
+    - ``subject_dir``        : simu root / subject  (simulations live here)
+    - ``m2m_dir``            : preps root / subject / m2m_{subject}  (charm segmentation)
+    - ``subject_target_dir`` : simu root / subject / subject_target
+    """
+    preps_root = get_preps_root(paths_config)
+    simu_root = get_simu_root(paths_config)
+    simu_subject_dir = simu_root / subject
+    preps_subject_dir = preps_root / subject
+    return {
+        "subject_dir": simu_subject_dir,
+        "m2m_dir": preps_subject_dir / f"m2m_{subject}",
+        "subject_target_dir": simu_subject_dir / "subject_target",
+    }
+
+
 def get_analysis_dir(results_dir: Path, space: str) -> Path:
     """Return the shared analysis output directory."""
-    return Path(results_dir) / "analysis"
+    return Path(results_dir) / "3-analysis"
 
 
 def get_features_csv_path(results_dir: Path, space: str) -> Path:

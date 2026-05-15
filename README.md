@@ -1,9 +1,6 @@
 # simnibs-analyze
 
-Post-processing and analysis pipeline for SimNIBS e-field outputs. 
-
-Built to facilitate the analysis of simnibs simulations in the context of non-invasive brain stimulation studies (TMS/tDCS).
-
+Post-processing and analysis pipeline for SimNIBS e-field outputs. Built to facilitate the analysis of simnibs simulations in the context of non-invasive brain stimulation studies (TMS/tDCS).
 
 ## What it does
 
@@ -25,7 +22,6 @@ Starting from SimNIBS outputs, the pipeline covers the full analysis workflow:
 pip install simnibs-analyze
 ```
 
-
 ## **Prerequisite Data (Input structure from simnibs):**
 
 You need to have already run:
@@ -39,14 +35,7 @@ You need to have already run:
 - then run:
   simnibs-analyze --config="pathToYourConfig.yaml"
 
-
-## Other parameters of the pipeline:
-
-
-
-## Documentation
-
-For more detailed usecases, and if you need to run particular function of the pipeline:
+## [Click here for a full documentation](https://icm-frontlab-cdpr.github.io/simnibs-analyze/)
 
 | Ressource                                        | Description                                              |
 | ------------------------------------------------ | -------------------------------------------------------- |

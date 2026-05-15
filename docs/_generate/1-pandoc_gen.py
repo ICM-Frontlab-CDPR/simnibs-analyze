@@ -20,7 +20,16 @@ ROOT = Path(__file__).parent.parent.parent   # simnibs-analyze/
 PIPELINE_DIR = ROOT / "simnibs_analyze"
 API_DIR = ROOT / "docs" / "api"
 
-MODULES = ["simnibs_analyze"]
+MODULES = [
+    # Package racine — pdoc découvre automatiquement tous ses sous-modules directs
+    "simnibs_analyze",
+    # steps/ n'est pas ré-exporté depuis __init__, pdoc ne le découvre pas seul
+    "simnibs_analyze.steps._0_anatomical_preparer",
+    "simnibs_analyze.steps._1_preprocessing",
+    "simnibs_analyze.steps._2_features_extraction",
+    "simnibs_analyze.steps._3_analysis",
+    "simnibs_analyze.steps._4_viz",
+]
 
 
 def run() -> None:

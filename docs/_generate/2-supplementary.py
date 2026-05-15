@@ -13,6 +13,68 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent.parent.parent   # simnibs-analyze/
 DOCS_DIR = ROOT / "docs"
+EXAMPLES_SRC = ROOT / "simnibs_analyze" / "examples"
+
+
+def _yaml_to_html_card(name: str, content: str) -> str:
+    """Retourne un bloc HTML <details> avec le contenu YAML coloré via <pre>."""
+    safe = content.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    return f"""
+    <details open>
+      <summary><strong>{name}</strong></summary>
+      <pre><code class="language-yaml">{safe}</code></pre>
+    </details>
+"""
+
+
+def generate_examples_page() -> None:
+    """Génère docs/examples/index.html à partir des fichiers YAML d'exemples."""
+    examples_dir = DOCS_DIR / "examples"
+    examples_dir.mkdir(parents=True, exist_ok=True)
+
+    yaml_files = sorted(EXAMPLES_SRC.glob("*.yaml"))
+    if not yaml_files:
+        print("  ⚠ Aucun fichier YAML trouvé dans simnibs_analyze/examples/")
+        return
+
+    cards_html = "".join(
+        _yaml_to_html_card(f.name, f.read_text(encoding="utf-8"))
+        for f in yaml_files
+    )
+
+    page = f"""<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Exemples — simnibs-analyze</title>
+  <style>
+    body {{ font-family: system-ui, sans-serif; max-width: 900px; margin: 3rem auto; padding: 0 1.5rem; color: #222; }}
+    a.back {{ font-size: .9rem; color: #555; text-decoration: none; }}
+    a.back:hover {{ text-decoration: underline; }}
+    h1 {{ margin: .5rem 0 .25rem; }}
+    p.sub {{ color: #555; margin-top: 0; }}
+    details {{ border: 1px solid #ddd; border-radius: 8px; margin: 1.5rem 0; padding: .75rem 1rem; }}
+    summary {{ cursor: pointer; font-size: 1.05rem; padding: .25rem 0; }}
+    pre {{ background: #f6f8fa; border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: .85rem; margin: .75rem 0 0; }}
+    code {{ font-family: "SFMono-Regular", Consolas, monospace; }}
+    footer {{ margin-top: 3rem; font-size: .8rem; color: #999; }}
+  </style>
+</head>
+<body>
+  <a class="back" href="../index.html">← Accueil</a>
+  <h1>Exemples de configuration</h1>
+  <p class="sub">Fichiers <code>config.yaml</code> d'exemple pour démarrer rapidement.</p>
+  {cards_html}
+  <footer>Généré automatiquement — simnibs-analyze</footer>
+</body>
+</html>
+"""
+
+    out = examples_dir / "index.html"
+    out.write_text(page, encoding="utf-8")
+    print(f"  ✓ Page exemples écrite : {out} ({len(yaml_files)} fichiers YAML)")
+
 
 LANDING_HTML = """\
 <!DOCTYPE html>
@@ -42,6 +104,10 @@ LANDING_HTML = """\
       <h2>📖 Référence API</h2>
       <p>Documentation auto-générée de tous les modules du package.</p>
     </a>
+    <a class="card" href="examples/index.html">
+      <h2>🗂 Exemples de config</h2>
+      <p>Fichiers config.yaml annotés pour démarrer rapidement.</p>
+    </a>
     <a class="card" href="assets/global-env.svg">
       <h2>🗺 Environnement global</h2>
       <p>Vue d'ensemble de l'architecture du pipeline.</p>
@@ -67,6 +133,9 @@ def run() -> None:
     index = DOCS_DIR / "index.html"
     index.write_text(LANDING_HTML, encoding="utf-8")
     print(f"  ✓ Landing page écrite : {index}")
+
+    # Page d'exemples YAML
+    generate_examples_page()
 
     print(f"\n✓ [2-supplementary] docs/ prêt pour GitHub Pages")
 

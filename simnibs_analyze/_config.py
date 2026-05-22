@@ -1,3 +1,6 @@
+
+
+from __future__ import annotations
 """
 Pydantic models for pipeline config.yaml validation.
 
@@ -5,8 +8,6 @@ These models mirror the config.yaml structure exactly.
 Usage (standalone check):
     python _config.py --config config.yaml
 """
-
-from __future__ import annotations
 
 from pathlib import Path
 from typing import Annotated, Literal, Optional, Union
@@ -17,6 +18,17 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 # ---------------------------------------------------------------------------
 # ROI definitions  (target_generation.rois)
 # ---------------------------------------------------------------------------
+
+class VisualizationConfig(BaseModel):
+    lesion_mask_color: str = "magenta"
+    lesion_mask_opacity: float = 0.4
+    t1_opacity: float = 0.15
+    mask_color: str = "cyan"
+    mask_opacity: float = 0.3
+    camera_position: Union[str, list[str]] = "xy"
+    cmap: str = "hot"
+
+
 
 
 class SphereROI(BaseModel):
@@ -84,6 +96,9 @@ class PathsConfig(BaseModel):
     mni_template: Optional[Path] = None
     mni_brain_mask: Optional[Path] = None
 
+    lesion_masks_dir: Optional[Path] = None
+    """Dossier des masques de lésion synthstroke (un dossier par sujet)."""
+
     @model_validator(mode="after")
     def _validate_input_paths(self) -> "PathsConfig":
         split = self.simnibs_preps is not None and self.simnibs_simu is not None
@@ -139,6 +154,7 @@ class PipelineConfig(BaseModel):
     preprocessing: PreprocessingConfig = PreprocessingConfig()
     feature_extraction: FeatureExtractionConfig = FeatureExtractionConfig()
     analysis: AnalysisConfig = AnalysisConfig()
+    visualisation: VisualizationConfig = VisualizationConfig()
 
     @model_validator(mode="after")
     def _stim_conditions_match_rois(self) -> "PipelineConfig":

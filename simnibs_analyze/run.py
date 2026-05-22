@@ -25,6 +25,7 @@ from simnibs_analyze.steps._1_preprocessing import Preprocessor
 from simnibs_analyze.steps._2_features_extraction import FeatureExtractor
 from simnibs_analyze.steps._3_analysis import Analysis
 from simnibs_analyze.steps._4_viz import Visualizer
+import simnibs_analyze.loaders_mask as loaders_mask
 from simnibs_analyze._pipeline_io import (
     SPACE_MNI,
     SPACE_NATIVE,
@@ -397,10 +398,10 @@ def run_viz(config: PipelineConfig, space: str, if_exists: str = "overwrite") ->
 
     viz = Visualizer(
         output_dir=results_dir,
-        cmap="hot",
+        cmap=getattr(config.visualisation, "cmap", "hot"),
         threshold_percentile=50.0,
         bins=50,
-        camera_position="xy",
+        camera_position=getattr(config.visualisation, "camera_position", "xy"),
         if_exists=if_exists,
     )
 
@@ -431,6 +432,18 @@ def run_viz(config: PipelineConfig, space: str, if_exists: str = "overwrite") ->
         if subj_bg.exists():
             subject_brain_bg_by_subject[subject] = subj_bg
 
+    # ── Charger les masques de lésion ──
+    lesion_mask_by_subject: Dict[str, Path] = {}
+    if getattr(config.paths, "lesion_masks_dir", None):
+        lesion_dataset = loaders_mask.SynthStrokeDataset(Path(config.paths.lesion_masks_dir), space=space)
+        for subject in subjects:
+            lesion = lesion_dataset.get(subject)
+            if lesion is not None:
+                # On prend le path du mask, pas l'objet nibabel
+                mask_path = lesion["mask_ss"].get_filename() if hasattr(lesion["mask_ss"], "get_filename") else None
+                if mask_path:
+                    lesion_mask_by_subject[subject] = Path(mask_path)
+
     file_info: Dict = {}
     for mode in modes:
         for condition in conditions:
@@ -459,7 +472,11 @@ def run_viz(config: PipelineConfig, space: str, if_exists: str = "overwrite") ->
             else subject_brain_bg_by_subject
         )
         viz.efields_figures(
-            file_info, t1_brain_by_subject=brain_bgs or None, space=space
+            file_info,
+            t1_brain_by_subject=brain_bgs or None,
+            lesion_mask_by_subject=lesion_mask_by_subject or None,
+            space=space,
+            visualisation_config=getattr(config, "visualisation", None),
         )
         logger.info(f"✓ 3D e-field figures generated ({space.upper()})")
     else:

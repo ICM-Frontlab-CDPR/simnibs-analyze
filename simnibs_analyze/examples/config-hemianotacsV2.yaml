@@ -1,0 +1,92 @@
+
+running:
+  if_exists: "overwrite"   # "skip" | "overwrite" | "error"
+
+# Paths — structure séparée preps / simu / results
+paths:
+  simnibs_preps: /Volumes/levy/raw/valerocabre/hemianotACS/Data/derivatives/mri/1-simnibs-prep-maskSS
+  simnibs_simu:  /Volumes/levy/raw/valerocabre/hemianotACS/Data/derivatives/mri/2-simnibs-sim-ips-fef
+  results_dir:   /Volumes/levy/raw/valerocabre/hemianotACS/Data/derivatives/mri/3-simnibs-analyze-ips-fef
+  mni_template:  /Users/hippolyte.dreyfus/Documents/simnibs-modular/templates/MNI152_T1_1mm.nii.gz
+  mni_brain_mask: /Users/hippolyte.dreyfus/Documents/simnibs-modular/templates/MNI152_T1_1mm_brain_mask.nii.gz
+  lesion_masks_dir: /Volumes/levy/raw/valerocabre/hemianotACS/Data/derivatives/mri/0-lesion-synthstroke-masks-SS
+
+# population:
+#   stroke:
+#     type:
+#     moment:
+  
+subjects:
+  - "0001"
+  - "0002"
+  # - "0008"
+  # - "0009"
+  # - "0011"
+  # - "0014"
+  # - "0015"
+  # - "0016"
+  # - "0018"
+  # - "0021"
+  # - "0023"
+  # - "0024"
+  # - "0026"
+  # - "0027"
+  # - "0029"
+  # - "0035"
+  # - "0037"
+  # - "0038"
+  # - "0040"
+  # - "0041"
+
+stim_conditions: [fef, ips-left, ips-right]
+mode: [simulation]
+space: mni
+
+# ROIs : cibles visuelles FEF / IPS en MNI
+target_generation:
+  radius_mm: 5.0
+  rois:
+    fef:
+      method: sphere
+      coords: [28, -8, 54]
+    ips-left:
+      method: sphere
+      coords: [-25, -60, 52]
+      folder_pattern: ips_left
+    ips-right:
+      method: sphere
+      coords: [25, -60, 52]
+      folder_pattern: ips_right
+
+# Preprocessing
+preprocessing:
+  smooth_fwhm: 2.0
+  outlier_method: iqr
+  portion: null
+
+# Feature extraction
+feature_extraction:
+  metrics: [mean, median, std, min, max]
+
+# Analysis
+analysis:
+  metric: mean
+  subject_col: subject
+  condition_col: condition
+  clustering:
+    method: mean
+    specificity_threshold: 1.5
+    intensity_col: mean
+
+
+# Visualisation parameters
+visualisation:
+  lesion_mask_color: magenta
+  lesion_mask_opacity: 0.4
+  t1_opacity: 0.15
+  mask_color: cyan
+  mask_opacity: 0.3
+  camera_position: [xy, yz]
+  cmap: hot
+  2d-axis: roi or lesion
+  #written-files: by-subject, by-panel

@@ -68,6 +68,11 @@ class Visualizer:
         mask_path: Optional[Path] = None,
         mask_color: str = "cyan",
         mask_opacity: float = 0.3,
+        t1_path: Optional[Path] = None,
+        t1_opacity: float = 0.15,
+        lesion_mask_path: Optional[Path] = None,
+        lesion_mask_color: str = "magenta",
+        lesion_mask_opacity: float = 0.4,
         off_screen: bool = True,
         component: Union[str, int] = "magnitude",
     ):  # -> pv.Plotter (lazy import, not annotated to avoid import at module level)
@@ -97,6 +102,11 @@ class Visualizer:
             Colour of the mask surface mesh (default ``'cyan'``).
         mask_opacity :
             Opacity of the mask surface mesh (default 0.3).
+        t1_path :
+            Optional T1 brain NIfTI for anatomical colocalization.  Rendered
+            as a semi-transparent gray isosurface behind the e-field volume.
+        t1_opacity :
+            Opacity of the T1 brain surface (default 0.15).
         off_screen :
             If ``True``, creates an offscreen plotter (static PNG).
             If ``False``, creates an interactive window plotter.
@@ -167,6 +177,50 @@ class Visualizer:
 
         plotter = pv.Plotter(off_screen=off_screen)
 
+        # ── T1 brain surface (anatomical context) ────────────────────────
+        if t1_path is not None:
+            t1_img = nib.as_closest_canonical(nib.load(str(t1_path)))
+            t1_data = np.squeeze(t1_img.get_fdata()).astype(np.float32)
+            t1_spacing = t1_img.header.get_zooms()[:3]
+            t1_origin = t1_img.affine[:3, 3]
+            t1_grid = pv.ImageData()
+            t1_grid.dimensions = np.array(t1_data.shape) + 1
+            t1_grid.spacing = t1_spacing
+            t1_grid.origin = t1_origin
+            t1_grid.cell_data["t1"] = t1_data.flatten(order="F")
+            # contour requires point data — convert once
+            t1_grid_pts = t1_grid.cell_data_to_point_data()
+            # Isosurface at ~15 % of max to capture the outer brain boundary
+            t1_thresh = float(np.percentile(t1_data[t1_data > 0], 15)) if t1_data.any() else 1.0
+            t1_surface = t1_grid_pts.contour([t1_thresh], scalars="t1")
+            if t1_surface.n_points > 0:
+                plotter.add_mesh(
+                    t1_surface,
+                    color="white",
+                    opacity=t1_opacity,
+                    smooth_shading=True,
+                )
+
+        # ── Lesion mask overlay ──────────────────────────────────────────
+        if lesion_mask_path is not None:
+            lesion_img = nib.as_closest_canonical(nib.load(str(lesion_mask_path)))
+            lesion_data = np.squeeze(lesion_img.get_fdata()).astype(np.float32)
+            lesion_spacing = lesion_img.header.get_zooms()[:3]
+            lesion_origin = lesion_img.affine[:3, 3]
+            lesion_grid = pv.ImageData()
+            lesion_grid.dimensions = np.array(lesion_data.shape) + 1
+            lesion_grid.spacing = lesion_spacing
+            lesion_grid.origin = lesion_origin
+            lesion_grid.cell_data["lesion"] = lesion_data.flatten(order="F")
+            lesion_surface = lesion_grid.threshold(0.5).extract_surface()
+            if lesion_surface.n_points > 0:
+                plotter.add_mesh(
+                    lesion_surface,
+                    color=lesion_mask_color,
+                    opacity=lesion_mask_opacity,
+                    smooth_shading=True,
+                )
+
         # ── Mask surface overlay ──────────────────────────────────────────
         if mask_path is not None:
             mask_img = nib.as_closest_canonical(nib.load(str(mask_path)))
@@ -207,6 +261,11 @@ class Visualizer:
         mask_path: Optional[Path] = None,
         mask_color: str = "cyan",
         mask_opacity: float = 0.3,
+        t1_path: Optional[Path] = None,
+        t1_opacity: float = 0.15,
+        lesion_mask_path: Optional[Path] = None,
+        lesion_mask_color: str = "magenta",
+        lesion_mask_opacity: float = 0.4,
         component: Union[str, int] = "magnitude",
     ) -> np.ndarray:
         """Offscreen render — returns an RGBA array (used by :meth:`efields_figures`)."""
@@ -220,6 +279,11 @@ class Visualizer:
             mask_path=mask_path,
             mask_color=mask_color,
             mask_opacity=mask_opacity,
+            t1_path=t1_path,
+            t1_opacity=t1_opacity,
+            lesion_mask_path=lesion_mask_path,
+            lesion_mask_color=lesion_mask_color,
+            lesion_mask_opacity=lesion_mask_opacity,
             off_screen=True,
             component=component,
         )
@@ -237,6 +301,8 @@ class Visualizer:
         mask_path: Optional[Path] = None,
         mask_color: str = "cyan",
         mask_opacity: float = 0.3,
+        t1_path: Optional[Path] = None,
+        t1_opacity: float = 0.15,
         threshold_percentile: Optional[float] = None,
         vmin: Optional[float] = None,
         vmax: Optional[float] = None,
@@ -263,6 +329,11 @@ class Visualizer:
             Colour of the mask surface (default ``'cyan'``).
         mask_opacity :
             Opacity of the mask surface in [0, 1] (default 0.3).
+        t1_path :
+            Optional T1 brain NIfTI for anatomical colocalization.  Rendered
+            as a semi-transparent gray isosurface behind the e-field.
+        t1_opacity :
+            Opacity of the T1 brain surface (default 0.15).
         threshold_percentile :
             Percentile cutoff for non-zero voxels.  Defaults to
             ``self.threshold_percentile``.
@@ -282,8 +353,7 @@ class Visualizer:
         >>> viz.view_efield_interactive(
         ...     efield_path="sub-0011_magnE.nii.gz",
         ...     mask_path="m2m_0011/surfaces/cereb_mask.nii.gz",
-        ...     mask_color="cyan",
-        ...     mask_opacity=0.3,
+        ...     t1_path="m2m_0011/T1_MNI_brain.nii.gz",
         ... )
         """
         plotter = self._build_plotter(
@@ -300,6 +370,8 @@ class Visualizer:
             mask_path=Path(mask_path) if mask_path is not None else None,
             mask_color=mask_color,
             mask_opacity=mask_opacity,
+            t1_path=Path(t1_path) if t1_path is not None else None,
+            t1_opacity=t1_opacity,
             off_screen=False,
             component=component,
         )
@@ -312,23 +384,12 @@ class Visualizer:
         self,
         file_info_by_roi_mode: Dict[Tuple[str, str], List[Tuple[str, Path]]],
         t1_brain_by_subject: Optional[Dict[str, Path]] = None,
+        lesion_mask_by_subject: Optional[Dict[str, Path]] = None,
         space: str = "mni",
+        visualisation_config: Optional[object] = None,
     ) -> None:
         """
-        Generate one 3D figure per (roi, mode) pair.
-
-        Parameters
-        ----------
-        file_info_by_roi_mode :
-            Mapping ``(roi, mode) → [(subject, efield_path), ...]``.
-        t1_brain_by_subject :
-            Optional mapping ``subject → T1 brain path``. Brain surface is
-            rendered behind the e-field.  Must be in the same space as the
-            e-fields (use ``T1_MNI_brain.nii.gz`` for MNI,
-            ``T1_subject_brain.nii.gz`` for subject space).
-        space : str
-            ``'mni'`` or ``'native'`` — included in the output filename so
-            figures from both spaces are saved without overwriting each other.
+        Generate one 3D figure per (roi, mode, camera_position) pair.
         """
         output_dir = self.output_dir / "1-simu"
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -354,50 +415,74 @@ class Visualizer:
         vmin, vmax = float(np.min(all_values)), float(np.max(all_values))
         logger.info(f"Global colour scale: {vmin:.3f} – {vmax:.3f} V/m")
 
-        for (roi, mode), subject_files in file_info_by_roi_mode.items():
-            logger.info(f"Generating figure: {roi} – {mode}")
-            n_subjects = len(subject_files)
-            n_cols = min(6, n_subjects)
-            n_rows = (n_subjects + n_cols - 1) // n_cols
+        # Get camera positions (list or str)
+        vcfg = visualisation_config or object()
+        camera_positions = getattr(vcfg, "camera_position", self.camera_position)
+        if isinstance(camera_positions, str):
+            camera_positions = [camera_positions]
 
-            fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 4 * n_rows))
-            if n_subjects == 1:
-                axes = np.array([[axes]])
-            elif n_rows == 1:
-                axes = axes.reshape(1, -1)
-            elif n_cols == 1:
-                axes = axes.reshape(-1, 1)
+        for camera_position in camera_positions:
+            for (roi, mode), subject_files in file_info_by_roi_mode.items():
+                logger.info(f"Generating figure: {roi} – {mode} – {camera_position}")
+                n_subjects = len(subject_files)
+                n_cols = min(6, n_subjects)
+                n_rows = (n_subjects + n_cols - 1) // n_cols
 
-            for idx, (subject, efield_path) in enumerate(subject_files):
-                row, col = divmod(idx, n_cols)
-                ax = axes[row, col]
-                image = self._create_3d_view(
-                    efield_path=efield_path,
-                    camera_position=self.camera_position,
-                    cmap=self.cmap,
-                    threshold_percentile=self.threshold_percentile,
-                    vmin=vmin,
-                    vmax=vmax,
+                fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 4 * n_rows))
+                if n_subjects == 1:
+                    axes = np.array([[axes]])
+                elif n_rows == 1:
+                    axes = axes.reshape(1, -1)
+                elif n_cols == 1:
+                    axes = axes.reshape(-1, 1)
+
+                for idx, (subject, efield_path) in enumerate(subject_files):
+                    row, col = divmod(idx, n_cols)
+                    ax = axes[row, col]
+                    t1 = (
+                        t1_brain_by_subject.get(subject)
+                        if t1_brain_by_subject is not None
+                        else None
+                    )
+                    lesion = (
+                        lesion_mask_by_subject.get(subject)
+                        if lesion_mask_by_subject is not None
+                        else None
+                    )
+                    image = self._create_3d_view(
+                        efield_path=efield_path,
+                        camera_position=camera_position,
+                        cmap=getattr(vcfg, "cmap", self.cmap),
+                        threshold_percentile=self.threshold_percentile,
+                        vmin=vmin,
+                        vmax=vmax,
+                        t1_path=Path(t1) if t1 is not None else None,
+                        t1_opacity=getattr(vcfg, "t1_opacity", 0.15),
+                        lesion_mask_path=Path(lesion) if lesion is not None else None,
+                        lesion_mask_color=getattr(vcfg, "lesion_mask_color", "magenta"),
+                        lesion_mask_opacity=getattr(vcfg, "lesion_mask_opacity", 0.4),
+                        mask_color=getattr(vcfg, "mask_color", "cyan"),
+                        mask_opacity=getattr(vcfg, "mask_opacity", 0.3),
+                    )
+                    ax.imshow(image)
+                    ax.axis("off")
+                    ax.set_title(subject, fontsize=12)
+
+                for idx in range(n_subjects, n_rows * n_cols):
+                    row, col = divmod(idx, n_cols)
+                    axes[row, col].axis("off")
+
+                fig.suptitle(
+                    f"{roi} – {mode} ({space.upper()}) – {camera_position}", fontsize=16, fontweight="bold"
                 )
-                ax.imshow(image)
-                ax.axis("off")
-                ax.set_title(subject, fontsize=12)
-
-            for idx in range(n_subjects, n_rows * n_cols):
-                row, col = divmod(idx, n_cols)
-                axes[row, col].axis("off")
-
-            fig.suptitle(
-                f"{roi} – {mode} ({space.upper()})", fontsize=16, fontweight="bold"
-            )
-            plt.tight_layout()
-            out_path = (
-                output_dir / f"efields_3d_{roi}_{mode}_{tag}_{self.camera_position}.png"
-            )
-            save_figure(
-                out_path, if_exists=self.if_exists, dpi=300, bbox_inches="tight"
-            )
-            logger.info(f"  Saved: {out_path}")
+                plt.tight_layout()
+                out_path = (
+                    output_dir / f"efields_3d_{roi}_{mode}_{tag}_{camera_position}.png"
+                )
+                save_figure(
+                    out_path, if_exists=self.if_exists, dpi=300, bbox_inches="tight"
+                )
+                logger.info(f"  Saved: {out_path}")
 
         logger.info(f"All 3D figures saved in {output_dir}")
 

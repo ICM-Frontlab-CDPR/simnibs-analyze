@@ -6,6 +6,7 @@ import nibabel as nib
 
 # ── Dataset loaders ────────────────────────────────────────────────────────────
 
+
 class SynthStrokeDataset:
     """
     Reads SynthStroke outputs from each subject folder.
@@ -15,7 +16,7 @@ class SynthStrokeDataset:
     """
 
     def __init__(self, root: Path, space: str = "native"):
-        self.root  = root
+        self.root = root
         self.space = space
         self.subjects = sorted(d.name for d in root.iterdir() if d.is_dir())
 
@@ -28,19 +29,25 @@ class SynthStrokeDataset:
                 subj_dir = alt_dir
         if self.space == "mni":
             masks = sorted(subj_dir.glob("*_lesion_mni.nii.gz"))
-            t1s   = sorted(subj_dir.glob("*_reslice_mni.nii.gz"))
+            t1s = sorted(subj_dir.glob("*_reslice_mni.nii.gz"))
         else:
             # native: exclude *_mni files to avoid ambiguity
-            masks = [p for p in sorted(subj_dir.glob("*_lesion.nii.gz"))
-                     if "_mni" not in p.name]
-            t1s   = [p for p in sorted(subj_dir.glob("*_reslice.nii.gz"))
-                     if "_mni" not in p.name]
+            masks = [
+                p
+                for p in sorted(subj_dir.glob("*_lesion.nii.gz"))
+                if "_mni" not in p.name
+            ]
+            t1s = [
+                p
+                for p in sorted(subj_dir.glob("*_reslice.nii.gz"))
+                if "_mni" not in p.name
+            ]
         if not masks or not t1s:
             return None
         return {
             "subject": subject,
             "mask_ss": nib.load(masks[0]),
-            "t1_ss":   nib.load(t1s[0]),
+            "t1_ss": nib.load(t1s[0]),
         }
 
 
@@ -53,7 +60,7 @@ class OriginalDataset:
     """
 
     def __init__(self, root: Path, space: str = "native"):
-        self.root  = root
+        self.root = root
         self.space = space
         self.subjects = sorted(d.name for d in root.iterdir() if d.is_dir())
 
@@ -66,7 +73,7 @@ class OriginalDataset:
             if not mask_path.exists():
                 return None
             return {
-                "subject":   subject,
+                "subject": subject,
                 "mask_orig": nib.load(mask_path),
             }
         else:
@@ -79,7 +86,6 @@ class OriginalDataset:
             if not candidates:
                 return None
             return {
-                "subject":   subject,
+                "subject": subject,
                 "mask_orig": nib.load(candidates[0]),
             }
-

@@ -1,6 +1,5 @@
-
-
 from __future__ import annotations
+
 """
 Pydantic models for pipeline config.yaml validation.
 
@@ -19,16 +18,17 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 # ROI definitions  (target_generation.rois)
 # ---------------------------------------------------------------------------
 
+
 class VisualizationConfig(BaseModel):
+    figure_type: Union[str, list[str]] = "3d"  # ou 'parallel', 'acs', '3d'
     lesion_mask_color: str = "magenta"
     lesion_mask_opacity: float = 0.4
     t1_opacity: float = 0.15
     mask_color: str = "cyan"
     mask_opacity: float = 0.3
     camera_position: Union[str, list[str]] = "xy"
+    method_definition_center_acs: str = "roi"  # ou 'lesion'
     cmap: str = "hot"
-
-
 
 
 class SphereROI(BaseModel):

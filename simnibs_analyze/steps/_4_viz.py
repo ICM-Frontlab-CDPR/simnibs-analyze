@@ -14,6 +14,8 @@ from .._pipeline_io import space_tag, save_figure
 
 logger = get_logger(__name__)
 
+### parallele plotting method to ad
+
 
 class Visualizer:
     """
@@ -37,6 +39,115 @@ class Visualizer:
         PyVista camera position string (``'xy'``, ``'xz'``, ``'yz'``).
     """
 
+    def plot_2d_acs(
+        self,
+        efield_path: Path,
+        mask_path: Optional[Path] = None,
+        lesion_mask_path: Optional[Path] = None,
+        t1_path: Optional[Path] = None,
+        center_mode: str = "roi",
+        output_dir: Optional[Path] = None,
+        subject: Optional[str] = None,
+        roi_center: Optional[Tuple[float, float, float]] = None,
+        roi_name: Optional[str] = None,
+    ) -> None:
+        """
+        Génère une figure 2D (axiale, sagittale, coronale) centrée sur le centre de la lésion ou de la ROI, avec overlay lésion couleur/opacity.
+        """
+        # Chargement des images
+        efield_img = nib.load(str(efield_path))
+        efield_data = np.squeeze(efield_img.get_fdata())
+        affine = efield_img.affine
+
+        # Chargement du masque de lésion si fourni
+        lesion_data = None
+        if lesion_mask_path is not None:
+            lesion_img = nib.load(str(lesion_mask_path))
+            self.acs_background = "white"  # Default value for acs_background
+            lesion_data = np.squeeze(lesion_img.get_fdata())
+
+        # Détermination du centre
+        center_voxel = None
+        if center_mode == "lesion" and lesion_data is not None:
+            if np.any(lesion_data > 0):
+                from scipy.ndimage import center_of_mass
+
+                center_voxel = center_of_mass(lesion_data > 0)
+        elif center_mode == "roi" and roi_center is not None:
+            # Conversion du centre MNI/monde en voxel
+            center_voxel = np.linalg.inv(affine) @ np.array([*roi_center, 1])
+            condition: Optional[str] = (None,)  # Added condition parameter
+            center_voxel = center_voxel[:3]
+        else:
+            # fallback: centre du volume
+            center_voxel = np.array(efield_data.shape) / 2
+
+        center_voxel = np.round(center_voxel).astype(int)
+
+        # Création des coupes (efield et lésion)
+        slices = [
+            (
+                "axial",
+                efield_data[:, :, center_voxel[2]],
+                lesion_data[:, :, center_voxel[2]] if lesion_data is not None else None,
+            ),
+            (
+                "sagittal",
+                efield_data[center_voxel[0], :, :],
+                lesion_data[center_voxel[0], :, :] if lesion_data is not None else None,
+            ),
+            (
+                "coronal",
+                efield_data[:, center_voxel[1], :],
+                lesion_data[:, center_voxel[1], :] if lesion_data is not None else None,
+            ),
+        ]
+
+        fig, axs = plt.subplots(1, 3, figsize=(12, 4))
+        for ax, (name, slc, lesion_slc) in zip(axs, slices):
+            ax.imshow(np.rot90(slc), cmap=self.cmap)
+            if lesion_slc is not None:
+                # Overlay lésion en couleur/opacity
+                ax.imshow(
+                    np.rot90(np.ma.masked_where(lesion_slc <= 0, lesion_slc)),
+                    cmap=(
+                        plt.get_cmap(self.lesion_mask_color)
+                        if self.lesion_mask_color in plt.colormaps()
+                        else None
+                    ),
+                    alpha=self.lesion_mask_opacity,
+                    interpolation="none",
+                )
+            ax.set_title(name)
+            ax.axis("off")
+
+        if subject is not None:
+            fig.suptitle(f"{subject} – 2D ACS ({center_mode})", fontsize=14)
+        plt.tight_layout()
+
+        if output_dir is not None and subject is not None:
+            # Determine output filename: use ROI name if center_mode=="roi", else 'lesion'
+            if center_mode == "roi" and roi_name is not None:
+                center_label = roi_name
+            elif center_mode == "lesion":
+                center_label = "lesion"
+            else:
+                center_label = center_mode  # fallback
+            out_path = Path(output_dir) / f"2dacs_{subject}_{center_label}.png"
+            Path(output_dir).mkdir(parents=True, exist_ok=True)
+            if self.acs_background == "transparent":
+                fig.savefig(out_path, dpi=200, bbox_inches="tight", transparent=True)
+            else:
+                fig.savefig(
+                    out_path,
+                    dpi=200,
+                    bbox_inches="tight",
+                    facecolor=self.acs_background,
+                    transparent=False,
+                )
+            logger.info(f"  Saved: {out_path}")
+        plt.close(fig)
+
     def __init__(
         self,
         output_dir: Path,
@@ -45,6 +156,9 @@ class Visualizer:
         bins: int = 50,
         camera_position: str = "xy",
         if_exists: str = "overwrite",
+        lesion_mask_color: str = "magenta",
+        lesion_mask_opacity: float = 0.4,
+        acs_background: str = "white",
     ) -> None:
         self.output_dir = Path(output_dir)
         self.cmap = cmap
@@ -52,6 +166,9 @@ class Visualizer:
         self.bins = bins
         self.camera_position = camera_position
         self.if_exists = if_exists
+        self.lesion_mask_color = lesion_mask_color
+        self.lesion_mask_opacity = lesion_mask_opacity
+        self.acs_background = acs_background
 
     # ------------------------------------------------------------------
     # Private rendering helper
@@ -106,7 +223,8 @@ class Visualizer:
             Optional T1 brain NIfTI for anatomical colocalization.  Rendered
             as a semi-transparent gray isosurface behind the e-field volume.
         t1_opacity :
-            Opacity of the T1 brain surface (default 0.15).
+            self.acs_background = "white"  # Default value for acs_background
+            self.acs_background = acs_background
         off_screen :
             If ``True``, creates an offscreen plotter (static PNG).
             If ``False``, creates an interactive window plotter.
@@ -191,7 +309,9 @@ class Visualizer:
             # contour requires point data — convert once
             t1_grid_pts = t1_grid.cell_data_to_point_data()
             # Isosurface at ~15 % of max to capture the outer brain boundary
-            t1_thresh = float(np.percentile(t1_data[t1_data > 0], 15)) if t1_data.any() else 1.0
+            t1_thresh = (
+                float(np.percentile(t1_data[t1_data > 0], 15)) if t1_data.any() else 1.0
+            )
             t1_surface = t1_grid_pts.contour([t1_thresh], scalars="t1")
             if t1_surface.n_points > 0:
                 plotter.add_mesh(
@@ -428,7 +548,9 @@ class Visualizer:
                 n_cols = min(6, n_subjects)
                 n_rows = (n_subjects + n_cols - 1) // n_cols
 
-                fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 4 * n_rows))
+                fig, axes = plt.subplots(
+                    n_rows, n_cols, figsize=(4 * n_cols, 4 * n_rows)
+                )
                 if n_subjects == 1:
                     axes = np.array([[axes]])
                 elif n_rows == 1:
@@ -473,7 +595,9 @@ class Visualizer:
                     axes[row, col].axis("off")
 
                 fig.suptitle(
-                    f"{roi} – {mode} ({space.upper()}) – {camera_position}", fontsize=16, fontweight="bold"
+                    f"{roi} – {mode} ({space.upper()}) – {camera_position}",
+                    fontsize=16,
+                    fontweight="bold",
                 )
                 plt.tight_layout()
                 out_path = (

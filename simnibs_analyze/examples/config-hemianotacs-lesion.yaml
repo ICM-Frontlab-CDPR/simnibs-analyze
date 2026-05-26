@@ -5,8 +5,8 @@ running:
 # Paths — structure séparée preps / simu / results
 paths:
   simnibs_preps: /Volumes/levy/raw/valerocabre/hemianotACS/Data/derivatives/mri/1-simnibs-prep-maskSS
-  simnibs_simu:  /Volumes/levy/raw/valerocabre/hemianotACS/Data/derivatives/mri/2-simnibs-sim-ips-fef
-  results_dir:   /Volumes/levy/raw/valerocabre/hemianotACS/Data/derivatives/mri/3-simnibs-analyze-ips-fef
+  simnibs_simu:  /Volumes/levy/raw/valerocabre/hemianotACS/Data/derivatives/mri/2-simnibs-sim-lesion
+  results_dir:   /Volumes/levy/raw/valerocabre/hemianotACS/Data/derivatives/mri/3-simnibs-analyze-lesion
   mni_template:  /Users/hippolyte.dreyfus/Documents/simnibs-modular/templates/MNI152_T1_1mm.nii.gz
   mni_brain_mask: /Users/hippolyte.dreyfus/Documents/simnibs-modular/templates/MNI152_T1_1mm_brain_mask.nii.gz
   lesion_masks_dir: /Volumes/levy/raw/valerocabre/hemianotACS/Data/derivatives/mri/0-lesion-synthstroke-masks-SS
@@ -38,7 +38,7 @@ subjects:
   - "0040"
   - "0041"
 
-stim_conditions: [fef, ips-left, ips-right]
+stim_conditions: [hdtdcs]
 mode: [simulation]
 space: mni
 
@@ -46,17 +46,10 @@ space: mni
 target_generation:
   radius_mm: 5.0
   rois:
-    fef:
+    hdtdcs:
       method: sphere
       coords: [28, -8, 54]
-    ips-left:
-      method: sphere
-      coords: [-25, -60, 52]
-      folder_pattern: ips_left
-    ips-right:
-      method: sphere
-      coords: [25, -60, 52]
-      folder_pattern: ips_right
+
 
 # Preprocessing
 preprocessing:

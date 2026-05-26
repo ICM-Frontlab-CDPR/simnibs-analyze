@@ -256,20 +256,26 @@ def find_simulation_dirs(
     List[Path]
         List of matching directories.
     """
+    fragment = folder_pattern if folder_pattern is not None else condition
+
     if mode == "simulation":
         base_dir = subject_dir / "simulations"
+        # Expect folders like simulation_sub-<subject>_<condition>_*
+        # Extract subject id from subject_dir (last part)
+        subject_id = subject_dir.name
+        pattern = f"simulation_sub-{subject_id}_{fragment}*"
     else:
         base_dir = subject_dir / "optimizations"
+        pattern = f"*{mode}_{fragment}*"
 
     if not base_dir.exists():
         logger.warning(f"{mode} directory not found: {base_dir}")
         return []
 
-    # Prend tous les dossiers (simulation_*) sans filtrer par condition
-    found_dirs = [d for d in base_dir.iterdir() if d.is_dir() and d.name.startswith("simulation_")]
+    found_dirs = list(base_dir.glob(pattern))
 
     if not found_dirs:
-        logger.warning(f"No {mode} directories found in {base_dir}")
+        logger.warning(f"No {mode} found for pattern: {pattern} in {base_dir}")
 
     return found_dirs
 

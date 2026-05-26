@@ -403,6 +403,9 @@ def run_viz(config: PipelineConfig, space: str, if_exists: str = "overwrite") ->
         bins=50,
         camera_position=getattr(config.visualisation, "camera_position", "xy"),
         if_exists=if_exists,
+        lesion_mask_color=getattr(config.visualisation, "lesion_mask_color", "magenta"),
+        lesion_mask_opacity=getattr(config.visualisation, "lesion_mask_opacity", 0.4),
+        acs_background=getattr(config.visualisation, "acs_background", "white"),
     )
 
     # ── Masques ROI ─────────────────────────────────────────────────────
@@ -435,12 +438,18 @@ def run_viz(config: PipelineConfig, space: str, if_exists: str = "overwrite") ->
     # ── Charger les masques de lésion ──
     lesion_mask_by_subject: Dict[str, Path] = {}
     if getattr(config.paths, "lesion_masks_dir", None):
-        lesion_dataset = loaders_mask.SynthStrokeDataset(Path(config.paths.lesion_masks_dir), space=space)
+        lesion_dataset = loaders_mask.SynthStrokeDataset(
+            Path(config.paths.lesion_masks_dir), space=space
+        )
         for subject in subjects:
             lesion = lesion_dataset.get(subject)
             if lesion is not None:
                 # On prend le path du mask, pas l'objet nibabel
-                mask_path = lesion["mask_ss"].get_filename() if hasattr(lesion["mask_ss"], "get_filename") else None
+                mask_path = (
+                    lesion["mask_ss"].get_filename()
+                    if hasattr(lesion["mask_ss"], "get_filename")
+                    else None
+                )
                 if mask_path:
                     lesion_mask_by_subject[subject] = Path(mask_path)
 
@@ -471,14 +480,55 @@ def run_viz(config: PipelineConfig, space: str, if_exists: str = "overwrite") ->
             if space == SPACE_MNI
             else subject_brain_bg_by_subject
         )
-        viz.efields_figures(
-            file_info,
-            t1_brain_by_subject=brain_bgs or None,
-            lesion_mask_by_subject=lesion_mask_by_subject or None,
-            space=space,
-            visualisation_config=getattr(config, "visualisation", None),
-        )
-        logger.info(f"✓ 3D e-field figures generated ({space.upper()})")
+        # Figure type(s) à générer
+        fig_types = getattr(config.visualisation, "figure_type", "3d")
+        if isinstance(fig_types, str):
+            fig_types = [fig_types]
+        if "3d" in fig_types:
+            viz.efields_figures(
+                file_info,
+                t1_brain_by_subject=brain_bgs or None,
+                lesion_mask_by_subject=lesion_mask_by_subject or None,
+                space=space,
+                visualisation_config=getattr(config, "visualisation", None),
+            )
+            logger.info(f"✓ 3D e-field figures generated ({space.upper()})")
+        if "acs" in fig_types:
+            # Pour chaque sujet/condition/mode, plot 2D ACS
+            for (condition, mode), subject_files in file_info.items():
+                for subject, efield_path in subject_files:
+                    t1 = brain_bgs.get(subject) if brain_bgs else None
+                    lesion = (
+                        lesion_mask_by_subject.get(subject)
+                        if lesion_mask_by_subject
+                        else None
+                    )
+                    # Centre ROI (MNI) si demandé
+                    roi_center = None
+                    if (
+                        hasattr(config.target_generation, "rois")
+                        and condition in config.target_generation.rois
+                    ):
+                        roi = config.target_generation.rois[condition]
+                        if hasattr(roi, "coords"):
+                            roi_center = roi.coords
+                    center_mode = getattr(
+                        config.visualisation, "method_definition_center_acs", "roi"
+                    )
+                    # Dossier 1-simu/2d_acs/
+                    acs_dir = results_dir / "1-simu" / "2d_acs"
+                    viz.plot_2d_acs(
+                        efield_path=efield_path,
+                        mask_path=None,
+                        lesion_mask_path=lesion,
+                        t1_path=t1,
+                        center_mode=center_mode,
+                        output_dir=acs_dir,
+                        subject=subject,
+                        roi_center=roi_center,
+                        roi_name=condition,
+                    )
+            logger.info(f"✓ 2D ACS figures generated ({space.upper()})")
     else:
         logger.warning(f"No e-fields found for space={space}, figures skipped")
 

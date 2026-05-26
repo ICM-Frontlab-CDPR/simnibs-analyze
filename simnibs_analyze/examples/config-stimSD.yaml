@@ -5,7 +5,7 @@ running:
 paths:
   simnibs_preps: /Users/hippolyte.dreyfus/Desktop/_stimSD/Data/derivatives/mri/simnibs-preps
   simnibs_simu:  /Users/hippolyte.dreyfus/Desktop/_stimSD/Data/derivatives/mri/simnibs-simu
-  results_dir:   /Users/hippolyte.dreyfus/Desktop/_stimSD/Data/derivatives/mri/simnibs-analyze-V2
+  results_dir:   /Users/hippolyte.dreyfus/Desktop/_stimSD/Data/derivatives/mri/simnibs-analyze
   mni_template:  /Users/hippolyte.dreyfus/Documents/simnibs-modular/templates/MNI152_T1_1mm.nii.gz
   mni_brain_mask: /Users/hippolyte.dreyfus/Documents/simnibs-modular/templates/MNI152_T1_1mm_brain_mask.nii.gz
 
@@ -28,7 +28,7 @@ subjects:
   - "0032"
 
 # Montage AF7 (anode) – FT8 (cathode) → cible fonctionnelle : DLPFC gauche
-stim_conditions: [stimSD]
+stim_conditions: [AFFT, FTAF]
 mode: [simulation]
 space: mni
 
@@ -36,9 +36,12 @@ space: mni
 target_generation:
   radius_mm: 10.0
   rois:
-    stimSD:
+    AFFT:
       method: sphere
       coords: [-46, 36, 20]   # DLPFC gauche, MNI
+    FTAF:
+      method: sphere
+      coords: [-46, 36, 20]
 
 # Preprocessing
 preprocessing:

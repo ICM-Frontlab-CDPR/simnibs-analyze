@@ -266,7 +266,9 @@ def find_simulation_dirs(
         return []
 
     # Prend tous les dossiers (simulation_*) sans filtrer par condition
-    found_dirs = [d for d in base_dir.iterdir() if d.is_dir() and d.name.startswith("simulation_")]
+    found_dirs = [
+        d for d in base_dir.iterdir() if d.is_dir() and d.name.startswith("simulation_")
+    ]
 
     if not found_dirs:
         logger.warning(f"No {mode} directories found in {base_dir}")

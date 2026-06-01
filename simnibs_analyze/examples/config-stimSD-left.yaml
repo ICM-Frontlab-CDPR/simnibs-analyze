@@ -4,8 +4,8 @@ running:
 # Paths — structure séparée preps / simu / results
 paths:
   simnibs_preps: /Volumes/levy/raw/valerocabre/stimSD/Data/derivatives/mri/1-simnibs-preps
-  simnibs_simu:  /Volumes/levy/raw/valerocabre/stimSD/Data/derivatives/mri/2-simnibs-simu
-  results_dir:   /Volumes/levy/raw/valerocabre/stimSD/Data/derivatives/mri/3-simnibs-analyze
+  simnibs_simu:  /Volumes/levy/raw/valerocabre/stimSD/Data/derivatives/mri/2-simnibs-simu-left
+  results_dir:   /Volumes/levy/raw/valerocabre/stimSD/Data/derivatives/mri/3-simnibs-analyze-left
   mni_template:  /Users/hippolyte.dreyfus/Documents/simnibs-modular/templates/MNI152_T1_1mm.nii.gz
   mni_brain_mask: /Users/hippolyte.dreyfus/Documents/simnibs-modular/templates/MNI152_T1_1mm_brain_mask.nii.gz
 
@@ -48,7 +48,7 @@ subjects:
   - "0065"
 
 # Montage AF7 (anode) – FT8 (cathode) → cible fonctionnelle : DLPFC gauche
-stim_conditions: [AFFT, FTAF]
+stim_conditions: [AFFT-left, FTAF-left]
 mode: [simulation]
 space: mni
 
@@ -56,12 +56,12 @@ space: mni
 target_generation:
   radius_mm: 10.0
   rois:
-    AFFT:
+    AFFT-left:
       method: sphere
-      coords: [-52, 2, -28]   # ++ DLPFC gauche a check aussi, MNI
-    FTAF:
+      coords: [-52, 2, -28] #[54, 4, -32] # ++ DLPFC gauche a check aussi, MNI
+    FTAF-left:
       method: sphere
-      coords: [54, 4, -32]
+      coords: [-52, 2, -28]
 
 # Preprocessing
 preprocessing:

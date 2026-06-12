@@ -29,6 +29,10 @@ qui permettent de scaler entre les cerveau et de faire du multipot sur tout ou p
 ----------- 2ND PASS------------------
 
 oui daccord pour tout dans visualizer le plotterNifties n'a pas de sens il casse toute la logique objet.
+Attention tu dois repartir de ce fichier (le meme qu'avant mais je l'ai renommé @visualizer)
+Regarde le fichier @run_viz_example.py que jai preparé... le vizualiser doit etre capable de saccrocher a une structure de simulation du reader pour ensuite simplifier
+l'usage je pense (quoi que cest ptetre pas si important...) 
+Les cohortes plot on verra ensuite... il y a des petites choses subtiles a discuter en plus avant (les setup scale)
 
 1- oui cest bien 2 classes séparées 
 
@@ -40,3 +44,11 @@ oui daccord pour tout dans visualizer le plotterNifties n'a pas de sens il casse
 4- oui pour linstant on soccupe pas des methodes de save... mais attention a ne pas confondre ! 
 la on est plus dans le simnibs_reader, on ecrit une classe de visualisation qui va se servir de sont API comme input.
 Pour autant le save dans un format 3d va etre important pour le visualiseur -   mais passons pour linstant.
+
+Dis moi si tout est bon pour toi et je te mets en mode agent pour la reecriture au propre de la classe.
+
+
+>>>
+...
+>>>
+

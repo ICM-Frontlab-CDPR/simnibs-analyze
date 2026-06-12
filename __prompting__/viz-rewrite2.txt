@@ -1,0 +1,55 @@
+-Tu peux oublié :
+├── _save_figure()                  ← remplace save_figure de _pipeline_io
+je gererai tous les save plus tard
+
+- tissues_efield = viz.coloc(label_prep_brain, cleaned_roi)
+ca enfait je pense que ca remplace 
+def _build_plotter(
+def _create_3d_view(
+
+...regarde bien mais je pense que le workflow actuel est beaucoup plus simple. Il suffit de dire:
+On colocalise un certain nombre d'image 3d (fournit par le reader) -avec certain test fait par nibabel etffectivement
+
+A la limite peutetre que ce qui est important c'est une methode 
+set_properties (qui permet de definir les propriétés global de visualisation du niftii 4D colocalisé (et ce pour chacune des 4eme dimensions))
+
+Mais enfait il ne doit pas avoir de nom de variable relative au efield, ce qu'on fait reste plutot general, cest une question de "comment on setup des visulaisations d'images 4D simplement"
+pour ensuite faire des plot efficacement
+
+Qu'en penses tu ? SI ca se trouve il existe deja ce que jessaie de faire.
+Mais la classe au final, je crois que cest juste un wrapper pour gerer de la visualisation 4D :
+
+En tout cas jai limpression que la strucutre à viser est plutot celle ci :
+
+
+Coloc Visualizer                          ← viz NIfTI (figures cerveaux)
+│   __init__(output_dir, sim=None, cmap, ...)
+│   # résout paths depuis sim si fourni
+
+│   ├──setup_properties (a voir ce la maniere de setup, ce qui change pour les plot 3D et 2D)
+├── 
+│   ├── make_coloc (pour passer de volume 3d a 4d)
+
+
+│
+├── [2D — nilearn]
+│   ├── plot_2D_acs(roi_result, center_mode, lesion_mask=None)
+│   │     inputs: ROIResult + optionnel Path lésion
+│   │     centre: roi_result.mask_img centroïde OU coords explicites
+│   │     bg_img: seg.t1 si sim attachée, sinon MNI template
+│   │
+│   ├── plot_2D_parallel_slicing(roi_result, axis, n_slices)  ← new
+│   │     nilearn plot_stat_map display_mode='z'/'x'/'y'
+
+│
+└── [3D — PyVista]
+    ├── plot_3D(roi_result=None, camera_position, vmin, vmax)
+    │     résout efield/t1/lesion depuis sim si attachée
+    │
+    └── view_interactive(roi_result=None, ...)
+          remplace view_nifti_interactive
+
+Ma question est donc plutot de l'ordre de 'la methode de coloc, fautil plutot la mettre a linterieur de la classe ou pas' 
+(jai l'impression qe cest important de lié le volume 4D dans tout les cas puisque cest lui l'objet central quon manipuel... mais de quelle maniere ?)
+
+... n'hesite pas a me dire qu'il existe deja une classe niftii 4D pour gerer tout ce genre de chose :) je pourrais en heriter si cest le cas

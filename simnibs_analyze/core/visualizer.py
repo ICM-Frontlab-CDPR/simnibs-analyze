@@ -11,9 +11,6 @@ import nibabel as nib
 import numpy as np
 from nilearn import image, plotting
 
-from .._logging import get_logger
-
-logger = get_logger(__name__)
 
 # ---------------------------------------------------------------------------
 # Roles
@@ -114,7 +111,6 @@ class ColocVolume:
         if self._reference is None:
             self._reference = img
         elif resample and not self._grids_match(img, self._reference):
-            logger.info(f"Resampling layer '{label}' to reference grid")
             img = image.resample_to_img(img, self._reference, interpolation="nearest")
 
         self._layers.append(
@@ -293,23 +289,67 @@ class ColocVolume:
             ) from exc
 
         plotter = pv.Plotter(off_screen=off_screen)
+        plotter.set_background("black")  # ✅ FIX 1 : fond noir
 
-        # ── background → T1 isosurface ───────────────────────────────────
+        # ── stat_map → volume rendering (RENDU EN PREMIER) ───────────────
+        #    PyVista compose mal volume + mesh : le volume doit être
+        #    ajouté AVANT les surfaces pour que le depth-peeling fonctionne.
+        for layer in self._by_role(ROLE_STAT_MAP):
+            canonical = nib.as_closest_canonical(layer.img)
+            raw = np.squeeze(canonical.get_fdata()).astype(np.float32)
+            if raw.ndim == 4:
+                raw = np.linalg.norm(raw, axis=-1)
+
+            grid = self._to_pv_image(canonical, raw, key="values")
+            grid = grid.cell_data_to_point_data()  # ✅ FIX 2 : point_data
+
+            _vmin = layer.clim[0] if layer.clim else (vmin if vmin is not None else 0.0)
+            _vmax = (
+                layer.clim[1]
+                if layer.clim
+                else (
+                    vmax
+                    if vmax is not None
+                    else (
+                        float(np.percentile(raw[raw > 0], 99))
+                        if np.any(raw > 0)
+                        else 1.0
+                    )
+                )
+            )
+
+            # ✅ FIX 3 : rampe d'opacité — zéros totalement transparents
+            opacity = [0.0, 0.05, 0.2, 0.4, 0.7, 1.0]
+
+            plotter.add_volume(
+                grid,
+                scalars="values",
+                cmap=layer.cmap,
+                clim=[_vmin, _vmax],
+                opacity=opacity,
+            )
+
+        # ── background → T1 isosurface (semi-transparent, APRÈS volume) ──
         for layer in self._by_role(ROLE_BACKGROUND):
-            data = np.squeeze(layer.img.get_fdata()).astype(np.float32)
-            grid = self._to_pv_image(layer.img, data, key="t1")
+            canonical = nib.as_closest_canonical(layer.img)
+            data = np.squeeze(canonical.get_fdata()).astype(np.float32)
+            grid = self._to_pv_image(canonical, data, key="t1")
             pts = grid.cell_data_to_point_data()
             thresh = float(np.percentile(data[data > 0], 15)) if data.any() else 1.0
             surface = pts.contour([thresh], scalars="t1")
             if surface.n_points > 0:
                 plotter.add_mesh(
-                    surface, color="white", opacity=layer.opacity, smooth_shading=True
+                    surface,
+                    color="white",
+                    opacity=layer.opacity,
+                    smooth_shading=True,
                 )
 
         # ── overlays → binary surface ────────────────────────────────────
         for layer in self._by_role(ROLE_OVERLAY):
-            data = np.squeeze(layer.img.get_fdata()).astype(np.float32)
-            grid = self._to_pv_image(layer.img, data, key="mask")
+            canonical = nib.as_closest_canonical(layer.img)
+            data = np.squeeze(canonical.get_fdata()).astype(np.float32)
+            grid = self._to_pv_image(canonical, data, key="mask")
             surface = grid.threshold(0.5).extract_surface()
             if surface.n_points > 0:
                 plotter.add_mesh(
@@ -319,23 +359,8 @@ class ColocVolume:
                     smooth_shading=True,
                 )
 
-        # ── stat_map → volume rendering ───────────────────────────────────
-        for layer in self._by_role(ROLE_STAT_MAP):
-            raw = np.squeeze(layer.img.get_fdata()).astype(float)
-            # 4-D vector field → magnitude
-            if raw.ndim == 4:
-                raw = np.linalg.norm(raw, axis=-1)
-            data = raw.copy()
-            data[data == 0] = np.nan  # transparent background voxels
-            grid = self._to_pv_image(layer.img, data, key="values")
-
-            _vmin = layer.clim[0] if layer.clim else vmin
-            _vmax = layer.clim[1] if layer.clim else vmax
-            kw = dict(cmap=layer.cmap)
-            if _vmin is not None and _vmax is not None:
-                kw["clim"] = [_vmin, _vmax]
-            plotter.add_volume(grid, **kw)
-
+        # Depth peeling pour transparence correcte (volume vu à travers mesh)
+        plotter.enable_depth_peeling(number_of_peels=8)
         plotter.camera_position = camera_position
         return plotter
 
@@ -364,7 +389,7 @@ class ColocVolume:
         title: Optional[str] = None,
     ) -> np.ndarray:
         """
-        Offscreen 3-D render — returns an RGBA numpy array.
+        Offscreen 3-D render — returns an RGB numpy array.
 
         Parameters
         ----------
@@ -378,7 +403,7 @@ class ColocVolume:
         Returns
         -------
         np.ndarray
-            RGBA image array ``(H, W, 4)``.
+            RGB image array ``(H, W, 3)``.
         """
         plotter = self._build_pyvista_plotter(
             camera_position=camera_position,
@@ -424,5 +449,4 @@ class ColocVolume:
         plotter.title = title or " | ".join(
             layer.label for layer in self._layers if layer.label
         )
-        logger.info("Opening interactive 3-D viewer — close window to continue.")
         plotter.show()

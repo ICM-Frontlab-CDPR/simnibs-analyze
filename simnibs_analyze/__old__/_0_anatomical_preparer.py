@@ -25,7 +25,7 @@ from nilearn import datasets, image
 from nilearn.image import new_img_like
 from scipy.ndimage import binary_fill_holes
 
-from .._pipeline_io import (
+from ._pipeline_io import (
     save_nifti,
     save_ants_image,
     check_output,

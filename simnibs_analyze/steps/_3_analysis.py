@@ -4,14 +4,9 @@ Inter/Intra-subject analysis from per-subject CSVs.
 
 from __future__ import annotations
 
-import argparse
-from pathlib import Path
-from typing import Iterable
 
 import numpy as np
 import pandas as pd
-
-from .._pipeline_io import load_csvs, check_output, save_dataframe
 
 
 class Analysis:
@@ -123,49 +118,3 @@ class Analysis:
     def correlate_with():
         # compute statistics between stim success and others variables (patient response / anatomic variables)
         pass
-
-
-def _parse_args(argv: Iterable[str] | None = None):
-    parser = argparse.ArgumentParser(description="Run inter/intra-subject analysis")
-    parser.add_argument("--inputs", nargs="+", required=True, help="CSV files")
-    parser.add_argument("--out-dir", required=True, help="Output directory")
-    parser.add_argument("--metric", default="mean", help="Metric column to analyze")
-    parser.add_argument("--subject-col", default="subject")
-    parser.add_argument("--condition-col", default="condition")
-    parser.add_argument("--cond-a", default="simu")
-    parser.add_argument("--cond-b", default="opti")
-    parser.add_argument(
-        "--if-exists", choices=["overwrite", "skip", "error"], default="overwrite"
-    )
-    return parser.parse_args(argv)
-
-
-def main(argv: Iterable[str] | None = None) -> int:
-    args = _parse_args(argv)
-    out_dir = Path(args.out_dir)
-    analysis = Analysis(load_csvs([Path(p) for p in args.inputs]))
-
-    inter = analysis.inter_subject_summary(
-        metric=args.metric, condition_col=args.condition_col
-    )
-    inter_csv = out_dir / "inter_subject_summary.csv"
-    inter_csv.parent.mkdir(parents=True, exist_ok=True)
-    if check_output(inter_csv, args.if_exists):
-        save_dataframe(inter, inter_csv, index=False)
-
-    diff_df = analysis.intra_subject_diff(
-        metric=args.metric,
-        subject_col=args.subject_col,
-        condition_col=args.condition_col,
-        cond_a=args.cond_a,
-        cond_b=args.cond_b,
-    )
-    diff_csv = out_dir / "intra_subject_diff.csv"
-    if check_output(diff_csv, args.if_exists):
-        save_dataframe(diff_df, diff_csv, index=False)
-
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

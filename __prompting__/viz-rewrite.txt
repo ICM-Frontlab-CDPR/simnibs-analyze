@@ -1,0 +1,42 @@
+@_4_viz.py
+
+rewriting correct vizualization methods:
+
+jaimerais reecrire cette classe de visualisation reposant majoritairement sur nilearn.
+
+- il faut enlever les dependances a l'ancien fichier "_io_pipeline" et remplacer toutes les entrées de fichiers grace au simnibs_reader:
+
+tu peux check la maniere dont on peut appeler les differents fichiers en allant regarder les sources :
+https://github.com/ICM-Frontlab-CDPR/simnibs-reader/tree/main/simnibs_reader
+https://github.com/ICM-Frontlab-CDPR/simnibs-reader/tree/main/simnibs_reader/core
+
+
+
+Commencons par les visualisations de nifti.
+
+--> estceque nilearn plotting permet de sauvegarder des images qui sont colocalisées entre elles dans un format 3D 
+qui permettent dans un second temps de faire des figures 3D via le setting de cameras et 2D via le setting de point de repere pour les coupes ?
+
+Quen penses tu ?
+
+Travaillons au niveau cerveau individuel, et dans un second temps on implementera les methodes 
+qui permettent de scaler entre les cerveau et de faire du multipot sur tout ou partie de la cohorte.
+
+
+
+
+
+----------- 2ND PASS------------------
+
+oui daccord pour tout dans visualizer le plotterNifties n'a pas de sens il casse toute la logique objet.
+
+1- oui cest bien 2 classes séparées 
+
+2- mais justement cest du code davant qui doit etre changé pour tous les inputs paths il va faloir utilisé le reader, et les methodes de save on verra après
+
+
+3- et bien oui c'est ton travail dwe reecrire proprement.
+
+4- oui pour linstant on soccupe pas des methodes de save... mais attention a ne pas confondre ! 
+la on est plus dans le simnibs_reader, on ecrit une classe de visualisation qui va se servir de sont API comme input.
+Pour autant le save dans un format 3d va etre important pour le visualiseur -   mais passons pour linstant.

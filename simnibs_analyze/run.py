@@ -25,8 +25,8 @@ from simnibs_analyze.steps._1_preprocessing import Preprocessor
 from simnibs_analyze.steps._2_features_extraction import FeatureExtractor
 from simnibs_analyze.steps._3_analysis import Analysis
 from simnibs_analyze.steps._4_viz import Visualizer
-import simnibs_analyze.loaders_mask as loaders_mask
-from simnibs_analyze._pipeline_io import (
+import simnibs_analyze.__old__.loaders_mask as loaders_mask
+from simnibs_analyze.__old__._pipeline_io import (
     SPACE_MNI,
     SPACE_NATIVE,
     check_output,
@@ -94,7 +94,7 @@ def process_subject_condition(
         return results
 
     try:
-        from simnibs_analyze._pipeline_io import get_simu_root
+        from simnibs_analyze.__old__._pipeline_io import get_simu_root
 
         roi_mask_path = get_roi_mask_path(
             get_simu_root(config.paths), condition, space=space, subject=subject
@@ -388,7 +388,7 @@ def run_viz(config: PipelineConfig, space: str, if_exists: str = "overwrite") ->
     """Collect paths (I/O) then generate all visualisations."""
     logger.step("GENERATING VISUALISATIONS")
 
-    from simnibs_analyze._pipeline_io import get_simu_root
+    from simnibs_analyze.__old__._pipeline_io import get_simu_root
 
     simu_root = get_simu_root(config.paths)
     results_dir = config.paths.results_dir
@@ -591,7 +591,7 @@ def main(
     logger.info(f"Space      : {space}")
 
     results_dir = config.paths.results_dir
-    from simnibs_analyze._pipeline_io import get_simu_root
+    from simnibs_analyze.__old__._pipeline_io import get_simu_root
 
     simu_root = get_simu_root(config.paths)
 

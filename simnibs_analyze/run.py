@@ -20,11 +20,11 @@ if __package__ is None or __package__ == "":
 import nibabel as nib
 import pandas as pd
 
-from simnibs_analyze.steps._0_anatomical_preparer import AnatomicalPreparer
-from simnibs_analyze.steps._1_preprocessing import Preprocessor
-from simnibs_analyze.steps._2_features_extraction import FeatureExtractor
-from simnibs_analyze.steps._3_analysis import Analysis
-from simnibs_analyze.steps._4_viz import Visualizer
+from simnibs_analyze.core._0_anatomical_preparer import AnatomicalPreparer
+from simnibs_analyze.core._1_preprocessing import Preprocessor
+from simnibs_analyze.core._2_features_extraction import FeatureExtractor
+from simnibs_analyze.core._3_analysis import Analysis
+from simnibs_analyze.core._4_viz import Visualizer
 import simnibs_analyze.__old__.loaders_mask as loaders_mask
 from simnibs_analyze.__old__._pipeline_io import (
     SPACE_MNI,

@@ -13,3 +13,4 @@ outputs/
 .ruff_cache
 *.egg-info*    
 *dist/simnibs*
+__old__

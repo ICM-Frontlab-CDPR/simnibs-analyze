@@ -146,10 +146,10 @@ render_3d(vols, "efield_sub-02-test.png", azimuth=120, elevation=15)
 
 # Orientations (caméra)
 render_3d(vols, "vue_gauche.png", azimuth=270, elevation=0)    # profil gauche
-render_3d(vols, "vue_droite.png", azimuth=90,  elevation=0)    # profil droit
-render_3d(vols, "vue_face.png",   azimuth=180, elevation=0)    # face (antérieur)
-render_3d(vols, "vue_dessus.png", azimuth=0,   elevation=90)   # vue du dessus
-render_3d(vols, "vue_3qrt.png",   azimuth=135, elevation=20)   # trois-quarts
+# render_3d(vols, "vue_droite.png", azimuth=90,  elevation=0)    # profil droit
+# render_3d(vols, "vue_face.png",   azimuth=180, elevation=0)    # face (antérieur)
+# render_3d(vols, "vue_dessus.png", azimuth=0,   elevation=90)   # vue du dessus
+# render_3d(vols, "vue_3qrt.png",   azimuth=135, elevation=20)   # trois-quarts
 
 # Balayage multi-angles (pour un GIF / une planche)
 for az in range(0, 360, 45):

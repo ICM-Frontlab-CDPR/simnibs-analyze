@@ -96,45 +96,9 @@ def render_3d(
     return output_path
 
 
-# vols=[
-# {"path": t1_path,     "colormap": "gray", "opacity": 1.0},
-# {"path": efield_path, "colormap": "hot",  "cal_min": 0.1,
-# "cal_max": 1.0, "opacity": 0.7},
-# {"path": roi_path,    "colormap": "red",  "opacity": 0.4},
-# ]
-
-
-# render_3d(
-#     volumes=vols,
-#     output_path="efield_sub-02-test.png",
-#     azimuth=120, elevation=15,
-# )
-
-
-# #some examples
-# render_3d(volumes=vols, output_path="vue_gauche.png",  azimuth=270, elevation=0)   # profil gauche
-# render_3d(volumes=vols, output_path="vue_droite.png",  azimuth=90,  elevation=0)   # profil droit
-# render_3d(volumes=vols, output_path="vue_face.png",    azimuth=180, elevation=0)   # face (antérieur)
-# render_3d(volumes=vols, output_path="vue_dessus.png",  azimuth=0,   elevation=90)  # vue du dessus
-# render_3d(volumes=vols, output_path="vue_3qrt.png",    azimuth=135, elevation=20)  # trois-quarts
-
-
-
-# for az in range(0, 360, 45):
-#     render_3d(volumes=vols, output_path=f"rot_{az:03d}.png", azimuth=az, elevation=15)
-    
-    
-# vols = [
-#     {"path": t1_path,     "colormap": "gray",    "opacity": 1.0},
-#     {"path": efield_path, "colormap": "viridis", "cal_min": 0.1, "cal_max": 1.0, "opacity": 0.8},
-# ]
-
-# render_3d(volumes=vols, output_path="vue_gauche.png",  azimuth=270, elevation=0)
-
-
-
 # ====================== EXEMPLES ======================
 
+## vols doit etre au format niivue.
 vols = [
     {"path": t1_path,     "colormap": "gray", "opacity": 1.0},
     {"path": efield_path, "colormap": "hot",  "cal_min": 0.1, "cal_max": 1.0, "opacity": 0.7},
@@ -142,7 +106,7 @@ vols = [
 ]
 
 # Rendu de base
-render_3d(vols, "efield_sub-02-test.png", azimuth=120, elevation=15)
+render_3d(vols, "efield.png", azimuth=120, elevation=15)
 
 # Orientations (caméra)
 render_3d(vols, "vue_gauche.png", azimuth=270, elevation=0)    # profil gauche

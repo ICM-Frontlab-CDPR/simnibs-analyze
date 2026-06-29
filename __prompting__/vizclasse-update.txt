@@ -1,0 +1,27 @@
+Ok il faut mettre a jour la classe SimnibsViz:
+
+1. integrer correctement la fonction render3D (elle remplace les fonctions « _built-plotter et _create_3D
+/Users/hippolyte.dreyfus/Documents/simnibs-analyze/simnibs_analyze/steps/_4-render3D.py 
+
+2. utiliser les fonctions de plotting de nilearn appliqué au contexte simnibs
+
+from nilearn import plotting
+
+
+# 2. fond anatomique
+disp = plotting.plot_anat(t1, )#display_mode="mosaic", cut_coords=1)
+                        #   cut_coords=(10, 10, 0))  # remplacer par le centre de lesions ou le centre ATL
+
+# 3. E-field en overlay continu
+disp.add_overlay(efield, cmap="hot", threshold=0.1)
+
+# 4. masque en contour par-dessus
+# disp.add_contours(roi, levels=[0.5], colors="cyan")
+
+
+# disp.savefig("overlay_sub-01.png", dpi=200)
+# disp.close()
+
+
+3. On fera le set_scale et les autres fonctions plus tard.
+4. le but d'ajourdhui c'est d'ecrire correctement /Users/hippolyte.dreyfus/Documents/simnibs-analyze/simnibs_analyze/steps/run-viz.py

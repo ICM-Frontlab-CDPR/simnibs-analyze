@@ -16,8 +16,8 @@ import nibabel as nib
 import pandas as pd
 
 
-from simnibs_analyze.steps._3_analysis import Analysis
-from simnibs_analyze.steps._4_viz import Visualizer
+from simnibs_analyze.steps.analysis import Analysis
+from simnibs_analyze.steps.viz import Visualizer
 from simnibs_analyze._logging import get_logger
 from simnibs_analyze._config import PipelineConfig
 

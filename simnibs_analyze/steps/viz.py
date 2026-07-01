@@ -118,15 +118,25 @@ class SimnibsViz:
         efields: list,
         lower_pct: float = 5.0,
         upper_pct: float = 95.0,
+        alpha: float = 0.0,
     ) -> tuple[float, float]:
-        """Compute global [pN, pM] from a list of EField / Nifti1Image objects.
+        """Compute global [vmin, vmax] from a list of EField / Nifti1Image objects.
 
         Parameters
         ----------
-        efields : list of nib.Nifti1Image (or EField subclass)
+        efields : list of nib.Nifti1Image (or EField)
             One per subject.
         lower_pct, upper_pct : float
-            Percentiles used for the colour-scale bounds.
+            Percentiles used for the raw colour-scale bounds.
+        alpha : float
+            Symmetric widening factor applied to the [lo, hi] window *after*
+            the percentile computation. ``margin = alpha * (hi - lo)`` is
+            subtracted from the low bound and added to the high bound:
+            - ``alpha = 0.0``  → window inchangée (percentiles bruts)
+            - ``alpha = 0.5``  → largeur ×2
+            - ``alpha = 1.0``  → largeur ×3
+            - ``alpha < 0``    → resserre la fenêtre (plus de saturation)
+            ``vmin`` est borné à 0 (magnE ≥ 0).
 
         Returns
         -------
@@ -134,11 +144,17 @@ class SimnibsViz:
         """
         all_vals = []
         for ef in efields:
-            d = ef.get_fdata().ravel()
+            d = np.asarray(ef.get_fdata()).ravel()
             all_vals.append(d[d > 0])
         pooled = np.concatenate(all_vals)
-        vmin = float(np.percentile(pooled, lower_pct))
-        vmax = float(np.percentile(pooled, upper_pct))
+
+        lo = float(np.percentile(pooled, lower_pct))
+        hi = float(np.percentile(pooled, upper_pct))
+
+        margin = alpha * (hi - lo)
+        vmin = max(0.0, lo - margin)  # magnE ≥ 0 → on clampe à 0
+        vmax = hi + margin
+
         self.set_scale(vmin, vmax)
         return vmin, vmax
 
@@ -148,20 +164,56 @@ class SimnibsViz:
 
     def plot_anat(
         self,
-        t1,
+        t1_or_vols,  # niimg/Path/EField  OU  list[dict]
         cut_coords=None,
         display_mode: str = "ortho",
         output: str | Path | None = None,
         title: str | None = None,
     ):
-        """Plot T1 anatomy (no overlay)."""
-        disp = plotting.plot_anat(
-            t1,
-            cut_coords=cut_coords,
-            display_mode=display_mode,
-            title=title,
-        )
+        """Plot T1 anatomy. Accepts a single image OR a NiiVue-style vols list.
+
+        vols format (1er = fond, suivants = overlays) :
+            [{"path": ..., "colormap": ..., "opacity": ...}, ...]
+        """
+        if isinstance(t1_or_vols, list):
+            bg, *overlays = t1_or_vols
+            disp = plotting.plot_anat(
+                self._as_niimg(bg["path"]),
+                cut_coords=cut_coords,
+                display_mode=display_mode,
+                title=title,
+            )
+            for ov in overlays:
+                disp.add_overlay(
+                    self._as_niimg(ov["path"]),
+                    cmap=self._cmap(ov.get("colormap", "hot")),
+                    alpha=ov.get("opacity", 1.0),
+                    vmin=ov.get("cal_min"),
+                    vmax=ov.get("cal_max"),
+                )
+        else:
+            disp = plotting.plot_anat(
+                self._as_niimg(t1_or_vols),
+                cut_coords=cut_coords,
+                display_mode=display_mode,
+                title=title,
+            )
         return self._finish_2d(disp, output)
+
+    # helpers partagés (utiles aussi pour render_3d) :
+
+    _CMAP_ALIASES = {"blue": "Blues", "red": "Reds", "green": "Greens"}
+
+    @classmethod
+    def _cmap(cls, name: str) -> str:
+        return cls._CMAP_ALIASES.get(name, name)
+
+    @staticmethod
+    def _as_niimg(src):
+        """str/Path → laissé tel quel (nilearn charge) ; EField → .img ; niimg → tel quel."""
+        if hasattr(src, "img"):
+            return src.img
+        return src
 
     def plot_efield(
         self,

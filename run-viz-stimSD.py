@@ -81,8 +81,7 @@ viz = SimnibsViz(output_dir=OUT_ROOT)
 # ── 2. Compute cohort e-field scale ─────────────────────────────────
 
 efields = [sim.magnE_native for sim, _ in subjects.values()]
-vmin, vmax = viz.set_scale_from_cohort(efields)
-vmin, vmax = vmin / 2, vmax * 2
+vmin, vmax = viz.set_scale_from_cohort(efields, alpha=0.5)
 print(f"Cohort scale: [{vmin:.4f}, {vmax:.4f}] V/m")
 
 
@@ -150,46 +149,47 @@ for key, (sim, seg) in subjects.items():
     # ==============================================================
 
     # --- A1. Scalp 3D : 3/4 left + 3/4 right ---------------------
-    vols_anat = [
-        {"path": str(t1), "colormap": "gray", "opacity": 0.5},
-        {
-            "path": str(mask_native_path),
-            "colormap": "blue",
-            "opacity": 1.0,
-            "cal_min": 0.5,
-            "cal_max": 1.0,
-        },
+    vols = [
+        {"path": str(t1), "opacity": 0.5},
+        {"path": str(mask_native_path), "opacity": 0.5},
     ]
-    viz.render_3d(vols_anat, out / "A1_scalp_3d_34left.png", azimuth=225, elevation=15)
-    viz.render_3d(vols_anat, out / "A1_scalp_3d_34right.png", azimuth=135, elevation=15)
+    viz.render_3d(vols, out / "A1_scalp_3d_34left.png", azimuth=225, elevation=15)
+    viz.render_3d(vols, out / "A1_scalp_3d_34right.png", azimuth=135, elevation=15)
+    viz.plot_anat(
+        vols,
+        cut_coords=center,
+        output=out / "A2_anat_ortho_brain.png",
+        title=f"{key} — T1",
+    )
 
-    vols_anat = [
+    vols = [
         {"path": str(t1_brain), "colormap": "gray", "opacity": 0.5},
-        {"path": str(mask_native_path), "colormap": "blue", "opacity": 1.0},
+        {"path": str(mask_native_path), "colormap": "blue", "opacity": 0.5},
     ]
-    viz.render_3d(vols_anat, out / "A1_brain_3d_34left.png", azimuth=225, elevation=15)
-    viz.render_3d(vols_anat, out / "A1_brain_3d_34right.png", azimuth=135, elevation=15)
+    viz.render_3d(vols, out / "A1_brain_3d_34left.png", azimuth=225, elevation=15)
+    viz.render_3d(vols, out / "A1_brain_3d_34right.png", azimuth=135, elevation=15)
 
     # --- A2. Scalp 2D ortho, centré sur lésion --------------------
     viz.plot_anat(
-        t1, cut_coords=center, output=out / "A2_anat_ortho.png", title=f"{key} — T1"
+        vols,
+        cut_coords=center,
+        output=out / "A2_anat_ortho_skull.png",
+        title=f"{key} — T1",
     )
-
-    # --- A3. Brain 3D : lésion + T1 fondu, vue postérieure --------
-    # NiiVue gère la transparence T1 + overlay ROI
-    vols_brain = [
-        {"path": str(t1), "colormap": "gray", "opacity": 0.4},
-        # {"path": str(lesion_path), "colormap": "red", "opacity": 0.6},
-    ]
-    viz.render_3d(
-        vols_brain, out / "A3_brain_3d_lesion_post.png", azimuth=0, elevation=15
-    )
+    # viz.plot_anat(t1, cut_coords=center, output=out / "A2_anat_ortho-old.png", title=f"{key} — T1")
 
     # ==============================================================
     # B. SIMNIBS (e-field, native)
     # ==============================================================
 
     # --- B1. E-field 2D ortho + ROI contour -----------------------
+    vols = [
+        {"path": str(t1_brain), "colormap": "gray", "opacity": 0.4},
+        {"path": str(mask_native_path), "colormap": "blue", "opacity": 0.2},
+        {"path": str(efield.path), "colormap": "red", "opacity": 0.6},
+    ]
+    viz.render_3d(vols, out / "B1_efield_3d.png", azimuth=225, elevation=15)
+
     viz.plot_efield(
         t1,
         efield.img,

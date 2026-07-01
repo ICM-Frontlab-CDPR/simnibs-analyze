@@ -14,7 +14,7 @@ import sys
 
 sys.path.insert(0, "/Users/hippolyte.dreyfus/Documents/simnibs-reader")
 from simnibs_reader import SimulationResult, SegmentationResult
-from simnibs_reader.nifti.efield import EField  # TODO REMOVE !!!
+from simnibs_reader.nifti.efield import EField  # for later TODO REMOVE !!!
 
 from scipy.ndimage import map_coordinates
 
@@ -23,10 +23,46 @@ from simnibs_analyze.steps.viz import SimnibsViz
 
 
 # ── Config ───────────────────────────────────────────────────────────
+## TODO gerer les groupes de sujets left and right.
 
 SUBJECTS = [
     "0001",
-]  # "0003", "0004"]
+    "0003",
+    "0004",
+    "0005",
+    "0007",
+    "0008",
+    "0009",
+    "0012",
+    "0013",
+    "0015",
+    "0017",
+    "0021",
+    "0023",
+    "0031",
+    "0032",
+    "0034",
+    "0035",
+    "0036",
+    "0037",
+    "0043",
+    "0046",
+    "0048",
+    "0050",
+    "0052",
+    "0053",
+    "0054",
+    "0055",
+    "0056",
+    "0057",
+    "0058",
+    "0060",
+    "0061",
+    "0062",
+    "0063",
+    "0064",
+    "0065",
+]
 SIM_BASE = Path(
     "/Volumes/levy/valerocabre/stimSD/Data/derivatives/mri/2-simnibs-simu-left"
 )
@@ -81,13 +117,20 @@ viz = SimnibsViz(output_dir=OUT_ROOT)
 # ── 2. Compute cohort e-field scale ─────────────────────────────────
 
 efields = [sim.magnE_native for sim, _ in subjects.values()]
-vmin, vmax = viz.set_scale_from_cohort(efields, alpha=0.5)
-print(f"Cohort scale: [{vmin:.4f}, {vmax:.4f}] V/m")
+# vmin, vmax = viz.set_scale_from_cohort(efields, alpha=0.1,lower_pct=50, upper_pct=85)
+viz.set_scale(
+    0.05, 0.4
+)  # ← manuel : bornes fixes en V/m #TODO symetric scale for later
 
 
 # ── 3. Per-subject figures ──────────────────────────────────────────
+# collecteurs pour les montages cohorte (remplis dans la boucle)
+panels_efield_3d = []  # portera l'échelle e-field → colorbar partagée
+panels_brain_3d = []  # anat seul → pas de colorbar
 
 for key, (sim, seg) in subjects.items():
+    sub_id = key.split("_")[0]  # "0001_simulation_..." → "0001"
+
     print(f"\n{'='*60}\n  {key}\n{'='*60}")
 
     out = OUT_ROOT / key
@@ -153,7 +196,11 @@ for key, (sim, seg) in subjects.items():
         {"path": str(t1), "opacity": 0.5},
         {"path": str(mask_native_path), "opacity": 0.5},
     ]
-    viz.render_3d(vols, out / "A1_scalp_3d_34left.png", azimuth=225, elevation=15)
+    png_brain = viz.render_3d(
+        vols, out / "A1_scalp_3d_34left.png", azimuth=225, elevation=15
+    )
+    panels_brain_3d.append({"label": sub_id, "image": png_brain})
+
     viz.render_3d(vols, out / "A1_scalp_3d_34right.png", azimuth=135, elevation=15)
     viz.plot_anat(
         vols,
@@ -186,9 +233,12 @@ for key, (sim, seg) in subjects.items():
     vols = [
         {"path": str(t1_brain), "colormap": "gray", "opacity": 0.4},
         {"path": str(mask_native_path), "colormap": "blue", "opacity": 0.2},
-        {"path": str(efield.path), "colormap": "red", "opacity": 0.6},
+        {"path": str(efield.path), "colormap": "linspecer", "opacity": 0.6},
     ]
-    viz.render_3d(vols, out / "B1_efield_3d.png", azimuth=225, elevation=15)
+    png_efield = viz.render_3d(
+        vols, out / "B1_efield_3d.png", azimuth=225, elevation=15
+    )
+    panels_efield_3d.append({"label": sub_id, "image": png_efield})
 
     viz.plot_efield(
         t1,
@@ -218,7 +268,27 @@ for key, (sim, seg) in subjects.items():
         title=f"{key} — magnE axial slices",
     )
 
-    # --- C. Cohort figures ---------------------------------
+# ==============================================================
+# C. Cohort figures  (une seule fois, tous sujets confondus)
+# ==============================================================
+
+cohort_dir = OUT_ROOT / "_cohort"
+
+# e-field : UNE colorbar partagée, dérivée du scale cohorte verrouillé
+viz.plot_cohort_montage(
+    panels_efield_3d,
+    cohort_dir / "cohort_efield_3d_34left.png",
+    title="magnE — cohorte (3/4 left)",
+    cbar_label="E-field (V/m)",
+)
+
+# anat : pas d'échelle → pas de colorbar
+viz.plot_cohort_montage(
+    panels_brain_3d,
+    cohort_dir / "cohort_brain_3d_34left.png",
+    title="Brain + ROI — cohorte (3/4 left)",
+    add_colorbar=False,
+)
 
 
 print(f"\n✓ All figures saved in {OUT_ROOT}")

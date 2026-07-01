@@ -1,28 +1,35 @@
 """
----------
+viz.py
+------
 SimnibsViz — 2D (nilearn) + 3D (NiiVue headless) visualisation class.
 
 2D methods wrap ``nilearn.plotting`` for slice overlays.
 3D method uses Playwright + NiiVue for headless WebGL rendering to PNG.
 Scale can be locked across a cohort via ``set_scale_from_cohort()``.
+Cohort montages are composed with ``plot_cohort_montage()`` (single shared scale).
 """
 
 from __future__ import annotations
 
 import http.server
 import json
+import math
 import shutil
 import socketserver
 import tempfile
 import threading
 from contextlib import contextmanager
+from functools import partial
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Sequence, Tuple
 
+import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import nibabel as nib
 import numpy as np
 import pandas as pd
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import Normalize
 from nilearn import plotting
 
 from .._logging import get_logger
@@ -38,9 +45,8 @@ logger = get_logger(__name__)
 @contextmanager
 def _serve(directory: Path):
     """Spin up a throwaway HTTP server for a temp directory."""
-    handler = lambda *a, **k: http.server.SimpleHTTPRequestHandler(
-        *a, directory=str(directory), **k
-    )
+    # partial instead of a lambda (E731) — same effect, no bound-name warning
+    handler = partial(http.server.SimpleHTTPRequestHandler, directory=str(directory))
     with socketserver.TCPServer(("127.0.0.1", 0), handler) as httpd:
         threading.Thread(target=httpd.serve_forever, daemon=True).start()
         try:
@@ -67,6 +73,12 @@ _HTML = """\
 </script></body></html>"""
 
 
+def _is_dark(rgba) -> bool:
+    """Perceived-luminance test for choosing black vs white text."""
+    r, g, b = rgba[:3]
+    return (0.299 * r + 0.587 * g + 0.114 * b) < 0.5
+
+
 # =====================================================================
 # SimnibsViz
 # =====================================================================
@@ -87,6 +99,11 @@ class SimnibsViz:
         Number of bins for histograms.
     if_exists : str
         ``"overwrite"``, ``"skip"``, or ``"error"`` for existing files.
+    bg_color : str or tuple
+        Figure background, as a cohort-wide aesthetic. Any matplotlib colour
+        (``"black"``, ``"white"``, ``"#101010"``, ``(0.1, 0.1, 0.1)``).
+        It drives both the 2D figures (``black_bg`` + facecolor) and the 3D
+        NiiVue scene (``backColor``), so a single setting keeps them coherent.
     """
 
     def __init__(
@@ -96,6 +113,7 @@ class SimnibsViz:
         threshold: float = 0.1,
         bins: int = 50,
         if_exists: str = "overwrite",
+        bg_color: str | tuple = (0.1, 0.1, 0.1),
     ) -> None:
         self.output_dir = Path(output_dir)
         self.cmap = cmap
@@ -103,6 +121,26 @@ class SimnibsViz:
         self.bins = bins
         self.if_exists = if_exists
         self._scale: tuple[float, float] | None = None  # (vmin, vmax)
+
+        # Background: one source of truth → derive 2D + 3D forms
+        self.bg_color = bg_color
+        self._bg_rgba = mcolors.to_rgba(bg_color)  # 3D NiiVue backColor
+        self._black_bg = _is_dark(self._bg_rgba)  # 2D nilearn black_bg
+
+    # =================================================================
+    # Background helpers
+    # =================================================================
+
+    def set_background(self, bg_color: str | tuple) -> None:
+        """Change the cohort-wide background colour (2D + 3D at once)."""
+        self.bg_color = bg_color
+        self._bg_rgba = mcolors.to_rgba(bg_color)
+        self._black_bg = _is_dark(self._bg_rgba)
+
+    @property
+    def _fg_color(self) -> str:
+        """Contrasting text/title colour for the current background."""
+        return "white" if self._black_bg else "black"
 
     # =================================================================
     # Scale management (cohort-level)
@@ -130,13 +168,9 @@ class SimnibsViz:
             Percentiles used for the raw colour-scale bounds.
         alpha : float
             Symmetric widening factor applied to the [lo, hi] window *after*
-            the percentile computation. ``margin = alpha * (hi - lo)`` is
-            subtracted from the low bound and added to the high bound:
-            - ``alpha = 0.0``  → window inchangée (percentiles bruts)
-            - ``alpha = 0.5``  → largeur ×2
-            - ``alpha = 1.0``  → largeur ×3
-            - ``alpha < 0``    → resserre la fenêtre (plus de saturation)
-            ``vmin`` est borné à 0 (magnE ≥ 0).
+            the percentile computation. ``margin = alpha * (hi - lo)``:
+            0.0 → unchanged, 0.5 → width ×2, 1.0 → width ×3, <0 → tightened.
+            ``vmin`` is clamped to 0 (magnE ≥ 0).
 
         Returns
         -------
@@ -152,8 +186,16 @@ class SimnibsViz:
         hi = float(np.percentile(pooled, upper_pct))
 
         margin = alpha * (hi - lo)
-        vmin = max(0.0, lo - margin)  # magnE ≥ 0 → on clampe à 0
+        vmin = max(0.0, lo - margin)  # magnE ≥ 0 → clamp
         vmax = hi + margin
+
+        if vmin >= vmax:
+            raise ValueError(
+                f"Échelle dégénérée (vmin={vmin:.4f} ≥ vmax={vmax:.4f}). "
+                f"alpha={alpha} resserre trop la fenêtre [{lo:.4f}, {hi:.4f}] "
+                "(alpha ≤ -0.5 la fait s'effondrer). Utilise alpha ∈ ]-0.5, 0], "
+                "ou resserre plutôt via lower_pct / upper_pct."
+            )
 
         self.set_scale(vmin, vmax)
         return vmin, vmax
@@ -161,46 +203,6 @@ class SimnibsViz:
     # =================================================================
     # 2D — nilearn wrappers
     # =================================================================
-
-    def plot_anat(
-        self,
-        t1_or_vols,  # niimg/Path/EField  OU  list[dict]
-        cut_coords=None,
-        display_mode: str = "ortho",
-        output: str | Path | None = None,
-        title: str | None = None,
-    ):
-        """Plot T1 anatomy. Accepts a single image OR a NiiVue-style vols list.
-
-        vols format (1er = fond, suivants = overlays) :
-            [{"path": ..., "colormap": ..., "opacity": ...}, ...]
-        """
-        if isinstance(t1_or_vols, list):
-            bg, *overlays = t1_or_vols
-            disp = plotting.plot_anat(
-                self._as_niimg(bg["path"]),
-                cut_coords=cut_coords,
-                display_mode=display_mode,
-                title=title,
-            )
-            for ov in overlays:
-                disp.add_overlay(
-                    self._as_niimg(ov["path"]),
-                    cmap=self._cmap(ov.get("colormap", "hot")),
-                    alpha=ov.get("opacity", 1.0),
-                    vmin=ov.get("cal_min"),
-                    vmax=ov.get("cal_max"),
-                )
-        else:
-            disp = plotting.plot_anat(
-                self._as_niimg(t1_or_vols),
-                cut_coords=cut_coords,
-                display_mode=display_mode,
-                title=title,
-            )
-        return self._finish_2d(disp, output)
-
-    # helpers partagés (utiles aussi pour render_3d) :
 
     _CMAP_ALIASES = {"blue": "Blues", "red": "Reds", "green": "Greens"}
 
@@ -210,10 +212,61 @@ class SimnibsViz:
 
     @staticmethod
     def _as_niimg(src):
-        """str/Path → laissé tel quel (nilearn charge) ; EField → .img ; niimg → tel quel."""
+        """str/Path → left as-is (nilearn loads) ; EField → .img ; niimg → as-is."""
         if hasattr(src, "img"):
             return src.img
         return src
+
+    @staticmethod
+    def _overlay_transparency(disp, img, **kw):
+        """add_overlay with the new `transparency=` kwarg, falling back to `alpha=`."""
+        opacity = kw.pop("opacity", 1.0)
+        try:
+            disp.add_overlay(img, transparency=opacity, **kw)
+        except TypeError:  # nilearn < 0.12
+            disp.add_overlay(img, alpha=opacity, **kw)
+
+    def plot_anat(
+        self,
+        t1_or_vols,  # niimg/Path/EField  OR  list[dict]
+        cut_coords=None,
+        display_mode: str = "ortho",
+        output: str | Path | None = None,
+        title: str | None = None,
+    ):
+        """Plot T1 anatomy. Accepts a single image OR a NiiVue-style vols list.
+
+        vols format (first = background, rest = overlays)::
+
+            [{"path": ..., "colormap": ..., "opacity": ...}, ...]
+        """
+        if isinstance(t1_or_vols, list):
+            bg, *overlays = t1_or_vols
+            disp = plotting.plot_anat(
+                self._as_niimg(bg["path"]),
+                cut_coords=cut_coords,
+                display_mode=display_mode,
+                title=title,
+                black_bg=self._black_bg,
+            )
+            for ov in overlays:
+                self._overlay_transparency(
+                    disp,
+                    self._as_niimg(ov["path"]),
+                    cmap=self._cmap(ov.get("colormap", "hot")),
+                    opacity=ov.get("opacity", 1.0),
+                    vmin=ov.get("cal_min"),
+                    vmax=ov.get("cal_max"),
+                )
+        else:
+            disp = plotting.plot_anat(
+                self._as_niimg(t1_or_vols),
+                cut_coords=cut_coords,
+                display_mode=display_mode,
+                title=title,
+                black_bg=self._black_bg,
+            )
+        return self._finish_2d(disp, output)
 
     def plot_efield(
         self,
@@ -232,14 +285,16 @@ class SimnibsViz:
         vmin, vmax = self._scale or (None, None)
 
         disp = plotting.plot_anat(
-            t1,
+            self._as_niimg(t1),
             cut_coords=cut_coords,
             display_mode=display_mode,
             title=title,
+            black_bg=self._black_bg,
         )
-        disp.add_overlay(
-            efield,
-            cmap=cmap,
+        self._overlay_transparency(
+            disp,
+            self._as_niimg(efield),
+            cmap=self._cmap(cmap),
             threshold=threshold,
             vmin=vmin,
             vmax=vmax,
@@ -269,7 +324,7 @@ class SimnibsViz:
             threshold=threshold,
             title=title,
         )
-        disp.add_contours(roi_mask, levels=[0.5], colors=contour_color)
+        disp.add_contours(self._as_niimg(roi_mask), levels=[0.5], colors=contour_color)
         return self._finish_2d(disp, output)
 
     def plot_mosaic(
@@ -291,21 +346,25 @@ class SimnibsViz:
         vmin, vmax = self._scale or (None, None)
 
         disp = plotting.plot_anat(
-            t1,
+            self._as_niimg(t1),
             display_mode=display_mode,
             cut_coords=n_cuts,
             title=title,
+            black_bg=self._black_bg,
         )
         if efield is not None:
-            disp.add_overlay(
-                efield,
-                cmap=cmap,
+            self._overlay_transparency(
+                disp,
+                self._as_niimg(efield),
+                cmap=self._cmap(cmap),
                 threshold=threshold,
                 vmin=vmin,
                 vmax=vmax,
             )
         if roi_mask is not None:
-            disp.add_contours(roi_mask, levels=[0.5], colors=contour_color)
+            disp.add_contours(
+                self._as_niimg(roi_mask), levels=[0.5], colors=contour_color
+            )
         return self._finish_2d(disp, output)
 
     def _finish_2d(self, disp, output):
@@ -313,6 +372,11 @@ class SimnibsViz:
         if output is not None:
             output = Path(output)
             output.parent.mkdir(parents=True, exist_ok=True)
+            # best-effort: paint the whole figure canvas with bg_color
+            try:
+                disp.frame_axes.figure.set_facecolor(self.bg_color)
+            except Exception:  # noqa: BLE001 — display internals vary by version
+                pass
             disp.savefig(str(output), dpi=200)
             logger.info(f"Saved 2D: {output}")
             disp.close()
@@ -329,6 +393,7 @@ class SimnibsViz:
         azimuth: float = 120,
         elevation: float = 15,
         nv_opts: dict | None = None,
+        colorbar: bool = True,
         width: int = 800,
         height: int = 600,
         niivue_url: str = "https://unpkg.com/@niivue/niivue/dist/index.js",
@@ -339,26 +404,31 @@ class SimnibsViz:
         Parameters
         ----------
         volumes : list of dict
-            Each dict must have ``"path"`` (str or Path to a NIfTI file)
-            plus any NiiVue keys: ``"colormap"``, ``"opacity"``,
-            ``"cal_min"``, ``"cal_max"``, etc.
+            Each dict must have ``"path"`` (str/Path to a NIfTI file) plus any
+            NiiVue keys: ``"colormap"``, ``"opacity"``, ``"cal_min"``,
+            ``"cal_max"``, etc.
         output : Path
             Destination PNG path.
         azimuth, elevation : float
             Camera angles.
         nv_opts : dict or None
-            NiiVue scene options.  Defaults to dark background + colorbar.
+            NiiVue scene options. Defaults to the class ``bg_color`` background
+            + a colorbar toggled by ``colorbar``.
+        colorbar : bool
+            Whether NiiVue draws its own colorbar. Set ``False`` for per-subject
+            renders that will be tiled by :meth:`plot_cohort_montage` (which
+            adds a single shared colorbar instead).
 
         Notes
         -----
-        If ``self._scale`` is set, ``cal_min`` / ``cal_max`` are
-        auto-injected on non-gray volumes (unless already specified).
+        If ``self._scale`` is set, ``cal_min`` / ``cal_max`` are auto-injected
+        on non-gray volumes (unless already specified).
         """
         output = Path(output)
         output.parent.mkdir(parents=True, exist_ok=True)
         nv_opts = nv_opts or {
-            "backColor": [0.1, 0.1, 0.1, 1],
-            "isColorbar": True,
+            "backColor": list(self._bg_rgba),
+            "isColorbar": colorbar,
         }
 
         # Auto-inject cohort scale on overlay (non-gray) volumes
@@ -427,6 +497,109 @@ class SimnibsViz:
         return output
 
     # =================================================================
+    # Cohort composition (one figure, one shared scale)
+    # =================================================================
+
+    def plot_cohort_montage(
+        self,
+        panels: Sequence[dict],
+        output: str | Path,
+        ncols: int | None = None,
+        title: str | None = None,
+        add_colorbar: bool = True,
+        cbar_label: str = "E-field (V/m)",
+        panel_title_size: int = 11,
+        dpi: int = 200,
+    ) -> Path:
+        """Tile per-subject figures into ONE cohort montage with a single scale.
+
+        Feed it the PNGs produced by the per-subject calls (``render_3d`` /
+        ``plot_*``). The colour scale is drawn **once** as a shared colorbar
+        derived from the locked cohort scale (``self._scale``) — so render the
+        per-subject panels with ``colorbar=False`` to avoid a scale per subject.
+
+        Parameters
+        ----------
+        panels : sequence of dict
+            One dict per subject: ``{"label": "0001", "image": <png path>}``.
+            ``label`` is the subject number shown above each panel.
+        output : Path
+            Destination PNG.
+        ncols : int or None
+            Columns in the grid. Defaults to ``ceil(sqrt(n))``.
+        title : str or None
+            Figure-level suptitle.
+        add_colorbar : bool
+            Draw the single shared colorbar (requires ``self._scale`` set).
+        cbar_label : str
+            Colorbar axis label.
+
+        Returns
+        -------
+        Path
+        """
+        panels = list(panels)
+        if not panels:
+            raise ValueError("plot_cohort_montage: `panels` is empty.")
+
+        n = len(panels)
+        ncols = ncols or math.ceil(math.sqrt(n))
+        nrows = math.ceil(n / ncols)
+
+        fig, axes = plt.subplots(
+            nrows,
+            ncols,
+            figsize=(4 * ncols, 4 * nrows),
+            squeeze=False,
+        )
+        fig.set_facecolor(self.bg_color)
+
+        for idx in range(nrows * ncols):
+            ax = axes[idx // ncols][idx % ncols]
+            ax.set_facecolor(self.bg_color)
+            ax.axis("off")
+            if idx >= n:
+                continue
+            panel = panels[idx]
+            img = plt.imread(str(panel["image"]))
+            ax.imshow(img)
+            label = str(panel.get("label", idx))
+            ax.set_title(label, fontsize=panel_title_size, color=self._fg_color)
+
+        # ── single shared colorbar ──────────────────────────────────
+        if add_colorbar:
+            if self._scale is None:
+                logger.warning(
+                    "plot_cohort_montage: no locked scale — call "
+                    "set_scale_from_cohort() first, or pass add_colorbar=False."
+                )
+            else:
+                vmin, vmax = self._scale
+                sm = ScalarMappable(
+                    norm=Normalize(vmin=vmin, vmax=vmax),
+                    cmap=self._cmap(self.cmap),
+                )
+                sm.set_array([])
+                # dedicated axis on the right → one bar for the whole grid
+                cax = fig.add_axes([0.92, 0.15, 0.015, 0.7])
+                cbar = fig.colorbar(sm, cax=cax)
+                cbar.set_label(cbar_label, color=self._fg_color)
+                cbar.ax.yaxis.set_tick_params(color=self._fg_color)
+                plt.setp(plt.getp(cbar.ax.axes, "yticklabels"), color=self._fg_color)
+
+        if title:
+            fig.suptitle(title, fontsize=16, fontweight="bold", color=self._fg_color)
+
+        output = Path(output)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        # rect leaves room for the colorbar on the right
+        fig.tight_layout(rect=(0, 0, 0.9 if add_colorbar else 1.0, 0.97))
+        fig.savefig(str(output), dpi=dpi, facecolor=self.bg_color, bbox_inches="tight")
+        plt.close(fig)
+        logger.info(f"Saved cohort montage: {output}")
+        return output
+
+    # =================================================================
     # Statistical visualisations
     # =================================================================
 
@@ -449,7 +622,7 @@ class SimnibsViz:
         """
         output_dir = self.output_dir / "2-preprocess"
         output_dir.mkdir(parents=True, exist_ok=True)
-        # tag = space_tag(space)
+        tag = space  # filename suffix (was an undefined `space_tag(space)`)
 
         for subject, subject_data in data_by_subject.items():
             logger.info(f"{region}-ROI histograms for {subject}")
@@ -457,11 +630,7 @@ class SimnibsViz:
             n_cols = min(3, n_plots)
             n_rows = (n_plots + n_cols - 1) // n_cols
 
-            fig, axes = plt.subplots(
-                n_rows,
-                n_cols,
-                figsize=(5 * n_cols, 4 * n_rows),
-            )
+            fig, axes = plt.subplots(n_rows, n_cols, figsize=(5 * n_cols, 4 * n_rows))
             if n_plots == 1:
                 axes = np.array([[axes]])
             elif n_rows == 1:
@@ -533,12 +702,12 @@ class SimnibsViz:
                 fontsize=16,
                 fontweight="bold",
             )
-            plt.tight_layout()
+            fig.tight_layout()
+
             out_path = output_dir / f"efields_histograms_{subject}_{region}_{tag}.png"
-            # save_figure(
-            #     out_path, if_exists=self.if_exists, dpi=300, bbox_inches="tight",
-            # )
-            # logger.info(f"  Saved: {out_path}")
+            fig.savefig(out_path, dpi=300, bbox_inches="tight", facecolor=self.bg_color)
+            plt.close(fig)
+            logger.info(f"  Saved: {out_path}")
 
         logger.info(f"All histograms saved in {output_dir}")
 
@@ -549,7 +718,7 @@ class SimnibsViz:
         subject_col: str = "subject",
         condition_col: str = "condition",
         output_tag: str = "",
-    ) -> None:
+    ) -> Path | None:
         """Scatter: simulation (x) vs optimisation (y) per subject/ROI."""
         output_dir = self.output_dir / "3-analysis"
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -562,4 +731,38 @@ class SimnibsViz:
             lambda x: x.replace("_simulation", "").replace("_optimization", "")
         )
 
-        r
+        wide = df.pivot_table(
+            index=[subject_col, "roi"], columns="type", values=metric
+        ).reset_index()
+
+        if "simulation" not in wide or "optimization" not in wide:
+            logger.warning(
+                "plot_simulation_vs_optimization: need both 'simulation' and "
+                "'optimization' rows; nothing to plot."
+            )
+            return None
+
+        fig, ax = plt.subplots(figsize=(6, 6))
+        fig.set_facecolor(self.bg_color)
+        for roi, sub in wide.groupby("roi"):
+            ax.scatter(
+                sub["simulation"], sub["optimization"], label=str(roi), alpha=0.7
+            )
+
+        hi = float(np.nanmax([wide["simulation"].max(), wide["optimization"].max()]))
+        lims = [0.0, hi * 1.05]
+        ax.plot(lims, lims, "--", color="gray", lw=1)  # y = x reference
+        ax.set_xlim(lims)
+        ax.set_ylim(lims)
+        ax.set_aspect("equal")
+        ax.set_xlabel(f"Simulation ({metric})")
+        ax.set_ylabel(f"Optimization ({metric})")
+        ax.set_title("Simulation vs Optimization")
+        ax.legend(fontsize=8)
+
+        suffix = f"_{output_tag}" if output_tag else ""
+        out_path = output_dir / f"sim_vs_opt_{metric}{suffix}.png"
+        fig.savefig(out_path, dpi=200, bbox_inches="tight", facecolor=self.bg_color)
+        plt.close(fig)
+        logger.info(f"Saved: {out_path}")
+        return out_path

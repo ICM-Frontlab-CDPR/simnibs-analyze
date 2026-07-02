@@ -124,7 +124,14 @@ def resolve_layer(name: str, cfg: VizConfig, ctx: SubjectCtx) -> dict:
                 / "cereb_mask.nii.gz",  # TODO confirmer le bon mask
                 "label_prep": ctx.seg.tissue_labeling_upsampled,
             }[spec.source]
-        layer = {"path": str(path), "colormap": spec.colormap, "opacity": spec.opacity}
+        is_binary = spec.source in ("lesion_native", "lesion_mni")
+        layer = {
+            "path": str(path),
+            "colormap": spec.colormap,
+            "opacity": spec.opacity,
+            "render": spec.render,
+            "threshold": 0.5 if is_binary else 0.0,
+        }
 
     elif isinstance(spec, RoiVol):
         native_path = ctx.out / f"roi_{name}_native.nii.gz"
@@ -145,11 +152,12 @@ def resolve_layer(name: str, cfg: VizConfig, ctx: SubjectCtx) -> dict:
                 spec.file
             )  # TODO: on suppose déjà natif ; fichier MNI = later
         # TODO (A1) : filtrer l'hémisphère controlatéral (x<0 / x>0 en MNI avant warp)
-        # TODO (A2) : spec.render == "contour" → nécessite un support dans SimnibsViz
         layer = {
             "path": str(native_path),
             "colormap": spec.colormap,
             "opacity": spec.opacity,
+            "render": spec.render,
+            "threshold": 0.5,
         }
 
     elif isinstance(spec, FieldVol):
@@ -175,10 +183,39 @@ def resolve_layer(name: str, cfg: VizConfig, ctx: SubjectCtx) -> dict:
 # ─────────────────────────────────────────────────────────────────────
 
 
-def _parallel_cut_coords(fig: FigureConfig):
-    """Explicit cut positions if coord_min/max/spacing given, else n_cuts (int)."""
-    if fig.coord_min is not None and fig.coord_max is not None and fig.spacing:
-        return list(np.arange(fig.coord_min, fig.coord_max + 1e-6, fig.spacing))
+def _lesion_com_native(lesion_path: str) -> list[float] | None:
+    """Native-space mm coords of the lesion center of mass (returns None if empty mask)."""
+    from scipy.ndimage import center_of_mass as _com
+
+    img = nib.load(lesion_path)
+    data = img.get_fdata()
+    if data.max() == 0:
+        return None
+    com_vox = _com(data)
+    return list(nib.affines.apply_affine(img.affine, com_vox).round(1))
+
+
+def _vol_com_on_axis(layer_path: str, axis: str) -> float:
+    """Native-space mm coordinate of a vol's CoM on the given axis (x/y/z)."""
+    from scipy.ndimage import center_of_mass as _com
+
+    img = nib.load(layer_path)
+    data = img.get_fdata()
+    if data.max() == 0:
+        raise ValueError(f"Vol {layer_path} est vide — impossible de calculer son CoM.")
+    com_vox = _com(data)
+    com_mm = nib.affines.apply_affine(img.affine, com_vox)
+    return float(com_mm[{"x": 0, "y": 1, "z": 2}[axis]])
+
+
+def _parallel_cut_coords_with_center(fig: FigureConfig, center: float | None):
+    """Build cut list from a center (mm) + half_width + spacing, or fall back to n_cuts."""
+    if center is not None and fig.half_width is not None and fig.spacing:
+        return list(
+            np.arange(
+                center - fig.half_width, center + fig.half_width + 1e-6, fig.spacing
+            )
+        )
     return fig.n_cuts  # nilearn auto-spreads across the whole brain
 
 
@@ -190,6 +227,11 @@ def render_figure(
     out_png = ctx.out / f"{fig.name}.png"
     title = f"{ctx.sub_id} — {fig.name}"
 
+    # apply per-figure contour overrides
+    for i, v_name in enumerate(fig.vols):
+        if v_name in fig.contour_vols:
+            vols[i] = {**vols[i], "render": "contour"}
+
     if fig.type == "3D":
         az, el = fig.camera
         # cohort panels are rendered WITHOUT their own colorbar (shared one in montage)
@@ -198,19 +240,42 @@ def render_figure(
         )
 
     # -- 2D --
+    # Résolution du centre (commun ortho + parallel)
+    center_vol_mm: list[float] | float | None = (
+        None  # mm natifs (ortho) ou sur l'axe (parallel)
+    )
+    if fig.cut_center_vol is not None:
+        vol_idx = fig.vols.index(fig.cut_center_vol)
+        if fig.subtype == "ortho":
+            center_vol_mm = _lesion_com_native(
+                vols[vol_idx]["path"]
+            )  # [x,y,z] mm natifs
+        else:
+            center_vol_mm = _vol_com_on_axis(
+                vols[vol_idx]["path"], fig.axis
+            )  # scalar mm
+
     if fig.subtype == "ortho":
-        center = (
-            mni_to_native_coords(fig.cut_coords, ctx.warp_img, ctx.warp_coords)
-            if fig.cut_coords is not None
-            else None
-        )
+        if fig.cut_coords is not None:
+            center = mni_to_native_coords(fig.cut_coords, ctx.warp_img, ctx.warp_coords)
+        else:
+            center = center_vol_mm  # CoM du vol cible, ou None (nilearn choisit)
         viz.plot_anat(
             vols, cut_coords=center, display_mode="ortho", output=out_png, title=title
         )
     else:  # parallel (mosaic)
+        if fig.cut_coords is not None:
+            # cut_coords[axe] projette le centre XYZ sur l'axe de coupe
+            ax_idx = {"x": 0, "y": 1, "z": 2}[fig.axis]
+            scalar_center = mni_to_native_coords(
+                fig.cut_coords, ctx.warp_img, ctx.warp_coords
+            )[ax_idx]
+        else:
+            scalar_center = center_vol_mm  # float ou None
+        cuts = _parallel_cut_coords_with_center(fig, scalar_center)
         viz.plot_anat(
             vols,
-            cut_coords=_parallel_cut_coords(fig),
+            cut_coords=cuts,
             display_mode=fig.axis,
             output=out_png,
             title=title,
@@ -282,6 +347,8 @@ def main(config_path: str) -> None:
             title=f"{fig.name} — cohorte",
             add_colorbar=cfg.figure_has_field(fig),  # échelle unique ssi champ continu
             cbar_label="E-field (V/m)",
+            ncols=fig.montage_ncols,
+            panel_h=fig.montage_panel_h,
         )
 
     print(f"\n✓ All figures saved in {cfg.paths.out_root}")

@@ -205,10 +205,17 @@ class SimnibsViz:
     # =================================================================
 
     _CMAP_ALIASES = {"blue": "Blues", "red": "Reds", "green": "Greens"}
+    _CMAP_TO_CONTOUR_COLOR = {"Blues": "blue", "Reds": "red", "Greens": "green"}
 
     @classmethod
     def _cmap(cls, name: str) -> str:
         return cls._CMAP_ALIASES.get(name, name)
+
+    @classmethod
+    def _contour_color(cls, name: str) -> str:
+        """Map a colormap name to a single contour color string."""
+        resolved = cls._cmap(name)
+        return cls._CMAP_TO_CONTOUR_COLOR.get(resolved, name)
 
     @staticmethod
     def _as_niimg(src):
@@ -250,14 +257,24 @@ class SimnibsViz:
                 black_bg=self._black_bg,
             )
             for ov in overlays:
-                self._overlay_transparency(
-                    disp,
-                    self._as_niimg(ov["path"]),
-                    cmap=self._cmap(ov.get("colormap", "hot")),
-                    opacity=ov.get("opacity", 1.0),
-                    vmin=ov.get("cal_min"),
-                    vmax=ov.get("cal_max"),
-                )
+                img = self._as_niimg(ov["path"])
+                if ov.get("render") == "contour":
+                    disp.add_contours(
+                        img,
+                        levels=[0.5],
+                        colors=[self._contour_color(ov.get("colormap", "blue"))],
+                        linewidths=2.0,
+                    )
+                else:
+                    self._overlay_transparency(
+                        disp,
+                        img,
+                        cmap=self._cmap(ov.get("colormap", "hot")),
+                        opacity=ov.get("opacity", 1.0),
+                        threshold=ov.get("threshold", 0.0),
+                        vmin=ov.get("cal_min"),
+                        vmax=ov.get("cal_max"),
+                    )
         else:
             disp = plotting.plot_anat(
                 self._as_niimg(t1_or_vols),
@@ -508,6 +525,7 @@ class SimnibsViz:
         title: str | None = None,
         add_colorbar: bool = True,
         cbar_label: str = "E-field (V/m)",
+        panel_h: float = 4.0,
         panel_title_size: int = 11,
         dpi: int = 200,
     ) -> Path:
@@ -546,10 +564,16 @@ class SimnibsViz:
         ncols = ncols or math.ceil(math.sqrt(n))
         nrows = math.ceil(n / ncols)
 
+        # Auto-size panels from the first image's pixel aspect ratio so that
+        # wide parallel-slice strips aren't squeezed into square cells.
+        first_img = plt.imread(str(panels[0]["image"]))
+        ph_px, pw_px = first_img.shape[:2]
+        panel_h_in = panel_h
+        panel_w_in = panel_h_in * (pw_px / ph_px)
         fig, axes = plt.subplots(
             nrows,
             ncols,
-            figsize=(4 * ncols, 4 * nrows),
+            figsize=(panel_w_in * ncols, panel_h_in * nrows),
             squeeze=False,
         )
         fig.set_facecolor(self.bg_color)
@@ -561,7 +585,7 @@ class SimnibsViz:
             if idx >= n:
                 continue
             panel = panels[idx]
-            img = plt.imread(str(panel["image"]))
+            img = plt.imread(str(panel["image"])) if idx > 0 else first_img
             ax.imshow(img)
             label = str(panel.get("label", idx))
             ax.set_title(label, fontsize=panel_title_size, color=self._fg_color)

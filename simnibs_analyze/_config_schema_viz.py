@@ -44,6 +44,7 @@ class AnatVol(_LayerBase):
     source: Literal["t1", "brain_mask", "label_prep", "lesion_native", "lesion_mni"] = (
         "t1"
     )
+    render: Literal["fill", "contour"] = "fill"
 
 
 class RoiVol(_LayerBase):
@@ -105,13 +106,31 @@ class FigureConfig(BaseModel):
 
     # -- 2D only --
     subtype: Literal["ortho", "parallel"] = "ortho"
-    cut_coords: list[float] | None = None  # MNI ; le script s'occupe du natif
-    axis: Literal["x", "y", "z"] = "z"  # parallel only
-    n_cuts: int = 7  # parallel only
-    # for later (B2) : borner les coupes plutôt que couvrir tout le cerveau
-    coord_min: float | None = None
-    coord_max: float | None = None
-    spacing: float | None = None
+
+    # Centre de coupe (ortho ET parallel) — au plus un des deux :
+    #   cut_coords   : [x, y, z] MNI explicites (ortho: centre; parallel: projeté sur l'axe)
+    #   cut_center_vol: nom d'un vol → CoM calculé au runtime (prioritaire sur cut_coords)
+    cut_coords: list[float] | None = None
+    cut_center_vol: str | None = None
+
+    # Étendue (parallel uniquement) :
+    #   half_width + spacing → coupes de (centre - half_width) à (centre + half_width)
+    #   sans half_width      → n_cuts coupes auto-réparties par nilearn
+    axis: Literal["x", "y", "z"] = "z"
+    n_cuts: int = 7
+    half_width: float | None = None  # demi-largeur du bloc (mm) ; parallel seulement
+    spacing: float | None = None  # mm entre coupes ; nécessite half_width
+
+    # -- contour overrides (per-figure, overrides vol-level render) --
+    contour_vols: list[str] = Field(
+        default_factory=list
+    )  # vol names to render as contour in this figure
+
+    # -- cohort montage --
+    montage_ncols: int | None = None  # colonnes dans la grille cohorte (None = auto)
+    montage_panel_h: float = (
+        4.0  # hauteur d'un panel en pouces (la largeur est déduite de l'aspect ratio)
+    )
 
     # -- 3D only --
     camera: list[float] = Field(
@@ -126,9 +145,21 @@ class FigureConfig(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def _cut_coords_len(self) -> "FigureConfig":
+    def _validate_cut(self) -> "FigureConfig":
+        # cut_coords et cut_center_vol sont mutuellement exclusifs
+        if self.cut_coords is not None and self.cut_center_vol is not None:
+            raise ValueError(
+                "`cut_coords` and `cut_center_vol` are mutually exclusive."
+            )
         if self.cut_coords is not None and len(self.cut_coords) != 3:
-            raise ValueError("cut_coords must be [x, y, z] in MNI mm.")
+            raise ValueError("`cut_coords` must be [x, y, z] in MNI mm.")
+        # half_width sans spacing n'a pas de sens (on ne sait pas combien de coupes)
+        if (
+            self.half_width is not None
+            and self.spacing is None
+            and self.subtype == "parallel"
+        ):
+            raise ValueError("`half_width` requires `spacing`.")
         return self
 
 

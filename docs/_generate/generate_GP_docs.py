@@ -15,14 +15,13 @@ Usage:
 Dépendance: pip install pdoc
 """
 import importlib.util
-import sys
 from pathlib import Path
 
 ROOT = Path(__file__).parent
 GENERATE_DIR = ROOT / "docs" / "_generate"
 
 STEPS = [
-    ("1-pandoc_gen",    "Génération API pdoc → docs/api/"),
+    ("1-pandoc_gen", "Génération API pdoc → docs/api/"),
     ("2-supplementary", "Landing page + .nojekyll → docs/index.html"),
 ]
 

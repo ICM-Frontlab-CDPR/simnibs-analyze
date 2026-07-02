@@ -104,13 +104,26 @@ def resolve_layer(name: str, cfg: VizConfig, ctx: SubjectCtx) -> dict:
     spec = cfg.vols[name]
 
     if isinstance(spec, AnatVol):
-        path = {
-            "t1": ctx.seg.t1,
-            "brain_mask": ctx.seg.path
-            / "surfaces"
-            / "cereb_mask.nii.gz",  # TODO confirmer le bon mask
-            "label_prep": ctx.seg.tissue_labeling_upsampled,
-        }[spec.source]
+        if spec.source == "lesion_native":
+            path = ctx.seg.lesion_native
+            if path is None:
+                raise FileNotFoundError(
+                    f"{ctx.sub_id}: lesion_native introuvable (seg.lesion_native is None)"
+                )
+        elif spec.source == "lesion_mni":
+            path = ctx.seg.lesion_mni
+            if path is None:
+                raise FileNotFoundError(
+                    f"{ctx.sub_id}: lesion_mni introuvable (seg.lesion_mni is None)"
+                )
+        else:
+            path = {
+                "t1": ctx.seg.t1,
+                "brain_mask": ctx.seg.path
+                / "surfaces"
+                / "cereb_mask.nii.gz",  # TODO confirmer le bon mask
+                "label_prep": ctx.seg.tissue_labeling_upsampled,
+            }[spec.source]
         layer = {"path": str(path), "colormap": spec.colormap, "opacity": spec.opacity}
 
     elif isinstance(spec, RoiVol):

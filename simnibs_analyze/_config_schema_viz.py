@@ -41,7 +41,9 @@ class AnatVol(_LayerBase):
     """Structural background layer."""
 
     kind: Literal["anat"]
-    source: Literal["t1", "brain_mask", "label_prep"] = "t1"
+    source: Literal["t1", "brain_mask", "label_prep", "lesion_native", "lesion_mni"] = (
+        "t1"
+    )
 
 
 class RoiVol(_LayerBase):

@@ -64,16 +64,11 @@ vols:
     colormap: hot
     opacity: 0.6
 
-  # ── Lésion (à activer quand le reader la résout depuis seg) ──────
-  # Le masque de lésion est per-sujet, donc PAS exprimable en `file:` unique.
-  # Il faut une source résolue par sujet. Deux options quand tu feras la modif :
-  #   (a) reader : ajouter seg.lesion → puis ici source anat/roi "lesion"
-  #   (b) run-viz : résoudre <lesion_base>/<id>/<mask>.nii.gz par sujet
-  # lesion:
-  #   kind: roi
-  #   file: "SERA_RESOLU_PAR_SUJET"   # ← nécessite la modif reader/run-viz
-  #   colormap: red
-  #   opacity: 0.6
+  lesion:
+    kind: anat
+    source: lesion_native   # résolu par sujet via seg.lesion_native
+    colormap: red
+    opacity: 0.7
 
 # ── Blocks de figures ───────────────────────────────────────
 figures:
@@ -116,11 +111,17 @@ figures:
     # TODO (B) : rajouter les positions d'électrodes
     # TODO (B1) : meilleure saturation e-field (échelle) — côté SimnibsViz
 
-  # ── A1 structural + LÉSION (à activer avec le vol `lesion` ci-dessus) ──
-  # - name: "A1_structural_lesion_34left"
-  #   type: "3D"
-  #   vols: [anat_skull, lesion]
-  #   camera: [0, 15]
-  #   cohort: true
+  # ── Figures avec lésion ──────────────────────────────────────────────────
+  - name: "C1_structural_lesion_ortho"
+    type: "2D"
+    subtype: "ortho"
+    vols: [anat_brain, lesion]
+    cohort: true
+
+  - name: "A1_structural_lesion_34left"
+    type: "3D"
+    vols: [anat_brain, lesion]
+    camera: [0, 15]
+    cohort: true
 
 # stats_figures (later)

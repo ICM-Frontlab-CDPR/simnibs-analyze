@@ -1,0 +1,48 @@
+# '''script du tool qui va permettre d'unifier et d'automatiser les visualisations que l'on doit faire apres avoir fait des simulations simnibs"
+
+
+# # 
+# subjects:
+
+
+# paths:
+
+
+# #images disponible à superposer pour la creation des vols
+
+# anat: (T1 ou label_prep) 
+# ROI: (x,y,z coord en mni) 
+# fields: e ou E ou j ou J
+# #later lesion: 
+
+# fields_scale: min, max
+# # for later ! space: mni or native 
+
+# # un block = un type de figures que l'on veut faire 
+# nifti_figures:
+
+#   viz-name: ""
+#   vols: # list des images aue l'on veut superposé ? #pour linstant cacher le dict niivue de l'UI ?
+#   type: 2D (or3D)
+#   subtype: slicing parallele or ortho
+#   cut_coords: #mni space, le script soccupe denvoyer en native si besoin
+#   axis (axial et ou coronal et ou tangentiel):
+#   nombre de coupe:    #if parallel... agerer dans la verif de format, pas dans l'UI
+#   distance entre coupe depuis le centre:    #if parallel... à gerer dans la verif de format, pas dans l'UI
+#   #for later : display electrodes...
+#   #cohorts figures: yes
+#     #some parameters ? for later...
+
+#   viz-name: ""
+#   vols:
+#   type: 2D or 3D
+#   default_3Dcamera: (les deux angles tel que demandé par render 3D)
+#   if_exists: str = "overwrite",
+
+
+#   #... mettre ce qui est actuellement dans run-viz.py
+
+
+# #stats_figures (later)
+
+

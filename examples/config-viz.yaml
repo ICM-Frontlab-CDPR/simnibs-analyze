@@ -1,5 +1,0 @@
-cmap: str = "hot",
-threshold_percentile: float = 50.0,
-bins: int = 50,
-default_3Dcamera: (les deux angles tel auew demandé par render 3D)
-if_exists: str = "overwrite",

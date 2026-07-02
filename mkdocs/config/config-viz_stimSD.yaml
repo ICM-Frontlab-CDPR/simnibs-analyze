@@ -1,53 +1,114 @@
-'''script du tool qui va permettre d'unifier et d'automatiser les visualisations que l'on doit faire apres avoir fait des simulations simnibs"
+# ============================================================
+# config-viz_stimSD.yaml
+# ------------------------------------------------------------
+# Config du tool qui unifie/automatise les visualisations
+# post-simulation SimNIBS.  Un "figure block" = un type de figure.
+#
+# Les images à superposer (vols) sont résolues automatiquement
+# grâce au reader (+ transform MNI→subject quand il le faut).
+# ============================================================
 
-
-# 
+# ── Cohorte ─────────────────────────────────────────────────
 subjects:
-
+  ids: [ "0001", "0003", ] #"0004", "0005", "0007", "0008", "0009", "0012", "0013", "0015",
+    # "0017", "0021", "0023", "0031", "0032", "0034", "0035", "0036", "0037", "0043",
+    # "0046", "0048", "0050", "0052", "0053", "0054", "0055", "0056", "0057", "0058",
+    # "0060", "0061", "0062", "0063", "0064", "0065",]
+  stim_pattern: "AFFT"
+  # TODO gérer les groupes de sujets left and right
 
 paths:
+  sim_base: "/Volumes/levy/valerocabre/stimSD/Data/derivatives/mri/2-simnibs-simu-left"
+  seg_base: "/Volumes/levy/valerocabre/stimSD/Data/derivatives/mri/1-simnibs-preps"
+  out_root: "/Volumes/levy/valerocabre/stimSD/Analysis/simnibs-figures-J"
 
+# ── Échelle e-field (verrouillée pour toute la cohorte) ─────
+fields_scale:
+  min: 0.05
+  max: 0.4
+  # for later ! symmetric scale
+  # for later ! space: mni or native
 
-# 1ere partie pour definir les images disponible à superposer pour la creation des vols 
-# (tout ca est geré facileemnt grace au reader + les transform mni-suject sil le faut)
+# ── Registre de layers réutilisables (référencés par nom) ───
+# anat  : t1 | brain_mask | label_prep
+# roi   : (x,y,z coord en mni) | atlas + regions | file  (commençons simple)
+# field : e | E | j | J  → magnE / magnJ ...
+vols:
 
-# for later ! space: mni or native 
-available-vols: # for later (differencier les masks des vols a valeurs continue / valeur discrete mais non binaire ? signé ou non)
-  anat: (T1 ou label_prep) #brain mask ou tout le skull...
-  ROI: (x,y,z coord en mni) | atlas + list | file (a voir comment gerer ça proprement... commencons simple)
-  fields: e ou E ou j ou J
-    scale: min, max
-  #later lesion: 
+  anat_skull:
+    kind: anat
+    source: t1
+    colormap: gray
+    opacity: 0.5
 
+  anat_brain:
+    kind: anat
+    source: brain_mask
+    colormap: gray
+    opacity: 0.5
 
+  roi_atl:
+    kind: roi
+    atlas: harvard-oxford
+    regions:
+      - "Temporal Pole"
+      - "Superior Temporal Gyrus, anterior division"
+      - "Middle Temporal Gyrus, anterior division"
+      - "Inferior Temporal Gyrus, anterior division"
+      - "Temporal Fusiform Cortex, anterior division"
+    colormap: blue
+    opacity: 0.5        #TODO dois pouvoir etre omis ! + attention a utiliser la fonction adequaet et generale de plotting de nilearn qui est "plot_img"
+    render: fill        # 'contour' → TODO (support à ajouter dans SimnibsViz)
 
+  efield:
+    kind: field
+    name: magnJ
+    colormap: hot       # linspecer = colormap NiiVue ; en 2D nilearn préférer 'hot'
+    opacity: 0.6
 
+# ── Blocks de figures ───────────────────────────────────────
+# un block = un type de figure à générer par sujet
+figures:
 
-# un block = un type de figures que l'on veut faire 
-nifti_figures:
+  # A2 — anat ortho (T1 + ROI), 2D
+  - name: "A2_anat_ROI_ortho"
+    type: "2D"
+    subtype: "ortho"
+    vols: [anat_brain, roi_atl]
+    cut_coords: [56, 8, -10]   # MNI ; le script envoie en natif
+    cohort: true
+    # for later : display electrodes
+    # TODO (A2) : rajout du ROI en contour plutôt qu'en fill
 
-  viz-name: "Anat-with-ROI"
-  vols: [anat,ROI] # list des images aue l'on veut superposé ? #pour linstant cacher le dict niivue de l'UI ?
-  type: 2D (or3D)
-  subtype: slicing parallele or ortho
-  cut_coords: #mni space, le script soccupe denvoyer en native si besoin
-  axis (axial et ou coronal et ou tangentiel):
-  nombre de coupe:    #if parallel... agerer dans la verif de format, pas dans l'UI
-  distance entre coupe depuis le centre:    #if parallel... à gerer dans la verif de format, pas dans l'UI
-  #for later : display electrodes...
-  #cohorts figures: yes
-    #some parameters ? for later...
+  # B2 — e-field mosaic axial (coupes parallèles), 2D
+  - name: "B2_efield_mosaic_axial"
+    type: "2D"
+    subtype: "parallel"
+    vols: [anat_brain, roi_atl, efield]
+    axis: "z"
+    n_cuts: 10
+    cohort: true
+    # for later (B2) : borner les coupes (coord_min / coord_max / spacing)
+    # coord_min: -40
+    # coord_max: 60
+    # spacing: 10
 
-  viz-name: ""
-  vols:
-  type: 2D or 3D
-  default_3Dcamera: (les deux angles tel que demandé par render 3D)
-  if_exists: str = "overwrite",
+  # A1 — brain 3D + ROI (3/4 left)
+  - name: "A1_brain_3d_34left"
+    type: "3D"
+    vols: [anat_brain, roi_atl]
+    camera: [225, 15]          # azimuth, elevation
+    cohort: true
+    if_exists: overwrite
+    # TODO (A1) : ne pas montrer le mask de l'autre hémisphère
 
+  # B1 — e-field 3D (3/4 left)
+  - name: "B1_efield_3d_34left"
+    type: "3D"
+    vols: [anat_brain, roi_atl, efield]
+    camera: [225, 15]
+    cohort: true
+    # TODO (B) : rajouter les positions d'électrodes
+    # TODO (B1) : meilleure saturation e-field (échelle) — côté SimnibsViz
 
-  #... mettre ce qui est actuellement dans run-viz.py
-
-
-#stats_figures (later)
-
-
+# stats_figures (later)

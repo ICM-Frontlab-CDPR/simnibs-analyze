@@ -6,6 +6,7 @@ __all__ = [
     "_pipeline_io",
     "_logging",
     "_citations",
+    "_config_schema_viz",
     "meta",
     "main",
 ]

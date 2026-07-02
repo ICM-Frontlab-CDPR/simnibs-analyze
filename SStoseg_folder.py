@@ -35,11 +35,11 @@ from pathlib import Path
 
 # ── Défauts (dataset hemianotACS) — surchargeables en CLI ────────────
 DEFAULT_SOURCE_BASE = Path(
-    "/Volumes/levy/raw/valerocabre/hemianotACS/Data/derivatives/mri/"
+    "/network/iss/levy/raw/valerocabre/hemianotACS/Data/derivatives/mri/"
     "0-lesion-synthstroke-masks-SS"
 )
 DEFAULT_DEST_BASE = Path(
-    "/Volumes/levy/raw/valerocabre/hemianotACS/Data/derivatives/mri/"
+    "/network/iss/levy/raw/valerocabre/hemianotACS/Data/derivatives/mri/"
     "1-simnibs-preps-maskSS"
 )
 LESIONS_SUBDIR = "_lesions"

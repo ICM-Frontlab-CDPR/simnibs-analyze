@@ -7,20 +7,13 @@
 
 # ── Cohorte ─────────────────────────────────────────────────
 subjects:
-  ids: ["0001", "0002", "0008", "0009", "0011", "0014","0015",]
-        # "0016","0018","0021","0023","0024","0026","0027",
-        # "0029","0035","0037","0038","0040","0041"]
-  # ids: ["sub-0001", "sub-0002", "sub-0008", "sub-0009", "sub-0011", "sub-0014","sub-0015",
-  #       "sub-0016","sub-0018","sub-0021","sub-0023","sub-0024","sub-0026","sub-0027",
-  #       "sub-0029","sub-0035","sub-0037","sub-0038","sub-0040","sub-0041"]      
+  ids: ["0001", "0002", "0008", "0009", "0011", "0014","0015",
+        "0016","0018","0021","0023","0024","0026","0027",
+        "0029","0035","0037","0038","0040","0041"]
+
   stim_pattern: "fef"
   # TODO gérer les groupes de sujets left and right (hémianopsie latéralisée)
 
-# ⚠ ASSUMÉS — tu ne m'as donné que le chemin des lésions. À CONFIRMER :
-#   - seg_base / sim_base : noms des sous-dossiers (repris de stimSD)
-#   - le pattern m2m : run-viz cherche seg_base/<id>/m2m_<id> → ici m2m_sub-0001.
-#     Si tes m2m s'appellent m2m_0001 (sans 'sub-'), enlève le préfixe des ids
-#     OU adapte le f-string dans run-viz.load_subjects().
 paths:
   seg_base: "/Volumes/levy/raw/valerocabre/hemianotACS/Data/derivatives/mri/1-simnibs-preps-maskSS"
   sim_base: "/Volumes/levy/raw/valerocabre/hemianotACS/Data/derivatives/mri/2-simnibs-sim-ips-fef"

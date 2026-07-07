@@ -66,6 +66,25 @@ _HTML = """\
   await nv.loadVolumes({volumes});
   nv.setSliceType(SLICE_TYPE.RENDER);
   nv.setRenderAzimuthElevation({azim}, {elev});
+  const electrodes = {electrodes};
+  if (electrodes.length) {{
+    try {{
+      nv.addConnectome({{
+        name: "electrodes",
+        nodeColormap: "warm",
+        nodeColormapNegative: "",
+        nodeMinColor: 0, nodeMaxColor: 1,
+        nodeScale: 3,
+        nodes: electrodes.map(e => ({{
+          name: e.label, x: e.x, y: e.y, z: e.z,
+          colorValue: 1.0, sizeValue: e.size !== undefined ? e.size : 4.0
+        }})),
+        edges: []
+      }});
+    }} catch(err) {{
+      console.warn("electrodes (addConnectome) failed:", err);
+    }}
+  }}
   nv.drawScene();
   requestAnimationFrame(() => requestAnimationFrame(() => {{
       window.__ready = true;
@@ -285,105 +304,6 @@ class SimnibsViz:
             )
         return self._finish_2d(disp, output)
 
-    def plot_efield(
-        self,
-        t1,
-        efield,
-        cut_coords=None,
-        display_mode: str = "ortho",
-        cmap: str | None = None,
-        threshold: float | None = None,
-        output: str | Path | None = None,
-        title: str | None = None,
-    ):
-        """Plot T1 + continuous e-field overlay."""
-        cmap = cmap or self.cmap
-        threshold = threshold if threshold is not None else self.threshold
-        vmin, vmax = self._scale or (None, None)
-
-        disp = plotting.plot_anat(
-            self._as_niimg(t1),
-            cut_coords=cut_coords,
-            display_mode=display_mode,
-            title=title,
-            black_bg=self._black_bg,
-        )
-        self._overlay_transparency(
-            disp,
-            self._as_niimg(efield),
-            cmap=self._cmap(cmap),
-            threshold=threshold,
-            vmin=vmin,
-            vmax=vmax,
-        )
-        return self._finish_2d(disp, output)
-
-    def plot_efield_roi(
-        self,
-        t1,
-        efield,
-        roi_mask,
-        cut_coords=None,
-        display_mode: str = "ortho",
-        cmap: str | None = None,
-        threshold: float | None = None,
-        contour_color: str = "cyan",
-        output: str | Path | None = None,
-        title: str | None = None,
-    ):
-        """Plot T1 + e-field overlay + ROI contour."""
-        disp = self.plot_efield(
-            t1,
-            efield,
-            cut_coords=cut_coords,
-            display_mode=display_mode,
-            cmap=cmap,
-            threshold=threshold,
-            title=title,
-        )
-        disp.add_contours(self._as_niimg(roi_mask), levels=[0.5], colors=contour_color)
-        return self._finish_2d(disp, output)
-
-    def plot_mosaic(
-        self,
-        t1,
-        efield=None,
-        roi_mask=None,
-        n_cuts: int = 7,
-        display_mode: str = "z",
-        cmap: str | None = None,
-        threshold: float | None = None,
-        contour_color: str = "cyan",
-        output: str | Path | None = None,
-        title: str | None = None,
-    ):
-        """Multi-slice mosaic — T1 with optional e-field and ROI contours."""
-        cmap = cmap or self.cmap
-        threshold = threshold if threshold is not None else self.threshold
-        vmin, vmax = self._scale or (None, None)
-
-        disp = plotting.plot_anat(
-            self._as_niimg(t1),
-            display_mode=display_mode,
-            cut_coords=n_cuts,
-            title=title,
-            black_bg=self._black_bg,
-        )
-        if efield is not None:
-            self._overlay_transparency(
-                disp,
-                self._as_niimg(efield),
-                cmap=self._cmap(cmap),
-                threshold=threshold,
-                vmin=vmin,
-                vmax=vmax,
-            )
-        if roi_mask is not None:
-            disp.add_contours(
-                self._as_niimg(roi_mask), levels=[0.5], colors=contour_color
-            )
-        return self._finish_2d(disp, output)
-
     def _finish_2d(self, disp, output):
         """Save and/or return a nilearn OrthoSlicer display."""
         if output is not None:
@@ -414,7 +334,9 @@ class SimnibsViz:
         width: int = 800,
         height: int = 600,
         niivue_url: str = "https://unpkg.com/@niivue/niivue/dist/index.js",
-        timeout_ms: int = 60_000,
+        timeout_ms: int = 6_000,
+        electrodes: list[dict] | None = None,  # ← nouveau
+        electrode_radius: float = 4.0,
     ) -> Path:
         """Render a list of NiiVue volumes to a PNG file (headless).
 
@@ -488,6 +410,18 @@ class SimnibsViz:
                     volumes=json.dumps(served),
                     azim=azimuth,
                     elev=elevation,
+                    electrodes=json.dumps(
+                        [
+                            {
+                                "label": e.get("label", ""),
+                                "x": e["x"],
+                                "y": e["y"],
+                                "z": e["z"],
+                                "size": e.get("size", electrode_radius),
+                            }
+                            for e in (electrodes or [])
+                        ]
+                    ),
                 )
             )
 

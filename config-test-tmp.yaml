@@ -1,0 +1,74 @@
+# ── Cohorte ─────────────────────────────────────────────────
+subjects:
+  ids: [ "0008",  "0009", "0011", "0016", "0023", "0029", "0035","0038",]   # RIGHT HEMI
+  stim_pattern: "ips_left"
+
+
+paths:
+  seg_base: "/Volumes/levy/raw/valerocabre/hemianotACS/Data/derivatives/mri/1-simnibs-preps-maskSS"
+  sim_base: "/Volumes/levy/raw/valerocabre/hemianotACS/Data/derivatives/mri/2-simnibs-sim-ips-fef"
+  out_root: "/Users/hippolyte.dreyfus/Documents/simnibs-analyze/__tmp__"
+
+# ── Échelle e-field (verrouillée pour toute la cohorte) ─────
+fields_scale:
+  min: 0.05
+  max: 0.3
+
+
+# ── Registre de layers réutilisables (référencés par nom) ───
+vols:
+
+  #label_prep/ to add
+  anat_skull:
+    kind: anat
+    source: t1
+    colormap: gray
+    opacity: 1
+
+  anat_brain:
+    kind: anat
+    source: brain_mask
+    colormap: gray
+    opacity: 1
+
+  roi:
+    kind: roi
+    coords: [-25, -60, 52]                                        #[30, -2, 48]  
+    radius: 5.0
+    colormap: blue
+    opacity: 0.5
+    render: contour
+
+  lesion:
+    kind: anat
+    source: lesion_native   
+    colormap: green
+    opacity: 0.7
+    render: contour
+
+  efield:
+    kind: field
+    name: magnE
+    colormap: hot     
+    opacity: 0.6
+
+
+# ── Blocks de figures ───────────────────────────────────────
+figures:
+  
+    # B3
+  - name: "B3_brain-ROI-efield_3D_left"
+    type: "3D"
+    vols: [anat_brain, roi, lesion, efield]
+    camera: [30, 15]
+    cohort: false
+    electrodes_cap: "EEG10-10_Neuroelectrics"  # ← activer ici
+
+
+    # B4
+  - name: "B4_brain-efield_3D_right"
+    type: "3D"
+    vols: [anat_brain, roi, lesion, efield]
+    camera: [-30, 15]
+    cohort: false
+    electrodes_cap: "EEG10-10_Neuroelectrics"

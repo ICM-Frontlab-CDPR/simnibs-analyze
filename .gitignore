@@ -14,5 +14,6 @@ outputs/
 *.egg-info*    
 *dist/simnibs*
 __old__
+__tmp__
 __prompting__
 .vscode

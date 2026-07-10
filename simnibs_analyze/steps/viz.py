@@ -69,7 +69,7 @@ _HTML = """\
   const electrodes = {electrodes};
   if (electrodes.length) {{
     try {{
-      nv.addConnectome({{
+      nv.loadConnectome({{
         name: "electrodes",
         nodeColormap: "warm",
         nodeColormapNegative: "",
@@ -82,13 +82,11 @@ _HTML = """\
         edges: []
       }});
     }} catch(err) {{
-      console.warn("electrodes (addConnectome) failed:", err);
+      console.warn("electrodes (loadConnectome) failed:", err);
     }}
   }}
   nv.drawScene();
-  requestAnimationFrame(() => requestAnimationFrame(() => {{
-      window.__ready = true;
-  }}));
+  setTimeout(() => {{ window.__ready = true; }}, 500);
 </script></body></html>"""
 
 
@@ -334,7 +332,7 @@ class SimnibsViz:
         width: int = 800,
         height: int = 600,
         niivue_url: str = "https://unpkg.com/@niivue/niivue/dist/index.js",
-        timeout_ms: int = 6_000,
+        timeout_ms: int = 30_000,
         electrodes: list[dict] | None = None,  # ← nouveau
         electrode_radius: float = 4.0,
     ) -> Path:
@@ -434,6 +432,7 @@ class SimnibsViz:
                     page = browser.new_page(
                         viewport={"width": width, "height": height},
                     )
+                    page.on("console", lambda msg: print("JS:", msg.text))
                     page.goto(f"http://127.0.0.1:{port}/index.html")
                     page.wait_for_function(
                         "window.__ready === true",

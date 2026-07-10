@@ -234,9 +234,18 @@ def render_figure(
 
     if fig.type == "3D":
         az, el = fig.camera
-        # cohort panels are rendered WITHOUT their own colorbar (shared one in montage)
+        elec = (
+            ctx.seg.read_electrodes(cap=fig.electrodes_cap)
+            if fig.electrodes_cap
+            else None
+        )
         return viz.render_3d(
-            vols, out_png, azimuth=az, elevation=el, colorbar=not fig.cohort
+            vols,
+            out_png,
+            azimuth=az,
+            elevation=el,
+            colorbar=not fig.cohort,
+            electrodes=elec,
         )
 
     # -- 2D --

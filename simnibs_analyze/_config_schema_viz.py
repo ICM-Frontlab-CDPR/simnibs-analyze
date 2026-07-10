@@ -136,6 +136,9 @@ class FigureConfig(BaseModel):
     camera: list[float] = Field(
         default_factory=lambda: [225.0, 15.0]
     )  # azimuth, elevation
+    electrodes_cap: str | None = (
+        None  # nom du cap EEG (sans .csv) ; None = pas d'électrodes
+    )
 
     @field_validator("camera")
     @classmethod

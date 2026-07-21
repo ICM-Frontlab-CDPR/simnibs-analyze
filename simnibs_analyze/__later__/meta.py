@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from ._pipeline_io import get_features_csv_path, save_dataframe, save_figure
-from ._logging import get_logger
+from .._logging import get_logger
 
 logger = get_logger(__name__)
 

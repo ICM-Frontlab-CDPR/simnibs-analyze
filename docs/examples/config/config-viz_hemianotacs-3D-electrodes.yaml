@@ -1,3 +1,8 @@
+# ============================================================
+# Example: 3D rendering with lesion overlay + EEG electrode cap
+# Demonstrates: render: contour, source: lesion_native,
+# electrodes_cap, and per-figure camera angles.
+# ============================================================
 # ── Cohorte ─────────────────────────────────────────────────
 subjects:
   ids: [ "0008",  "0009", "0011", "0016", "0023", "0029", "0035","0038",]   # RIGHT HEMI

@@ -117,7 +117,7 @@ scipy==1.17.1
 scooby==0.11.2
 Send2Trash==2.1.0
 -e git+https://github.com/ICM-Frontlab-CDPR/simnibs-analyze.git@244e3263c4314dffe37a76983e1ba8b3ca03bb9d#egg=simnibs_pipeline
-simnibs-reader==0.1.0
+simnibs-reader==0.2.0
 simpervisor==1.0.0
 six==1.17.0
 soupsieve==2.8.4

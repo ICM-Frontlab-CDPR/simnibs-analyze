@@ -1,5 +1,3 @@
-# .zenodo.json — metadata for Zenodo auto-archiving via GitHub releases
-# See: https://developers.zenodo.org/#add-metadata-to-your-github-repository-release
 {
   "title": "simnibs-analyze",
   "description": "Modular pipeline for SimNIBS e-field analysis: NIfTI volume preprocessing, intra/extra-ROI feature extraction, inter/intra-subject analysis and visualisation. Designed for non-invasive brain stimulation studies (TMS/tDCS) with MNI registration via ANTsPy.",
@@ -24,5 +22,6 @@
     "neuroimaging",
     "MNI"
   ],
-  "access_right": "open"
+  "access_right": "open",
+  "version": "0.1.0"
 }

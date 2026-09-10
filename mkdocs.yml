@@ -1,0 +1,75 @@
+site_name: simnibs-analyze
+site_url: https://ICM-Frontlab-CDPR.github.io/simnibs-analyze/
+site_description: Modular pipeline for SimNIBS e-field analysis and visualisation
+
+repo_url: https://github.com/ICM-Frontlab-CDPR/simnibs-analyze
+repo_name: ICM-Frontlab-CDPR/simnibs-analyze
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Dark mode
+    - scheme: slate
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: true
+            show_root_heading: true
+            heading_level: 2
+            members_order: source
+            docstring_style: numpy
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Commands: commands.md
+  - Configuration: configuration.md
+  - API Reference:
+      - Overview: api/index.md
+      - Analysis pipeline: api/run-analyze.md
+      - Visualisation pipeline: api/run-viz.md
+      - Analysis step: api/analysis.md
+      - Visualisation step: api/viz.md
+      - Config schemas: api/config.md
+      - Pipeline I/O: api/io.md

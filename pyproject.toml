@@ -4,19 +4,20 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "simnibs-analyze"
-version = "0.0.2"
+version = "0.1.0"
 description = "Modular pipeline for brain stimulation modelling (tDCS/TMS) with SimNIBS"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 
 dependencies = [
+    "simnibs-reader>=0.2.0",
     "nibabel>=5.0",
     "nilearn>=0.10",
     "numpy>=1.24",
     "pandas>=2.0",
+    "scipy>=1.10",
     "pydantic>=2.0",
-    "pyvista>=0.43",
     "matplotlib>=3.7",
     "pyyaml>=6.0",
     "rich>=13.0",
@@ -28,16 +29,31 @@ dev = [
     "pytest-cov",
     "ruff",
 ]
+docs = [
+    "mkdocs-material",
+    "mkdocstrings[python]",
+    "mkdocs-jupyter",
+]
 citations = [
     "duecredit>=0.9",
 ]
 
 [project.scripts]
-simnibs-analyze = "simnibs_analyze.run:cli"
+simnibs-analyze = "simnibs_analyze.run_analyze:cli"
+simnibs-viz = "simnibs_analyze.run_viz:cli"
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["simnibs_analyze*"]
+exclude = [
+    "simnibs_analyze.__old__*",
+    "simnibs_analyze.__later__*",
+    "simnibs_analyze.__TODO*",
+    "simnibs_analyze.tests*",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["simnibs_analyze/tests"]
 
 [tool.ruff]
 line-length = 100

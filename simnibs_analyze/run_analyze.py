@@ -1,5 +1,5 @@
 """
-run-analyze.py
+run_analyze.py
 --------------
 SimNIBS e-field analysis pipeline, driven by a validated PipelineConfig and
 built entirely on **simnibs-reader** (no direct nibabel/nilearn plumbing here).
@@ -14,8 +14,8 @@ Per (subject × condition × mode) it:
 Then it runs the inter/intra-subject analysis + clustering (steps in
 ``steps/analysis.py``) and writes the summary CSVs.
 
-    python run-analyze.py --config mkdocs/config/config-analyze_htacs.yaml
-    python run-analyze.py --config ... --skip-features   # reuse existing CSV
+    simnibs-analyze --config mkdocs/config/config-analyze_htacs.yaml
+    simnibs-analyze --config ... --skip-features   # reuse existing CSV
 """
 
 from __future__ import annotations
@@ -28,29 +28,12 @@ import pandas as pd
 import simnibs_reader as snr
 from simnibs_reader.nifti.stats import compute_ratio
 
-# config schema + steps live in the package; import defensively so the file can
-# also be run as a plain script from the repo root.
-try:
-    from simnibs_analyze._config_schema_analyze import (
-        PipelineConfig,
-        load_and_validate,
-    )
-    from simnibs_analyze.steps.analysis import Analysis
-    from simnibs_analyze._logging import get_logger
-except ImportError:  # pragma: no cover — fallback when run outside the package
-    import importlib.util
-
-    def _load(mod_name: str, rel_path: str):
-        spec = importlib.util.spec_from_file_location(mod_name, rel_path)
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        return mod
-
-    _schema = _load("_cfg", "simnibs_analyze/_config-schema-analyze.py")
-    PipelineConfig = _schema.PipelineConfig
-    load_and_validate = _schema.load_and_validate
-    from simnibs_analyze.steps.analysis import Analysis  # type: ignore
-    from simnibs_analyze._logging import get_logger  # type: ignore
+from simnibs_analyze._config_schema_analyze import (
+    PipelineConfig,
+    load_and_validate,
+)
+from simnibs_analyze.steps.analysis import Analysis
+from simnibs_analyze._logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -291,7 +274,10 @@ def run_analysis(cfg: PipelineConfig, features_csv: Path) -> None:
 
 
 def main(argv: Iterable[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="SimNIBS e-field analysis pipeline")
+    ap = argparse.ArgumentParser(
+        prog="simnibs-analyze",
+        description="SimNIBS e-field analysis pipeline",
+    )
     ap.add_argument("--config", type=Path, required=True)
     ap.add_argument(
         "--skip-features",
@@ -326,5 +312,10 @@ def main(argv: Iterable[str] | None = None) -> int:
     return 0
 
 
+def cli(argv: Iterable[str] | None = None) -> int:
+    """Entry point for the ``simnibs-analyze`` command."""
+    return main(argv)
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(cli())

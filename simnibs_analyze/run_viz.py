@@ -1,18 +1,18 @@
 """
-run-viz.py
+run_viz.py
 ----------
 Config-driven cohort visualisation for SimNIBS results.
 
-Reads a validated YAML config (see config_schema.py) and, for each figure
-block, generates one figure per subject — then composes the cohort montages
-for the blocks flagged ``cohort: true`` (single shared e-field scale).
+Reads a validated YAML config (see ``_config_schema_viz.py``) and, for each
+figure block, generates one figure per subject — then composes the cohort
+montages for the blocks flagged ``cohort: true`` (single shared e-field scale).
 
-    python run-viz.py config-viz_stimSD.yaml
+    simnibs-viz --config mkdocs/config/config-viz_stimSD.yaml
 """
 
 from __future__ import annotations
 
-import sys
+import argparse
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -20,9 +20,8 @@ import numpy as np
 import nibabel as nib
 from scipy.ndimage import map_coordinates
 
-sys.path.insert(0, "/Users/hippolyte.dreyfus/Documents/simnibs-reader")
 from simnibs_reader import SimulationResult, SegmentationResult
-from simnibs_reader.nifti.efield import EField  # for later TODO REMOVE !!!
+from simnibs_reader.nifti.efield import EField
 
 from simnibs_analyze.steps.viz import SimnibsViz
 from simnibs_analyze._config_schema_viz import (
@@ -363,6 +362,26 @@ def main(config_path: str) -> None:
     print(f"\n✓ All figures saved in {cfg.paths.out_root}")
 
 
+def cli(argv: list[str] | None = None) -> int:
+    """Entry point for the ``simnibs-viz`` command."""
+    ap = argparse.ArgumentParser(
+        prog="simnibs-viz",
+        description="Config-driven cohort visualisation for SimNIBS results",
+    )
+    ap.add_argument(
+        "--config",
+        type=Path,
+        required=True,
+        help="path to the visualisation YAML config",
+    )
+    args = ap.parse_args(argv)
+
+    if not args.config.is_file():
+        ap.error(f"config file not found: {args.config}")
+
+    main(str(args.config))
+    return 0
+
+
 if __name__ == "__main__":
-    cfg_path = sys.argv[1] if len(sys.argv) > 1 else "config-viz_stimSD.yaml"
-    main(cfg_path)
+    raise SystemExit(cli())

@@ -12,9 +12,8 @@ import nibabel as nib
 
 import sys
 
-sys.path.insert(0, "/Users/hippolyte.dreyfus/Documents/simnibs-reader")
 from simnibs_reader import SimulationResult, SegmentationResult
-from simnibs_reader.nifti.efield import EField  # TODO REMOVE !!!
+from simnibs_reader.nifti.efield import EField
 
 from scipy.ndimage import map_coordinates
 

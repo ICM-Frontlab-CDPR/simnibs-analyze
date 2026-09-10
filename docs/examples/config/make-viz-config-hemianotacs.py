@@ -7,19 +7,13 @@ Generates anatomical + e-field figures per subject with cohort-locked scale.
 
 from pathlib import Path
 
-import numpy as np
 import nibabel as nib
-
-import sys
-
-from simnibs_reader import SimulationResult, SegmentationResult
+import numpy as np
+from scipy.ndimage import map_coordinates
+from simnibs_reader import SegmentationResult, SimulationResult
 from simnibs_reader.nifti.efield import EField
 
-from scipy.ndimage import map_coordinates
-
-
 from simnibs_analyze.steps.viz import SimnibsViz
-
 
 # ── Config ───────────────────────────────────────────────────────────
 

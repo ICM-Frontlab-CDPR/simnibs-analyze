@@ -21,10 +21,9 @@ Design
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-
 
 # ─────────────────────────────────────────────────────────────────────
 # Layers (the `vols` registry)
@@ -61,7 +60,7 @@ class RoiVol(_LayerBase):
     colormap: str = "blue"
 
     @model_validator(mode="after")
-    def _exactly_one_source(self) -> "RoiVol":
+    def _exactly_one_source(self) -> RoiVol:
         n = sum(x is not None for x in (self.atlas, self.coords, self.file))
         if n != 1:
             raise ValueError(
@@ -85,7 +84,7 @@ class FieldVol(_LayerBase):
     # for later ! space: mni or native
 
 
-VolSpec = Annotated[Union[AnatVol, RoiVol, FieldVol], Field(discriminator="kind")]
+VolSpec = Annotated[AnatVol | RoiVol | FieldVol, Field(discriminator="kind")]
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -148,7 +147,7 @@ class FigureConfig(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def _validate_cut(self) -> "FigureConfig":
+    def _validate_cut(self) -> FigureConfig:
         # cut_coords et cut_center_vol sont mutuellement exclusifs
         if self.cut_coords is not None and self.cut_center_vol is not None:
             raise ValueError(
@@ -193,7 +192,7 @@ class FieldsScale(BaseModel):
     # for later ! space: mni or native
 
     @model_validator(mode="after")
-    def _ordered(self) -> "FieldsScale":
+    def _ordered(self) -> FieldsScale:
         if self.min >= self.max:
             raise ValueError(
                 f"fields_scale: min ({self.min}) must be < max ({self.max})."
@@ -211,7 +210,7 @@ class VizConfig(BaseModel):
     figures: list[FigureConfig]
 
     @model_validator(mode="after")
-    def _references_exist(self) -> "VizConfig":
+    def _references_exist(self) -> VizConfig:
         known = set(self.vols)
         for fig in self.figures:
             missing = [v for v in fig.vols if v not in known]

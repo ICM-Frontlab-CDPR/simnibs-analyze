@@ -92,7 +92,7 @@ def print_citations() -> None:
     """Print dependency citation notices to stdout."""
     # Try duecredit first
     try:
-        from duecredit import due, Doi, BibTeX  # noqa: F401
+        from duecredit import BibTeX, Doi, due  # noqa: F401
 
         for entry in _CITATIONS:
             due.cite(

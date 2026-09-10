@@ -10,8 +10,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-
 import simnibs_analyze
 
 REPO_ROOT = Path(__file__).resolve().parents[2]

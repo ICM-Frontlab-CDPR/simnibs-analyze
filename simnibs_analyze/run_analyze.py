@@ -21,8 +21,8 @@ Then it runs the inter/intra-subject analysis + clustering (steps in
 from __future__ import annotations
 
 import argparse
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 import pandas as pd
 import simnibs_reader as snr
@@ -32,8 +32,8 @@ from simnibs_analyze._config_schema_analyze import (
     PipelineConfig,
     load_and_validate,
 )
-from simnibs_analyze.steps.analysis import Analysis
 from simnibs_analyze._logging import get_logger
+from simnibs_analyze.steps.analysis import Analysis
 
 logger = get_logger(__name__)
 

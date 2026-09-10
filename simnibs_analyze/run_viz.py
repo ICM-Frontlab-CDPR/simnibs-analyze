@@ -16,23 +16,21 @@ import argparse
 from dataclasses import dataclass, field
 from pathlib import Path
 
-import numpy as np
 import nibabel as nib
+import numpy as np
 from scipy.ndimage import map_coordinates
-
-from simnibs_reader import SimulationResult, SegmentationResult
+from simnibs_reader import SegmentationResult, SimulationResult
 from simnibs_reader.nifti.efield import EField
 
-from simnibs_analyze.steps.viz import SimnibsViz
 from simnibs_analyze._config_schema_viz import (
-    VizConfig,
-    FigureConfig,
     AnatVol,
-    RoiVol,
     FieldVol,
+    FigureConfig,
+    RoiVol,
+    VizConfig,
     load_config,
 )
-
+from simnibs_analyze.steps.viz import SimnibsViz
 
 # ─────────────────────────────────────────────────────────────────────
 # Helpers — MNI ↔ native warping (Conform2MNI_nonl, cf. debug_warp.py)

@@ -52,7 +52,7 @@ class _PipelineLogger:
     def _emit(self, kind: str, msg: str) -> None:
         if getattr(logging, kind.upper()) < self.level:
             return
-        ts = datetime.datetime.now().strftime("%H:%M:%S")
+        ts = datetime.datetime.now().strftime("%H:%M:%S")  # noqa: DTZ005 — local console timestamp
         name_part = f"[name]{self.name}[/]  " if self.name else ""
         _get_console().print(f"[asctime]{ts}[/]  {name_part}[{kind}]{msg}[/]")
 

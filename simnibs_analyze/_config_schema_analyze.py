@@ -9,10 +9,9 @@ Usage (standalone check):
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated, Literal, Optional, Union
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
-
 
 # ---------------------------------------------------------------------------
 # ROI definitions  (target_generation.rois)
@@ -24,7 +23,7 @@ class SphereROI(BaseModel):
 
     method: Literal["sphere"]
     coords: Annotated[list[float], Field(min_length=3, max_length=3)]
-    folder_pattern: Optional[str] = None
+    folder_pattern: str | None = None
     """Glob fragment used to find SimNIBS output folders for this ROI.
     If omitted, the ROI key name is used (e.g. 'fef' → 'simulation_simulation_fef_*').
     Set this when the folder name differs from the ROI key (e.g. ROI 'ips-left' but
@@ -36,13 +35,13 @@ class AtlasROI(BaseModel):
 
     method: Literal["atlas"]
     atlas: Literal["harvard-oxford", "aal", "destrieux"]
-    regions: Union[str, list[str]]
-    folder_pattern: Optional[str] = None
+    regions: str | list[str]
+    folder_pattern: str | None = None
     """See SphereROI.folder_pattern."""
 
 
 # Discriminated union: Pydantic inspects the `method` field to pick the right model.
-ROIDef = Annotated[Union[SphereROI, AtlasROI], Field(discriminator="method")]
+ROIDef = Annotated[SphereROI | AtlasROI, Field(discriminator="method")]
 
 
 # ---------------------------------------------------------------------------
@@ -67,13 +66,13 @@ class TargetGenerationConfig(BaseModel):
 
 class PathsConfig(BaseModel):
     # ── Nouvelles clés (préféré) ───────────────────────────────────────────
-    simnibs_preps: Optional[Path] = None
+    simnibs_preps: Path | None = None
     """Dossier des résultats charm/segmentation  →  {sub}/m2m_{sub}/"""
-    simnibs_simu: Optional[Path] = None
+    simnibs_simu: Path | None = None
     """Dossier des résultats de simulation/optimisation  →  {sub}/simulations/"""
 
     # ── Compatibilité ascendante (ancien pipeline, un seul dossier racine) ─
-    simnibs_output: Optional[Path] = None
+    simnibs_output: Path | None = None
     """Deprecated : utiliser simnibs_preps + simnibs_simu."""
 
     # ── Sorties pipeline ──────────────────────────────────────────────────
@@ -81,11 +80,11 @@ class PathsConfig(BaseModel):
     """Dossier de sortie : CSVs, figures, statistiques."""
 
     # ── Templates ─────────────────────────────────────────────────────────
-    mni_template: Optional[Path] = None
-    mni_brain_mask: Optional[Path] = None
+    mni_template: Path | None = None
+    mni_brain_mask: Path | None = None
 
     @model_validator(mode="after")
-    def _validate_input_paths(self) -> "PathsConfig":
+    def _validate_input_paths(self) -> PathsConfig:
         split = self.simnibs_preps is not None and self.simnibs_simu is not None
         legacy = self.simnibs_output is not None
         if not split and not legacy:
@@ -99,7 +98,7 @@ class PathsConfig(BaseModel):
 class PreprocessingConfig(BaseModel):
     smooth_fwhm: float = Field(default=2.0, ge=0)
     outlier_method: Literal["iqr", "zscore"] = "iqr"
-    portion: Optional[float] = Field(default=None, gt=0, le=1)
+    portion: float | None = Field(default=None, gt=0, le=1)
 
 
 class FeatureExtractionConfig(BaseModel):
@@ -141,7 +140,7 @@ class PipelineConfig(BaseModel):
     analysis: AnalysisConfig = AnalysisConfig()
 
     @model_validator(mode="after")
-    def _stim_conditions_match_rois(self) -> "PipelineConfig":
+    def _stim_conditions_match_rois(self) -> PipelineConfig:
         """Every stim_condition must have a matching ROI key (used to find the mask file)."""
         roi_names = set(self.target_generation.rois)
         missing = [c for c in self.stim_conditions if c not in roi_names]
@@ -187,6 +186,6 @@ if __name__ == "__main__":
             f"✓ Config valid — {len(cfg.subjects)} subject(s), "
             f"{len(cfg.target_generation.rois)} ROI(s), space={cfg.space}"
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — CLI reports any validation failure
         print(f"✗ Invalid config:\n{e}", file=sys.stderr)
         sys.exit(1)

@@ -5,13 +5,13 @@ Inter/Intra-subject analysis from per-subject CSVs.
 from __future__ import annotations
 
 import argparse
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 import numpy as np
 import pandas as pd
 
-from .._pipeline_io import load_csvs, check_output, save_dataframe
+from .._pipeline_io import check_output, load_csvs, save_dataframe
 
 
 class Analysis:

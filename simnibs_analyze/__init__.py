@@ -16,13 +16,13 @@ from __future__ import annotations
 __version__ = "0.1.0"
 
 __all__ = [
+    "__version__",
+    "_citations",
+    "_config_schema_analyze",
+    "_config_schema_viz",
+    "_logging",
+    "_pipeline_io",
     "run_analyze",
     "run_viz",
     "steps",
-    "_config_schema_analyze",
-    "_config_schema_viz",
-    "_pipeline_io",
-    "_logging",
-    "_citations",
-    "__version__",
 ]

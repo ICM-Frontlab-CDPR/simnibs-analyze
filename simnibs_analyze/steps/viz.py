@@ -18,10 +18,11 @@ import shutil
 import socketserver
 import tempfile
 import threading
+from collections.abc import Sequence
 from contextlib import contextmanager
 from functools import partial
 from pathlib import Path
-from typing import Dict, List, Sequence, Tuple
+from typing import ClassVar
 
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
@@ -221,8 +222,12 @@ class SimnibsViz:
     # 2D — nilearn wrappers
     # =================================================================
 
-    _CMAP_ALIASES = {"blue": "Blues", "red": "Reds", "green": "Greens"}
-    _CMAP_TO_CONTOUR_COLOR = {"Blues": "blue", "Reds": "red", "Greens": "green"}
+    _CMAP_ALIASES: ClassVar[dict[str, str]] = {
+        "blue": "Blues", "red": "Reds", "green": "Greens"
+    }
+    _CMAP_TO_CONTOUR_COLOR: ClassVar[dict[str, str]] = {
+        "Blues": "blue", "Reds": "red", "Greens": "green"
+    }
 
     @classmethod
     def _cmap(cls, name: str) -> str:
@@ -310,7 +315,7 @@ class SimnibsViz:
             # best-effort: paint the whole figure canvas with bg_color
             try:
                 disp.frame_axes.figure.set_facecolor(self.bg_color)
-            except Exception:  # noqa: BLE001 — display internals vary by version
+            except Exception:  # noqa: BLE001, S110 — display internals vary by version
                 pass
             disp.savefig(str(output), dpi=200)
             logger.info(f"Saved 2D: {output}")
@@ -423,25 +428,24 @@ class SimnibsViz:
                 )
             )
 
-            with _serve(tmp) as port:
-                with sync_playwright() as p:
-                    browser = p.chromium.launch(
-                        headless=True,
-                        args=["--use-gl=angle", "--use-angle=swiftshader"],
-                    )
-                    page = browser.new_page(
-                        viewport={"width": width, "height": height},
-                    )
-                    page.on("console", lambda msg: print("JS:", msg.text))
-                    page.goto(f"http://127.0.0.1:{port}/index.html")
-                    page.wait_for_function(
-                        "window.__ready === true",
-                        timeout=timeout_ms,
-                    )
-                    with page.expect_download() as dl:
-                        page.evaluate("nv.saveScene('scene.png')")
-                    dl.value.save_as(str(output))
-                    browser.close()
+            with _serve(tmp) as port, sync_playwright() as p:
+                browser = p.chromium.launch(
+                    headless=True,
+                    args=["--use-gl=angle", "--use-angle=swiftshader"],
+                )
+                page = browser.new_page(
+                    viewport={"width": width, "height": height},
+                )
+                page.on("console", lambda msg: print("JS:", msg.text))
+                page.goto(f"http://127.0.0.1:{port}/index.html")
+                page.wait_for_function(
+                    "window.__ready === true",
+                    timeout=timeout_ms,
+                )
+                with page.expect_download() as dl:
+                    page.evaluate("nv.saveScene('scene.png')")
+                dl.value.save_as(str(output))
+                browser.close()
 
         logger.info(f"Saved 3D: {output}")
         return output
@@ -562,7 +566,7 @@ class SimnibsViz:
 
     def efields_histograms(
         self,
-        data_by_subject: Dict[str, List[Tuple[str, str, Path, Path]]],
+        data_by_subject: dict[str, list[tuple[str, str, Path, Path]]],
         region: str = "intra",
         space: str = "mni",
     ) -> None:

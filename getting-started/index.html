@@ -459,6 +459,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="simnibs-analyze — features and statistics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-configs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example configs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -470,6 +487,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="simnibs-viz — figures and cohort montages">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-configs_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example configs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
       </ul>
@@ -478,43 +512,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#writing-the-config" class="md-nav__link">
+  <a href="#checking-a-config-before-running" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Writing the config
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#exit-codes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Exit codes
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#running-from-a-source-checkout" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Running from a source checkout
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#development" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Development
+        Checking a config before running
       
     </span>
   </a>
@@ -625,6 +626,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="simnibs-analyze — features and statistics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-configs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example configs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -636,6 +654,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="simnibs-viz — figures and cohort montages">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-configs_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example configs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
       </ul>
@@ -644,43 +679,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#writing-the-config" class="md-nav__link">
+  <a href="#checking-a-config-before-running" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Writing the config
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#exit-codes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Exit codes
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#running-from-a-source-checkout" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Running from a source checkout
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#development" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Development
+        Checking a config before running
       
     </span>
   </a>
@@ -721,7 +723,10 @@ which handles all NIfTI reading and ROI extraction.</p>
 </ul>
 <h2 id="the-two-commands">The two commands<a class="headerlink" href="#the-two-commands" title="Permanent link">&para;</a></h2>
 <p>Installing the package puts two commands on your <code>PATH</code>. Both are driven
-entirely by a YAML config file passed with <code>--config</code>.</p>
+entirely by a YAML config file passed with <code>--config</code>. The two schemas are
+<strong>different and not interchangeable</strong> — see <a href="../configuration/">Configuration</a>
+for every key.</p>
+<hr />
 <h3 id="simnibs-analyze-features-and-statistics"><code>simnibs-analyze</code> — features and statistics<a class="headerlink" href="#simnibs-analyze-features-and-statistics" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>simnibs-analyze<span class="w"> </span>--config<span class="w"> </span>config-analyze.yaml
 </code></pre></div>
@@ -762,6 +767,13 @@ analysis and clustering, writing summary CSVs to <code>paths.results_dir</code>.
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>simnibs-analyze<span class="w"> </span>--config<span class="w"> </span>config-analyze.yaml<span class="w"> </span>--skip-features
 </code></pre></div>
 </div>
+<h4 id="example-configs">Example configs<a class="headerlink" href="#example-configs" title="Permanent link">&para;</a></h4>
+<p><strong>Sphere ROIs, native space, simulation + optimization</strong> — the fullest example,
+with <code>folder_pattern</code> and an atlas ROI:</p>
+<p><a class="md-button md-button--primary" download="download" href="../examples/config/config-analyze_htacs.yaml"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7z"/></svg></span> config-analyze_htacs.yaml</a></p>
+<p><strong>Single ROI, MNI space</strong> — a minimal starting point:</p>
+<p><a class="md-button" download="download" href="../examples/config/config-analyze_stimSD.yaml"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7z"/></svg></span> config-analyze_stimSD.yaml</a></p>
+<hr />
 <h3 id="simnibs-viz-figures-and-cohort-montages"><code>simnibs-viz</code> — figures and cohort montages<a class="headerlink" href="#simnibs-viz-figures-and-cohort-montages" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>simnibs-viz<span class="w"> </span>--config<span class="w"> </span>config-viz.yaml
 </code></pre></div>
@@ -786,48 +798,21 @@ shared e-field colour scale.</p>
 </table>
 <p>Output goes to <code>paths.out_root</code>, one directory per <code>{subject}_{simulation}</code>,
 with montages in <code>_cohort/</code>.</p>
-<h2 id="writing-the-config">Writing the config<a class="headerlink" href="#writing-the-config" title="Permanent link">&para;</a></h2>
-<p>The two commands take <strong>different, non-interchangeable</strong> config schemas. See
-<a href="../configuration/">Configuration</a> for every key, and the ready-made examples in
-<code>docs/examples/config/</code> of the repository.</p>
-<h2 id="exit-codes">Exit codes<a class="headerlink" href="#exit-codes" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Code</th>
-<th>Meaning</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>0</code></td>
-<td>Completed</td>
-</tr>
-<tr>
-<td><code>1</code></td>
-<td>Runtime failure (e.g. <code>--skip-features</code> but the CSV is missing)</td>
-</tr>
-<tr>
-<td><code>2</code></td>
-<td>Bad invocation — missing <code>--config</code>, or the file does not exist</td>
-</tr>
-</tbody>
-</table>
-<h2 id="running-from-a-source-checkout">Running from a source checkout<a class="headerlink" href="#running-from-a-source-checkout" title="Permanent link">&para;</a></h2>
-<p>Both modules are importable, so you can run them without installing:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>python<span class="w"> </span>-m<span class="w"> </span>simnibs_analyze.run_analyze<span class="w"> </span>--config<span class="w"> </span>config-analyze.yaml
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>python<span class="w"> </span>-m<span class="w"> </span>simnibs_analyze.run_viz<span class="w">     </span>--config<span class="w"> </span>config-viz.yaml
+<h4 id="example-configs_1">Example configs<a class="headerlink" href="#example-configs_1" title="Permanent link">&para;</a></h4>
+<p><strong>2D ortho and parallel slices, cohort montages</strong> — the reference example:</p>
+<p><a class="md-button md-button--primary" download="download" href="../examples/config/config-viz_stimSD.yaml"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7z"/></svg></span> config-viz_stimSD.yaml</a></p>
+<p><strong>3D rendering with lesion overlay and EEG electrode cap</strong> — covers
+<code>electrodes_cap</code>, <code>render: contour</code> and per-figure camera angles:</p>
+<p><a class="md-button" download="download" href="../examples/config/config-viz_hemianotacs-3D-electrodes.yaml"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7z"/></svg></span> config-viz_hemianotacs-3D-electrodes.yaml</a></p>
+<p><strong>Lesion overlays across a cohort</strong>:</p>
+<p><a class="md-button" download="download" href="../examples/config/config-viz_htacs.yaml"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7z"/></svg></span> config-viz_htacs.yaml</a></p>
+<hr />
+<h2 id="checking-a-config-before-running">Checking a config before running<a class="headerlink" href="#checking-a-config-before-running" title="Permanent link">&para;</a></h2>
+<p>Validate the file without launching the pipeline:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>python<span class="w"> </span>-m<span class="w"> </span>simnibs_analyze._config_schema_analyze<span class="w"> </span>--config<span class="w"> </span>my-config.yaml
 </code></pre></div>
-<h2 id="development">Development<a class="headerlink" href="#development" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/ICM-Frontlab-CDPR/simnibs-analyze.git
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nb">cd</span><span class="w"> </span>simnibs-analyze
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">".[dev]"</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>pytest
-</code></pre></div>
-<p>Serve the documentation locally:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">".[docs]"</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>mkdocs<span class="w"> </span>serve
-</code></pre></div>
+<p>It prints a one-line summary on success, or the validation error and exit
+code <code>1</code> on failure.</p>
 
 
 

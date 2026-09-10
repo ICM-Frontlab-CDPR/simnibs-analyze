@@ -1,0 +1,129 @@
+# ============================================================
+# config-viz_hemianotACS.yaml
+# ------------------------------------------------------------
+# Config viz pour le dataset hemianotACS (stimulation FEF).
+# Calqué sur config-viz_stimSD.yaml.
+# ============================================================
+
+# ── Cohorte ─────────────────────────────────────────────────
+subjects:
+  ids: ["0001", "0002", "0008", "0009", "0011", "0014","0015",
+        "0016","0018","0021","0023","0024","0026","0027",
+        "0029","0035","0037","0038","0040","0041"]
+
+  stim_pattern: "fef"
+  # TODO gérer les groupes de sujets left and right (hémianopsie latéralisée)
+
+paths:
+  seg_base: "/Volumes/levy/raw/valerocabre/hemianotACS/Data/derivatives/mri/1-simnibs-preps-maskSS"
+  sim_base: "/Volumes/levy/raw/valerocabre/hemianotACS/Data/derivatives/mri/2-simnibs-sim-ips-fef"
+  out_root: "/Volumes/levy/raw/valerocabre/hemianotACS/Analysis/simnibs-figures"
+
+# ── Échelle e-field (verrouillée pour toute la cohorte) ─────
+fields_scale:
+  min: 0.05
+  max: 0.4
+  # for later ! symmetric scale
+  # for later ! space: mni or native
+
+# ── Registre de layers réutilisables (référencés par nom) ───
+vols:
+
+  anat_skull:
+    kind: anat
+    source: t1
+    colormap: gray
+    opacity: 0.5
+
+  anat_brain:
+    kind: anat
+    source: brain_mask
+    colormap: gray
+    opacity: 0.5
+
+  # FEF : PAS un label Harvard-Oxford → défini par coordonnées MNI (sphère).
+  # ⚠ Coordonnée FEF approximative + latéralité à fixer (étude hémianopsie).
+  #   Gauche ~ [-30, -2, 48] ; droite ~ [30, -2, 48] (Paus 1996 / Amiez).
+  roi_fef:
+    kind: roi
+    coords: [30, -2, 48]   # MNI ; le script envoie en natif
+    radius: 10.0
+    colormap: blue
+    opacity: 0.5
+
+  efield:
+    kind: field
+    name: magnE
+    colormap: hot
+    opacity: 0.6
+
+  lesion:
+    kind: anat
+    source: lesion_native   # résolu par sujet via seg.lesion_native
+    colormap: red
+    opacity: 0.7
+
+# ── Blocks de figures ───────────────────────────────────────
+figures:
+
+  # A2 — anat ortho (T1 + ROI FEF), 2D
+  - name: "A2_anat_FEF_ortho"
+    type: "2D"
+    subtype: "ortho"
+    vols: [anat_brain, roi_fef]
+    cut_coords: [30, -2, 48]   # MNI ; le script envoie en natif
+    cohort: true
+    # for later : display electrodes
+    # TODO (A2) : rajout du ROI en contour plutôt qu'en fill
+
+  # B2 — e-field mosaic axial (coupes parallèles), 2D
+  - name: "B2_efield_mosaic_axial"
+    type: "2D"
+    subtype: "parallel"
+    vols: [anat_brain, roi_fef, efield]
+    axis: "z"
+    cut_center: 25   # centre du bloc de coupes (MNI z mm) — ~niveau cortex moteur
+    half_width: 35   # demi-largeur : coupes de z=-10 à z=60
+    spacing: 8       # mm entre coupes (~9 coupes)
+    cohort: true
+    montage_ncols: 1        # une ligne par sujet dans la grille cohorte
+    montage_panel_h: 3.0    # hauteur panel en pouces (largeur auto-calculée)
+      
+
+  # A1 — brain 3D + ROI FEF (3/4 left)
+  - name: "A1_brain_3d_34left"
+    type: "3D"
+    vols: [anat_brain, roi_fef]
+    camera: [0, 15]
+    cohort: true
+    if_exists: overwrite
+    # TODO (A1) : ne pas montrer le mask de l'autre hémisphère
+
+  # B1 — e-field 3D (3/4 left)
+  - name: "B1_efield_3d_34left"
+    type: "3D"
+    vols: [anat_brain, roi_fef, efield]
+    camera: [0, 15]
+    cohort: true
+    # TODO (B) : rajouter les positions d'électrodes
+    # TODO (B1) : meilleure saturation e-field (échelle) — côté SimnibsViz
+
+  # ── Figures avec lésion ──────────────────────────────────────────────────
+  - name: "C1_structural_lesion_ortho"
+    type: "2D"
+    subtype: "ortho"
+    vols: [anat_brain, lesion]
+    cohort: true
+
+  - name: "A1_structural_lesion_34left"
+    type: "3D"
+    vols: [anat_brain, lesion]
+    camera: [0, 15]  # LATER TODO possibility to pass array
+    cohort: true
+    # montage_ncols: 3  # number of subjects per row (default = auto)
+    # TODO
+    # gif:
+    #   diff_on: [lesion] #[lesion,fef]
+
+
+# stats_figures (later)

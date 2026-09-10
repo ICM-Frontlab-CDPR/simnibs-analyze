@@ -19,7 +19,11 @@ You need SimNIBS outputs already computed:
 ## The two commands
 
 Installing the package puts two commands on your `PATH`. Both are driven
-entirely by a YAML config file passed with `--config`.
+entirely by a YAML config file passed with `--config`. The two schemas are
+**different and not interchangeable** — see [Configuration](configuration.md)
+for every key.
+
+---
 
 ### `simnibs-analyze` — features and statistics
 
@@ -46,6 +50,19 @@ analysis and clustering, writing summary CSVs to `paths.results_dir`.
     simnibs-analyze --config config-analyze.yaml --skip-features
     ```
 
+#### Example configs
+
+**Sphere ROIs, native space, simulation + optimization** — the fullest example,
+with `folder_pattern` and an atlas ROI:
+
+[:material-download: config-analyze_htacs.yaml](examples/config/config-analyze_htacs.yaml){ .md-button .md-button--primary download }
+
+**Single ROI, MNI space** — a minimal starting point:
+
+[:material-download: config-analyze_stimSD.yaml](examples/config/config-analyze_stimSD.yaml){ .md-button download }
+
+---
+
 ### `simnibs-viz` — figures and cohort montages
 
 ```bash
@@ -63,41 +80,30 @@ shared e-field colour scale.
 Output goes to `paths.out_root`, one directory per `{subject}_{simulation}`,
 with montages in `_cohort/`.
 
-## Writing the config
+#### Example configs
 
-The two commands take **different, non-interchangeable** config schemas. See
-[Configuration](configuration.md) for every key, and the ready-made examples in
-`docs/examples/config/` of the repository.
+**2D ortho and parallel slices, cohort montages** — the reference example:
 
-## Exit codes
+[:material-download: config-viz_stimSD.yaml](examples/config/config-viz_stimSD.yaml){ .md-button .md-button--primary download }
 
-| Code | Meaning |
-|---|---|
-| `0` | Completed |
-| `1` | Runtime failure (e.g. `--skip-features` but the CSV is missing) |
-| `2` | Bad invocation — missing `--config`, or the file does not exist |
+**3D rendering with lesion overlay and EEG electrode cap** — covers
+`electrodes_cap`, `render: contour` and per-figure camera angles:
 
-## Running from a source checkout
+[:material-download: config-viz_hemianotacs-3D-electrodes.yaml](examples/config/config-viz_hemianotacs-3D-electrodes.yaml){ .md-button download }
 
-Both modules are importable, so you can run them without installing:
+**Lesion overlays across a cohort**:
 
-```bash
-python -m simnibs_analyze.run_analyze --config config-analyze.yaml
-python -m simnibs_analyze.run_viz     --config config-viz.yaml
-```
+[:material-download: config-viz_htacs.yaml](examples/config/config-viz_htacs.yaml){ .md-button download }
 
-## Development
+---
+
+## Checking a config before running
+
+Validate the file without launching the pipeline:
 
 ```bash
-git clone https://github.com/ICM-Frontlab-CDPR/simnibs-analyze.git
-cd simnibs-analyze
-pip install -e ".[dev]"
-pytest
+python -m simnibs_analyze._config_schema_analyze --config my-config.yaml
 ```
 
-Serve the documentation locally:
-
-```bash
-pip install -e ".[docs]"
-mkdocs serve
-```
+It prints a one-line summary on success, or the validation error and exit
+code `1` on failure.

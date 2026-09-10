@@ -33,7 +33,7 @@ simnibs-analyze --config config-analyze.yaml   # features + statistics
 simnibs-viz     --config config-viz.yaml       # figures + cohort montages
 ```
 
-See [Commands](commands.md) for the full argument reference.
+See [Getting Started](getting-started.md) for the full argument reference.
 
 ---
 

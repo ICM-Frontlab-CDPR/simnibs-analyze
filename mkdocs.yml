@@ -63,13 +63,4 @@ plugins:
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
-  - Commands: commands.md
   - Configuration: configuration.md
-  - API Reference:
-      - Overview: api/index.md
-      - Analysis pipeline: api/run-analyze.md
-      - Visualisation pipeline: api/run-viz.md
-      - Analysis step: api/analysis.md
-      - Visualisation step: api/viz.md
-      - Config schemas: api/config.md
-      - Pipeline I/O: api/io.md

@@ -85,3 +85,19 @@ Both modules are importable, so you can run them without installing:
 python -m simnibs_analyze.run_analyze --config config-analyze.yaml
 python -m simnibs_analyze.run_viz     --config config-viz.yaml
 ```
+
+## Development
+
+```bash
+git clone https://github.com/ICM-Frontlab-CDPR/simnibs-analyze.git
+cd simnibs-analyze
+pip install -e ".[dev]"
+pytest
+```
+
+Serve the documentation locally:
+
+```bash
+pip install -e ".[docs]"
+mkdocs serve
+```

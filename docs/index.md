@@ -52,6 +52,17 @@ summary CSVs to `results_dir`.
 
 ---
 
+## What it covers
+
+- **Target definition** — ROI masks from MNI coordinates or atlas parcels (sphere, atlas-based)
+- **E-field preparation** — smoothing, masking, intra/extra-ROI decomposition
+- **Feature extraction** — mean, median, std, min, max and focality ratio, per subject and condition
+- **Group analysis** — inter-subject summaries, intra-subject contrasts
+- **Clustering** — `specific`/`diffuse` × `high`/`low` labelling from the focality ratio
+- **Visualisation** — 2D overlays, 3D surface renders, lesion overlays, EEG electrode caps, cohort montages
+
+---
+
 ## Relationship to simnibs-reader
 
 | Package | Responsibility |
@@ -61,3 +72,22 @@ summary CSVs to `results_dir`.
 
 No direct `nibabel` / `nilearn` plumbing lives in the pipeline code — it all goes
 through the reader.
+
+---
+
+## Citation
+
+If you use this pipeline in your research, please cite it via the
+[`CITATION.cff`](https://github.com/ICM-Frontlab-CDPR/simnibs-analyze/blob/main/CITATION.cff)
+file in the repository.
+
+The pipeline depends on several open-source tools whose references are printed
+at the start of each run. For a machine-readable BibTeX summary:
+
+```bash
+pip install "simnibs-analyze[citations]"
+DUECREDIT_ENABLE=1 simnibs-analyze --config config.yaml
+python -m duecredit summary --format bibtex
+```
+
+Key tools to cite: SimNIBS, nilearn, nibabel, NumPy, pandas, matplotlib.

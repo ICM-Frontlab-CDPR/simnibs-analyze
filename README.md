@@ -54,13 +54,13 @@ montages for blocks flagged `cohort: true`, on a single shared e-field scale.
 2D orthogonal and parallel-slice views, 3D surface renders, optional EEG
 electrode caps.
 
-Ready-made configs live in [`mkdocs/config/`](mkdocs/config/).
+Ready-made configs live in [`docs/examples/config/`](docs/examples/config/).
 
 ## Quick start
 
 ```bash
 pip install simnibs-analyze
-cp mkdocs/config/config-analyze_htacs.yaml my-config.yaml
+cp docs/examples/config/config-analyze_htacs.yaml my-config.yaml
 # edit paths, subjects, stim_conditions and ROIs
 simnibs-analyze --config my-config.yaml
 ```

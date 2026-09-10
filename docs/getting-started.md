@@ -67,7 +67,7 @@ with montages in `_cohort/`.
 
 The two commands take **different, non-interchangeable** config schemas. See
 [Configuration](configuration.md) for every key, and the ready-made examples in
-`mkdocs/config/` of the repository.
+`docs/examples/config/` of the repository.
 
 ## Exit codes
 

@@ -86,15 +86,6 @@ with montages in `_cohort/`.
 
 [:material-download: config-viz_stimSD.yaml](examples/config/config-viz_stimSD.yaml){ .md-button .md-button--primary download }
 
-**3D rendering with lesion overlay and EEG electrode cap** — covers
-`electrodes_cap`, `render: contour` and per-figure camera angles:
-
-[:material-download: config-viz_hemianotacs-3D-electrodes.yaml](examples/config/config-viz_hemianotacs-3D-electrodes.yaml){ .md-button download }
-
-**Lesion overlays across a cohort**:
-
-[:material-download: config-viz_htacs.yaml](examples/config/config-viz_htacs.yaml){ .md-button download }
-
 ---
 
 ## Checking a config before running

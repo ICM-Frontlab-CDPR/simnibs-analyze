@@ -798,13 +798,23 @@ shared e-field colour scale.</p>
 </table>
 <p>Output goes to <code>paths.out_root</code>, one directory per <code>{subject}_{simulation}</code>,
 with montages in <code>_cohort/</code>.</p>
+<div class="admonition warning">
+<p class="admonition-title">3D figures need Playwright</p>
+<p><code>type: 3D</code> figures are rendered by driving a headless browser over a NiiVue
+WebGL scene. That needs two steps, and the second is easy to forget — it
+downloads the browser itself:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"simnibs-analyze[viz3d]"</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>playwright<span class="w"> </span>install<span class="w"> </span>chromium
+</code></pre></div>
+<p>2D figures have no such requirement.</p>
+</div>
 <h4 id="example-configs_1">Example configs<a class="headerlink" href="#example-configs_1" title="Permanent link">&para;</a></h4>
 <p><strong>2D ortho and parallel slices, cohort montages</strong> — the reference example:</p>
 <p><a class="md-button md-button--primary" download="download" href="../examples/config/config-viz_stimSD.yaml"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7z"/></svg></span> config-viz_stimSD.yaml</a></p>
 <hr />
 <h2 id="checking-a-config-before-running">Checking a config before running<a class="headerlink" href="#checking-a-config-before-running" title="Permanent link">&para;</a></h2>
 <p>Validate the file without launching the pipeline:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>python<span class="w"> </span>-m<span class="w"> </span>simnibs_analyze._config_schema_analyze<span class="w"> </span>--config<span class="w"> </span>my-config.yaml
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>python<span class="w"> </span>-m<span class="w"> </span>simnibs_analyze._config_schema_analyze<span class="w"> </span>--config<span class="w"> </span>my-config.yaml
 </code></pre></div>
 <p>It prints a one-line summary on success, or the validation error and exit
 code <code>1</code> on failure.</p>

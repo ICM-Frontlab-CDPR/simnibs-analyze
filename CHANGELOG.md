@@ -4,6 +4,16 @@ All notable changes to **simnibs-analyze** are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] — 2026-09-14
+
+### Fixed
+- **`playwright` was imported but never declared as a dependency**, so every
+  `type: 3D` figure failed with `ModuleNotFoundError` on a clean install. It is
+  now an optional extra, `simnibs-analyze[viz3d]`, and the import error explains
+  both required steps — the `playwright install chromium` browser download is
+  easy to miss. A test now scans for lazy imports inside function bodies, which
+  is how this one escaped the dependency audit in 0.1.0.
+
 ## [0.1.0] — 2026-09-09
 
 First release built on top of the published

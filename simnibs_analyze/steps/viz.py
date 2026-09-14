@@ -389,7 +389,17 @@ class SimnibsViz:
                 for v in volumes
             ]
 
-        from playwright.sync_api import sync_playwright
+        try:
+            from playwright.sync_api import sync_playwright
+        except ImportError as exc:  # pragma: no cover - depends on the environment
+            raise ImportError(
+                "3D rendering requires Playwright, which is not installed.\n"
+                "It drives a headless browser to render the NiiVue WebGL scene, "
+                "so it needs two steps:\n"
+                '    pip install "simnibs-analyze[viz3d]"\n'
+                "    playwright install chromium\n"
+                "The second step downloads the browser itself and is easy to miss."
+            ) from exc
 
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)

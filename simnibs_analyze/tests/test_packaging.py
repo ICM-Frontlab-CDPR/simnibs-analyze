@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import ClassVar
 
 import simnibs_analyze
 
@@ -62,3 +63,41 @@ class TestDependencyDeclared:
 
         major, minor = (int(x) for x in simnibs_reader.__version__.split(".")[:2])
         assert (major, minor) >= (0, 2)
+
+
+class TestLazyImportsDeclared:
+    """Imports inside function bodies are easy to miss when auditing
+    dependencies - playwright shipped undeclared because of exactly this."""
+
+    THIRD_PARTY_LAZY: ClassVar[dict[str, str | None]] = {
+        "playwright": "viz3d",
+        "yaml": None,      # core dependency
+        "scipy": None,     # core dependency
+        "duecredit": "citations",
+    }
+
+    def test_every_lazy_third_party_import_is_declared(self) -> None:
+        import re
+
+        pyproject = (REPO_ROOT / "pyproject.toml").read_text()
+        pattern = re.compile(r"^\s+(?:from|import)\s+([a-zA-Z_][\w]*)", re.MULTILINE)
+
+        found: set[str] = set()
+        for path in _active_sources():
+            for mod in pattern.findall(path.read_text()):
+                if mod in self.THIRD_PARTY_LAZY:
+                    found.add(mod)
+
+        undeclared = [m for m in found if m.replace("yaml", "pyyaml") not in pyproject]
+        assert undeclared == [], f"lazy-imported but not in pyproject: {undeclared}"
+
+    def test_playwright_is_an_optional_extra(self) -> None:
+        pyproject = (REPO_ROOT / "pyproject.toml").read_text()
+        assert "viz3d = [" in pyproject
+        assert "playwright" in pyproject
+
+    def test_missing_playwright_raises_actionable_error(self) -> None:
+        """The error must name both install steps, not just the pip one."""
+        src = (PKG_ROOT / "steps" / "viz.py").read_text()
+        assert "simnibs-analyze[viz3d]" in src
+        assert "playwright install chromium" in src

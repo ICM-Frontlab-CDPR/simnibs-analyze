@@ -80,6 +80,18 @@ shared e-field colour scale.
 Output goes to `paths.out_root`, one directory per `{subject}_{simulation}`,
 with montages in `_cohort/`.
 
+!!! warning "3D figures need Playwright"
+    `type: 3D` figures are rendered by driving a headless browser over a NiiVue
+    WebGL scene. That needs two steps, and the second is easy to forget — it
+    downloads the browser itself:
+
+    ```bash
+    pip install "simnibs-analyze[viz3d]"
+    playwright install chromium
+    ```
+
+    2D figures have no such requirement.
+
 #### Example configs
 
 **2D ortho and parallel slices, cohort montages** — the reference example:

@@ -18,10 +18,7 @@
 
 # ── Cohort ───────────────────────────────────────────────────────────────────
 # REQUIRED. Subject IDs as they appear in the folder names.
-subjects:
-  - "0001"
-  - "0002"
-  - "0005"
+subjects: ["0001", "0003", "0004", "0005", "0007"]
 
 # REQUIRED. Which conditions to process. Every entry here must have a matching
 # key under target_generation.rois, otherwise validation fails.
@@ -49,17 +46,17 @@ space: native
 # copied across unchanged.
 paths:
   # Simulation / optimization results  →  <sub>/simulations/
-  sim_base: /data/derivatives/mri/simnibs-simu
+  sim_base: "/home/hippolyted/Data/stimSD/_tmp_simnibs-outputs/2-simnibs-simu"
 
   # charm / segmentation results  →  <sub>/m2m_<sub>/
   #
   # Not strictly required, but without it you lose extra-ROI statistics (and
   # therefore the focality ratio and the clustering), and native-space runs
   # cannot warp MNI targets. A missing folder is warned about explicitly.
-  seg_base: /data/derivatives/mri/simnibs-preps
+  seg_base: "/home/hippolyted/Data/stimSD/_tmp_simnibs-outputs/1-simnibs-preps"
 
   # REQUIRED. Where CSVs and statistics are written.
-  out_root: /data/derivatives/mri/simnibs-analyze
+  out_root: "/home/hippolyted/Data/stimSD/_tmp_simnibs-outputs/test-analyze"
 
   # Legacy alias, still accepted: one root holding both of the above.
   # simnibs_output: /data/derivatives/mri/simnibs

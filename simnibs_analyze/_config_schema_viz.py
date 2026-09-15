@@ -6,7 +6,7 @@ Typed validation of the visualisation config (config-viz.yaml) with pydantic v2.
 Usage
 -----
     from config_schema import load_config
-    cfg = load_config("config-viz_stimSD.yaml")   # raises on any malformed field
+    cfg = load_config("config_viz_example.yaml")   # raises on any malformed field
 
 Design
 ------

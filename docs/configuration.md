@@ -8,8 +8,8 @@ raises a precise error rather than crashing mid-run.
 
 | Command | Schema | Example |
 |---|---|---|
-| `simnibs-analyze` | `PipelineConfig` | `docs/examples/config/config-analyze_htacs.yaml` |
-| `simnibs-viz` | `VizConfig` | `docs/examples/config/config-viz_stimSD.yaml` |
+| `simnibs-analyze` | `PipelineConfig` | `docs/examples/config/config_analyze_example.yaml` |
+| `simnibs-viz` | `VizConfig` | `docs/examples/config/config_viz_example.yaml` |
 
 ---
 

@@ -7,7 +7,7 @@ Reads a validated YAML config (see ``_config_schema_viz.py``) and, for each
 figure block, generates one figure per subject — then composes the cohort
 montages for the blocks flagged ``cohort: true`` (single shared e-field scale).
 
-    simnibs-viz --config docs/examples/config/config-viz_stimSD.yaml
+    simnibs-viz --config config_viz_example.yaml
 """
 
 from __future__ import annotations

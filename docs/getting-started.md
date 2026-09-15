@@ -50,16 +50,11 @@ analysis and clustering, writing summary CSVs to `paths.results_dir`.
     simnibs-analyze --config config-analyze.yaml --skip-features
     ```
 
-#### Example configs
+#### Example config
 
-**Sphere ROIs, native space, simulation + optimization** — the fullest example,
-with `folder_pattern` and an atlas ROI:
+Fully commented, every key shown with its default:
 
-[:material-download: config-analyze_htacs.yaml](examples/config/config-analyze_htacs.yaml){ .md-button .md-button--primary download }
-
-**Single ROI, MNI space** — a minimal starting point:
-
-[:material-download: config-analyze_stimSD.yaml](examples/config/config-analyze_stimSD.yaml){ .md-button download }
+[:material-download: config_analyze_example.yaml](examples/config/config_analyze_example.yaml){ .md-button .md-button--primary download="config_analyze_example.yaml" }
 
 ---
 
@@ -92,11 +87,12 @@ with montages in `_cohort/`.
 
     2D figures have no such requirement.
 
-#### Example configs
+#### Example config
 
-**2D ortho and parallel slices, cohort montages** — the reference example:
+Covers 2D ortho, 2D slice mosaics and 3D rendering, with the layer registry
+explained inline:
 
-[:material-download: config-viz_stimSD.yaml](examples/config/config-viz_stimSD.yaml){ .md-button .md-button--primary download }
+[:material-download: config_viz_example.yaml](examples/config/config_viz_example.yaml){ .md-button .md-button--primary download="config_viz_example.yaml" }
 
 ---
 

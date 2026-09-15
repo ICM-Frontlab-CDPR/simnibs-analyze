@@ -48,6 +48,15 @@ Requires `simnibs-reader >= 0.3.0`.
   command-line entry point duplicating `simnibs-analyze`. `run_analyze` writes
   its CSVs directly.
 
+### Documentation
+- One commented example config per command — `config_analyze_example.yaml` and
+  `config_viz_example.yaml` — replacing six study-specific files that carried
+  hardcoded paths, dead keys and TODO notes. Every key is shown with its
+  default.
+- Download buttons now save under the real filename. `attr_list` turns a bare
+  `download` keyword into `download="download"`, which the browser used as the
+  filename; the attribute is now given its value explicitly.
+
 ### Migration
 Existing configs keep working through the aliases, but **`folder_pattern` is
 removed** — delete it, the folder is found without it. To update the rest, rename

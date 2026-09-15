@@ -14,7 +14,7 @@ Per (subject × condition × mode) it:
 Then it runs the inter/intra-subject analysis + clustering (steps in
 ``steps/analysis.py``) and writes the summary CSVs.
 
-    simnibs-analyze --config docs/examples/config/config-analyze_htacs.yaml
+    simnibs-analyze --config config_analyze_example.yaml
     simnibs-analyze --config ... --skip-features   # reuse existing CSV
 """
 

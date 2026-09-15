@@ -283,6 +283,25 @@
   
 
       
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../outputs/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Outputs
+
+      </a>
+    </li>
+  
+
+      
     </ul>
   </div>
 </nav>
@@ -616,6 +635,33 @@
   
 
     
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../outputs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Outputs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
   </ul>
 </nav>
                   </div>
@@ -754,7 +800,7 @@ computes intra-ROI stats, extra-ROI stats and their ratio, then appends a row to
 analysis and clustering, writing to <code>paths.out_root</code>.</p>
 <p>Feature extraction is the slow part. Once the CSV exists, <code>--skip-features</code>
 re-runs only the statistics; <code>--skip-analysis</code> stops after extraction.</p>
-<p>→ <a href="../configuration-analyze/">Configuration reference</a></p>
+<p>→ <a href="../configuration-analyze/">Configuration reference</a> · <a href="../outputs/">Outputs</a></p>
 <h3 id="simnibs-viz-figures-and-cohort-montages"><code>simnibs-viz</code> — figures and cohort montages<a class="headerlink" href="#simnibs-viz-figures-and-cohort-montages" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>simnibs-viz<span class="w"> </span>--config<span class="w"> </span>config-viz.yaml
 </code></pre></div>
@@ -762,7 +808,7 @@ re-runs only the statistics; <code>--skip-analysis</code> stops after extraction
 montages for the blocks flagged <code>cohort: true</code>, on a single shared e-field
 scale. Output goes to <code>paths.out_root</code>, one directory per
 <code>{subject}_{simulation}</code>, with montages in <code>_cohort/</code>.</p>
-<p>→ <a href="../configuration-viz/">Configuration reference</a></p>
+<p>→ <a href="../configuration-viz/">Configuration reference</a> · <a href="../outputs/">Outputs</a></p>
 <h2 id="checking-a-config-before-running">Checking a config before running<a class="headerlink" href="#checking-a-config-before-running" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>python<span class="w"> </span>-m<span class="w"> </span>simnibs_analyze._config_schema_analyze<span class="w"> </span>--config<span class="w"> </span>my-config.yaml
 </code></pre></div>

@@ -23,8 +23,7 @@ subjects: ["0001", "0003", "0004", "0005", "0007"]
 # REQUIRED. Which conditions to process. Every entry here must have a matching
 # key under target_generation.rois, otherwise validation fails.
 stim_conditions:
-  - fef
-  - ips-left
+  - AFFT
 
 # REQUIRED. Any of: simulation, optimization.
 mode:
@@ -76,19 +75,16 @@ target_generation:
   # ROI definitions, keyed by condition name.
   #
   # NOTE: ROI names cannot contain underscores — they collide with the
-  # `space-<value>` output filename convention. Use hyphens: ips-left.
-  # SimNIBS folders on disk often use underscores anyway (..._ips_left_...);
-  # both spellings are tried automatically, nothing to declare.
+  # `space-<value>` output filename convention. Use hyphens instead, e.g.
+  # ips-left. SimNIBS folders on disk often use underscores anyway
+  # (..._ips_left_...); both spellings are tried automatically when locating
+  # the folder, so there is nothing extra to declare.
   rois:
 
     # -- sphere: centred on MNI coordinates ---------------------------------
-    fef:
+    AFFT:
       method: sphere
       coords: [28, -8, 54]     # exactly three floats, MNI mm
-
-    ips-left:
-      method: sphere
-      coords: [-25, -60, 52]
 
     # -- atlas: one or more parcels -----------------------------------------
     # atlas: harvard-oxford | aal | destrieux

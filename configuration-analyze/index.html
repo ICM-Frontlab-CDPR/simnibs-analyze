@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://ICM-Frontlab-CDPR.github.io/simnibs-analyze/getting-started/">
+        <link rel="canonical" href="https://ICM-Frontlab-CDPR.github.io/simnibs-analyze/configuration-analyze/">
       
       
-        <link rel="prev" href="..">
+        <link rel="prev" href="../getting-started/">
       
       
-        <link rel="next" href="../configuration-analyze/">
+        <link rel="next" href="../configuration-viz/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Getting Started - simnibs-analyze</title>
+        <title>simnibs-analyze - simnibs-analyze</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#getting-started" class="md-skip">
+        <a href="#simnibs-analyze-config" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Getting Started
+              simnibs-analyze
             
           </span>
         </div>
@@ -242,11 +242,9 @@
   
   
   
-    
   
-  
-    <li class="md-tabs__item md-tabs__item--active">
-      <a href="./" class="md-tabs__link">
+    <li class="md-tabs__item">
+      <a href="../getting-started/" class="md-tabs__link">
         
   
   
@@ -263,11 +261,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../configuration-analyze/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
           
   
   
@@ -355,6 +355,90 @@
       
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Configuration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
     
   
   
@@ -374,7 +458,7 @@
   <span class="md-ellipsis">
     
   
-    Getting Started
+    simnibs-analyze
   
 
     
@@ -392,7 +476,7 @@
   <span class="md-ellipsis">
     
   
-    Getting Started
+    simnibs-analyze
   
 
     
@@ -418,10 +502,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
+  <a href="#top-level-keys" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Installation
+        Top-level keys
       
     </span>
   </a>
@@ -429,49 +513,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-two-commands" class="md-nav__link">
+  <a href="#running" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The two commands
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="The two commands">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#simnibs-analyze-features-and-statistics" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        simnibs-analyze — features and statistics
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#simnibs-viz-figures-and-cohort-montages" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        simnibs-viz — figures and cohort montages
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#checking-a-config-before-running" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Checking a config before running
+        running
       
     </span>
   </a>
@@ -479,10 +524,76 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#development" class="md-nav__link">
+  <a href="#paths" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Development
+        paths
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#target_generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        target_generation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#preprocessing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        preprocessing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#feature_extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        feature_extraction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        analysis
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#minimal-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minimal example
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#checking-a-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Checking a config
       
     </span>
   </a>
@@ -493,85 +604,6 @@
   
 </nav>
       
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Configuration
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Configuration
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../configuration-analyze/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    simnibs-analyze
-  
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -639,10 +671,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
+  <a href="#top-level-keys" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Installation
+        Top-level keys
       
     </span>
   </a>
@@ -650,49 +682,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-two-commands" class="md-nav__link">
+  <a href="#running" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The two commands
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="The two commands">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#simnibs-analyze-features-and-statistics" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        simnibs-analyze — features and statistics
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#simnibs-viz-figures-and-cohort-montages" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        simnibs-viz — figures and cohort montages
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#checking-a-config-before-running" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Checking a config before running
+        running
       
     </span>
   </a>
@@ -700,10 +693,76 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#development" class="md-nav__link">
+  <a href="#paths" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Development
+        paths
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#target_generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        target_generation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#preprocessing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        preprocessing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#feature_extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        feature_extraction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        analysis
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#minimal-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minimal example
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#checking-a-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Checking a config
       
     </span>
   </a>
@@ -730,44 +789,328 @@
   
 
 
-<h1 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h1>
-<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>simnibs-analyze
+<h1 id="simnibs-analyze-config"><code>simnibs-analyze</code> config<a class="headerlink" href="#simnibs-analyze-config" title="Permanent link">&para;</a></h1>
+<p>Validated against <code>PipelineConfig</code> before any work starts, so a malformed file
+fails immediately with a precise message.</p>
+<p><a class="md-button md-button--primary" download="config_analyze_example.yaml" href="../examples/config/config_analyze_example.yaml"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7z"/></svg></span> config_analyze_example.yaml</a></p>
+<h2 id="top-level-keys">Top-level keys<a class="headerlink" href="#top-level-keys" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>subjects</code></td>
+<td>list of str</td>
+<td>—</td>
+<td>Subject IDs</td>
+</tr>
+<tr>
+<td><code>stim_conditions</code></td>
+<td>list of str</td>
+<td>—</td>
+<td>Conditions to process. Every entry needs a matching key in <code>target_generation.rois</code></td>
+</tr>
+<tr>
+<td><code>mode</code></td>
+<td>list</td>
+<td>—</td>
+<td>Any of <code>simulation</code>, <code>optimization</code></td>
+</tr>
+<tr>
+<td><code>space</code></td>
+<td>str</td>
+<td><code>mni</code></td>
+<td><code>mni</code> or <code>native</code>. Drives the <code>space-&lt;...&gt;</code> output suffix</td>
+</tr>
+<tr>
+<td><code>running</code></td>
+<td>mapping</td>
+<td>see below</td>
+<td>Output-collision policy</td>
+</tr>
+<tr>
+<td><code>paths</code></td>
+<td>mapping</td>
+<td>—</td>
+<td>Input and output locations</td>
+</tr>
+<tr>
+<td><code>target_generation</code></td>
+<td>mapping</td>
+<td>—</td>
+<td>ROI definitions</td>
+</tr>
+<tr>
+<td><code>preprocessing</code></td>
+<td>mapping</td>
+<td>see below</td>
+<td>Smoothing and outlier removal</td>
+</tr>
+<tr>
+<td><code>feature_extraction</code></td>
+<td>mapping</td>
+<td>see below</td>
+<td>Which metrics to compute</td>
+</tr>
+<tr>
+<td><code>analysis</code></td>
+<td>mapping</td>
+<td>see below</td>
+<td>Group statistics and clustering</td>
+</tr>
+</tbody>
+</table>
+<h2 id="running"><code>running</code><a class="headerlink" href="#running" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>if_exists</code></td>
+<td>str</td>
+<td><code>skip</code></td>
+<td><code>skip</code>, <code>overwrite</code>, or <code>error</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="paths"><code>paths</code><a class="headerlink" href="#paths" title="Permanent link">&para;</a></h2>
+<p>Key names are shared with the <a href="../configuration-viz/">viz config</a>, so a <code>paths</code>
+block can be copied between the two.</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sim_base</code></td>
+<td>path</td>
+<td>Simulation / optimization results — <code>{sub}/simulations/</code></td>
+</tr>
+<tr>
+<td><code>seg_base</code></td>
+<td>path</td>
+<td>Segmentation results — <code>{sub}/m2m_{sub}/</code></td>
+</tr>
+<tr>
+<td><code>out_root</code></td>
+<td>path</td>
+<td><strong>Required.</strong> Where CSVs and statistics are written</td>
+</tr>
+</tbody>
+</table>
+<p>Without <code>seg_base</code> you get intra-ROI stats only: no focality ratio, no
+clustering, and native-space runs cannot warp MNI targets.</p>
+<h2 id="target_generation"><code>target_generation</code><a class="headerlink" href="#target_generation" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>radius_mm</code></td>
+<td>float</td>
+<td><code>10.0</code></td>
+<td>Sphere radius, must be <code>&gt; 0</code></td>
+</tr>
+<tr>
+<td><code>rois</code></td>
+<td>mapping</td>
+<td>—</td>
+<td>ROI name → definition</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Coordinates are always MNI</p>
+<p><code>coords</code> are MNI millimetres regardless of <code>space</code>. In <code>native</code>, they are
+warped onto the subject grid using the field in
+<code>seg_base/{sub}/m2m_{sub}/toMNI/</code>. Atlas parcels are warped the same way.</p>
+</div>
+<div class="admonition danger">
+<p class="admonition-title">ROI names cannot contain underscores</p>
+<p>Use hyphens — <code>ips-left</code>, not <code>ips_left</code> — they collide with the
+<code>space-&lt;value&gt;</code> filename convention. SimNIBS folders on disk often use
+underscores anyway; both spellings are tried automatically.</p>
+</div>
+<p>Each ROI is one of two methods, discriminated on <code>method</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">rois</span><span class="p">:</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">AFFT</span><span class="p">:</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sphere</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">coords</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">28</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">-8</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">54</span><span class="p p-Indicator">]</span><span class="w">        </span><span class="c1"># exactly 3 floats, MNI mm</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="nt">HA-fef</span><span class="p">:</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">atlas</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nt">atlas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">harvard-oxford</span><span class="w">       </span><span class="c1"># harvard-oxford | aal | destrieux</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="nt">regions</span><span class="p">:</span><span class="w"> </span><span class="s">"Precentral</span><span class="nv"> </span><span class="s">Gyrus"</span><span class="w"> </span><span class="c1"># str or list of str</span>
 </code></pre></div>
-<p>Pulls in <a href="https://pypi.org/project/simnibs-reader/"><code>simnibs-reader</code></a>, which
-handles all NIfTI reading and ROI extraction.</p>
-<p>You need SimNIBS outputs already computed: a head model per subject
-(<code>m2m_&lt;subID&gt;/</code>, from <code>charm</code>) and a simulation or optimization folder.</p>
-<h2 id="the-two-commands">The two commands<a class="headerlink" href="#the-two-commands" title="Permanent link">&para;</a></h2>
-<p>Both are driven entirely by a YAML file passed with <code>--config</code>. The schemas are
-different and not interchangeable.</p>
-<h3 id="simnibs-analyze-features-and-statistics"><code>simnibs-analyze</code> — features and statistics<a class="headerlink" href="#simnibs-analyze-features-and-statistics" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>simnibs-analyze<span class="w"> </span>--config<span class="w"> </span>config-analyze.yaml
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Applies to</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>coords</code></td>
+<td>sphere</td>
+<td><code>[x, y, z]</code> in MNI mm</td>
+</tr>
+<tr>
+<td><code>atlas</code></td>
+<td>atlas</td>
+<td><code>harvard-oxford</code>, <code>aal</code>, or <code>destrieux</code></td>
+</tr>
+<tr>
+<td><code>regions</code></td>
+<td>atlas</td>
+<td>One label or a list of labels</td>
+</tr>
+</tbody>
+</table>
+<h2 id="preprocessing"><code>preprocessing</code><a class="headerlink" href="#preprocessing" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>smooth_fwhm</code></td>
+<td>float</td>
+<td><code>2.0</code></td>
+<td>Smoothing FWHM in mm, <code>&gt;= 0</code></td>
+</tr>
+<tr>
+<td><code>outlier_method</code></td>
+<td>str</td>
+<td><code>iqr</code></td>
+<td><code>iqr</code> or <code>zscore</code></td>
+</tr>
+<tr>
+<td><code>portion</code></td>
+<td>float</td>
+<td><code>null</code></td>
+<td>Fraction of voxels to keep, in <code>(0, 1]</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="feature_extraction"><code>feature_extraction</code><a class="headerlink" href="#feature_extraction" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>metrics</code></td>
+<td>list of str</td>
+<td><code>[mean, median, std, min, max]</code></td>
+<td>Statistics computed per ROI</td>
+</tr>
+</tbody>
+</table>
+<h2 id="analysis"><code>analysis</code><a class="headerlink" href="#analysis" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>metric</code></td>
+<td>str</td>
+<td><code>mean</code></td>
+<td>Column used for group statistics</td>
+</tr>
+<tr>
+<td><code>subject_col</code></td>
+<td>str</td>
+<td><code>subject</code></td>
+<td>Subject column in the features CSV</td>
+</tr>
+<tr>
+<td><code>condition_col</code></td>
+<td>str</td>
+<td><code>condition</code></td>
+<td>Condition column</td>
+</tr>
+<tr>
+<td><code>clustering.method</code></td>
+<td>str</td>
+<td><code>mean</code></td>
+<td>Reads <code>efield_ratio_&lt;method&gt;</code></td>
+</tr>
+<tr>
+<td><code>clustering.specificity_threshold</code></td>
+<td>float</td>
+<td><code>1.5</code></td>
+<td>Ratio above which a simulation is <em>specific</em>, <code>&gt; 0</code></td>
+</tr>
+<tr>
+<td><code>clustering.intensity_col</code></td>
+<td>str</td>
+<td><code>mean</code></td>
+<td>Column whose group median splits <em>high</em> from <em>low</em></td>
+</tr>
+</tbody>
+</table>
+<p>Clusters are labelled <code>specific_high</code>, <code>specific_low</code>, <code>diffuse_high</code>,
+<code>diffuse_low</code>.</p>
+<h2 id="minimal-example">Minimal example<a class="headerlink" href="#minimal-example" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">subjects</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"0001"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"0002"</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nt">stim_conditions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">AFFT</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">simulation</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nt">space</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">native</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="nt">target_generation</span><span class="p">:</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="nt">radius_mm</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10.0</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span><span class="nt">rois</span><span class="p">:</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="nt">AFFT</span><span class="p">:</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">      </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sphere</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">      </span><span class="nt">coords</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">28</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">-8</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">54</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="nt">paths</span><span class="p">:</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">  </span><span class="nt">sim_base</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/derivatives/simnibs-simu</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">  </span><span class="nt">seg_base</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/derivatives/simnibs-preps</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">  </span><span class="nt">out_root</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/derivatives/results</span>
 </code></pre></div>
-<p>Per (subject × condition × mode) it extracts the target ROI, post-processes it,
-computes intra-ROI stats, extra-ROI stats and their ratio, then appends a row to
-<code>all_features_space-&lt;space&gt;.csv</code>. It finishes with the inter/intra-subject
-analysis and clustering, writing to <code>paths.out_root</code>.</p>
-<p>Feature extraction is the slow part. Once the CSV exists, <code>--skip-features</code>
-re-runs only the statistics; <code>--skip-analysis</code> stops after extraction.</p>
-<p>→ <a href="../configuration-analyze/">Configuration reference</a></p>
-<h3 id="simnibs-viz-figures-and-cohort-montages"><code>simnibs-viz</code> — figures and cohort montages<a class="headerlink" href="#simnibs-viz-figures-and-cohort-montages" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>simnibs-viz<span class="w"> </span>--config<span class="w"> </span>config-viz.yaml
-</code></pre></div>
-<p>Renders one figure per subject for each figure block, then composes cohort
-montages for the blocks flagged <code>cohort: true</code>, on a single shared e-field
-scale. Output goes to <code>paths.out_root</code>, one directory per
-<code>{subject}_{simulation}</code>, with montages in <code>_cohort/</code>.</p>
-<p>→ <a href="../configuration-viz/">Configuration reference</a></p>
-<h2 id="checking-a-config-before-running">Checking a config before running<a class="headerlink" href="#checking-a-config-before-running" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>python<span class="w"> </span>-m<span class="w"> </span>simnibs_analyze._config_schema_analyze<span class="w"> </span>--config<span class="w"> </span>my-config.yaml
-</code></pre></div>
-<p>Prints a one-line summary, or the validation error and exit code <code>1</code>.</p>
-<h2 id="development">Development<a class="headerlink" href="#development" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/ICM-Frontlab-CDPR/simnibs-analyze.git
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nb">cd</span><span class="w"> </span>simnibs-analyze
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">".[dev]"</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>pytest
+<h2 id="checking-a-config">Checking a config<a class="headerlink" href="#checking-a-config" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python<span class="w"> </span>-m<span class="w"> </span>simnibs_analyze._config_schema_analyze<span class="w"> </span>--config<span class="w"> </span>my-config.yaml
 </code></pre></div>
 
 

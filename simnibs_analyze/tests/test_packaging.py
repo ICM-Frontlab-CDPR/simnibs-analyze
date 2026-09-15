@@ -101,3 +101,26 @@ class TestLazyImportsDeclared:
         src = (PKG_ROOT / "steps" / "viz.py").read_text()
         assert "simnibs-analyze[viz3d]" in src
         assert "playwright install chromium" in src
+
+
+class TestDocsVersionInSync:
+    """A hardcoded version in the docs goes stale silently — CITATION.cff sat
+    at 3.0.0 for several releases before anyone noticed."""
+
+    def test_landing_page_states_the_version(self) -> None:
+        index = (REPO_ROOT / "docs" / "index.md").read_text()
+        assert f"version {simnibs_analyze.__version__}" in index
+
+    def test_mkdocs_extra_version_matches(self) -> None:
+        mkdocs = (REPO_ROOT / "mkdocs.yml").read_text()
+        assert f'version: "{simnibs_analyze.__version__}"' in mkdocs
+
+    def test_declared_reader_floor_is_documented(self) -> None:
+        """The docs promise a reader version; pyproject must require it."""
+        import re
+
+        index = (REPO_ROOT / "docs" / "index.md").read_text()
+        m = re.search(r"simnibs-reader >= ([\d.]+)", index)
+        assert m, "the landing page should state the required reader version"
+        pyproject = (REPO_ROOT / "pyproject.toml").read_text()
+        assert f"simnibs-reader>={m.group(1)}" in pyproject

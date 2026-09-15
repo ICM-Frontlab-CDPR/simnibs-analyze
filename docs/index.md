@@ -4,6 +4,10 @@ hide:
 ---
 # simnibs-analyze
 
+!!! info "Documentation for version 0.2.0"
+    Requires `simnibs-reader >= 0.3.0`. See the
+    [changelog](https://github.com/ICM-Frontlab-CDPR/simnibs-analyze/blob/main/CHANGELOG.md).
+
 **Turn SimNIBS simulation outputs into cohort-level e-field statistics and figures — driven entirely by a YAML config.**
 
 `simnibs-analyze` sits on top of

@@ -83,9 +83,11 @@ If both a new name and its alias are given, the new name wins.
 
 !!! danger "ROI names cannot contain underscores"
     Use hyphens: `ips-left`, not `ips_left`. Underscores are rejected at
-    validation because they collide with the output filename convention. If the
-    SimNIBS folder on disk *does* use an underscore, keep the hyphen in the ROI
-    name and set `folder_pattern` to the on-disk spelling.
+    validation because they collide with the output filename convention.
+
+    SimNIBS folders on disk often use underscores anyway (`..._ips_left_...`).
+    That is handled for you — both spellings are tried when looking up the
+    folder, so the two never have to be declared separately.
 
 Each ROI is one of two methods, discriminated on the `method` key.
 
@@ -97,8 +99,7 @@ fef:
   coords: [28, -8, 54]     # exactly 3 floats, MNI mm
 ips-left:
   method: sphere
-  coords: [-25, -60, 52]
-  folder_pattern: ips_left  # folder spelling differs from the ROI key
+  coords: [-25, -60, 52]   # matches an '..._ips_left_...' folder too
 ```
 
 **Atlas** — one or more parcels:
@@ -115,7 +116,6 @@ HA-fef:
 | `coords` | sphere | `[x, y, z]` in MNI mm. Exactly three values |
 | `atlas` | atlas | `harvard-oxford`, `aal`, or `destrieux` |
 | `regions` | atlas | One label or a list of labels |
-| `folder_pattern` | both | Glob fragment for finding SimNIBS folders when the name differs from the ROI key |
 
 ### `preprocessing`
 
@@ -183,9 +183,20 @@ the figure definitions.
 |---|---|---|
 | `subjects` | mapping | Cohort selection |
 | `paths` | mapping | Input and output roots |
+| `running` | mapping | Execution policy — same keys as the analyse schema |
 | `fields_scale` | mapping | Colour scale shared across the whole cohort |
 | `vols` | mapping | Named layer registry |
 | `figures` | list | Figure blocks |
+
+### `running`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `if_exists` | str | `skip` | `skip`, `overwrite`, or `error` when a figure already exists |
+
+A figure that already exists is skipped **before** any volume is loaded or
+warped, so re-running a cohort to add one figure costs almost nothing. Set
+`overwrite` to force a re-render.
 
 ### `subjects`
 
@@ -265,7 +276,7 @@ vols:
 | `type` | str | — | `2D` or `3D` |
 | `vols` | list of str | — | Layer names from the registry. **Must not be empty, and every name must exist** |
 | `cohort` | bool | `false` | Also include this figure in a cohort montage |
-| `if_exists` | str | `overwrite` | `overwrite`, `skip`, `error` |
+| `if_exists` | str | inherits `running.if_exists` | Override the global policy for this figure only |
 
 **2D only:**
 

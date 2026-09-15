@@ -26,11 +26,9 @@ target_generation: #TO MOVE INTO SIMNIBS INPUT !
     ips-left:
       method: sphere
       coords: [-25, -60, 52]
-      folder_pattern: ips_left
     ips-right:
       method: sphere
       coords: [25, -60, 52]
-      folder_pattern: ips_right #TO REMOVE WHEN FOLDER FROM SIMNIBS-MODULAR CORRECTLY GENERATED
     # atlas example:
     HA-fef:
       method: atlas

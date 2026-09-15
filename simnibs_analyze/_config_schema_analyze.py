@@ -23,11 +23,6 @@ class SphereROI(BaseModel):
 
     method: Literal["sphere"]
     coords: Annotated[list[float], Field(min_length=3, max_length=3)]
-    folder_pattern: str | None = None
-    """Glob fragment used to find SimNIBS output folders for this ROI.
-    If omitted, the ROI key name is used (e.g. 'fef' → 'simulation_simulation_fef_*').
-    Set this when the folder name differs from the ROI key (e.g. ROI 'ips-left' but
-    folders are named '…ips_left…' → folder_pattern: 'ips_left')."""
 
 
 class AtlasROI(BaseModel):
@@ -36,8 +31,6 @@ class AtlasROI(BaseModel):
     method: Literal["atlas"]
     atlas: Literal["harvard-oxford", "aal", "destrieux"]
     regions: str | list[str]
-    folder_pattern: str | None = None
-    """See SphereROI.folder_pattern."""
 
 
 # Discriminated union: Pydantic inspects the `method` field to pick the right model.

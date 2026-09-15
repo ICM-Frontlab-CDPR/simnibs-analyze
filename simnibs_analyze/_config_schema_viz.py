@@ -92,6 +92,15 @@ VolSpec = Annotated[AnatVol | RoiVol | FieldVol, Field(discriminator="kind")]
 # ─────────────────────────────────────────────────────────────────────
 
 
+class RunningConfig(BaseModel):
+    """Execution policy. Mirrors the analyse schema."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    if_exists: Literal["overwrite", "skip", "error"] = "skip"
+    """What to do when a figure already exists on disk."""
+
+
 class FigureConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -99,9 +108,8 @@ class FigureConfig(BaseModel):
     type: Literal["2D", "3D"]
     vols: list[str]  # references into the top-level `vols` registry
     cohort: bool = False
-    if_exists: Literal["overwrite", "skip", "error"] = (
-        "overwrite"  # TODO enforce in viz
-    )
+    if_exists: Literal["overwrite", "skip", "error"] | None = None
+    """Override the top-level `running.if_exists` for this figure only."""
 
     # -- 2D only --
     subtype: Literal["ortho", "parallel"] = "ortho"
@@ -208,6 +216,11 @@ class VizConfig(BaseModel):
     fields_scale: FieldsScale
     vols: dict[str, VolSpec]
     figures: list[FigureConfig]
+    running: RunningConfig = Field(default_factory=RunningConfig)
+
+    def if_exists_for(self, fig: FigureConfig) -> str:
+        """Effective policy for one figure: its own override, else the global one."""
+        return fig.if_exists or self.running.if_exists
 
     @model_validator(mode="after")
     def _references_exist(self) -> VizConfig:

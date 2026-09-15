@@ -22,6 +22,10 @@ from scipy.ndimage import map_coordinates
 from simnibs_reader import SegmentationResult, SimulationResult
 from simnibs_reader.nifti.efield import EField
 
+from simnibs_analyze._logging import get_logger
+
+logger = get_logger(__name__)
+
 from simnibs_analyze._config_schema_viz import (
     AnatVol,
     FieldVol,
@@ -220,8 +224,19 @@ def render_figure(
     fig: FigureConfig, cfg: VizConfig, ctx: SubjectCtx, viz: SimnibsViz
 ) -> Path:
     """Produce one figure of block *fig* for subject *ctx*; return the PNG path."""
-    vols = [resolve_layer(v, cfg, ctx) for v in fig.vols]
     out_png = ctx.out / f"{fig.name}.png"
+
+    policy = cfg.if_exists_for(fig)
+    if out_png.exists():
+        if policy == "skip":
+            logger.info(f"Skip (already exists): {out_png.name}")
+            return out_png
+        if policy == "error":
+            raise FileExistsError(
+                f"Figure already exists (if_exists='error'): {out_png}"
+            )
+
+    vols = [resolve_layer(v, cfg, ctx) for v in fig.vols]
     title = f"{ctx.sub_id} — {fig.name}"
 
     # apply per-figure contour overrides

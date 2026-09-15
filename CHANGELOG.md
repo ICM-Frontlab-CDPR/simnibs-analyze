@@ -30,13 +30,27 @@ Requires `simnibs-reader >= 0.3.0`.
   `simnibs_output`) still work as deprecated aliases; the new name wins when
   both are given.
 
+- **`running.if_exists` is now enforced in `simnibs-viz`.** The viz schema
+  carried a per-figure `if_exists` marked `# TODO enforce in viz`: it was
+  declared, stored, and never read, so figures were always re-rendered. There
+  is now a top-level `running` block mirroring the analyse schema, checked
+  before any volume is loaded or warped. A per-figure value still overrides it.
+
 ### Removed
 - `mni_template` and `mni_brain_mask`. The schema accepted them and no code
   ever read them — leftovers from when this package did its own MNI
   registration. The brain mask is resolved from the segmentation instead.
+- **`folder_pattern`.** It existed only to restate a ROI name with underscores
+  instead of hyphens, because ROI keys forbid underscores while SimNIBS folders
+  use them. Both spellings are now tried automatically when locating the folder.
+- **`_pipeline_io.py` and the parallel CLI inside `steps/analysis.py`.** That
+  module's three helpers were used by nothing except a second, undeclared
+  command-line entry point duplicating `simnibs-analyze`. `run_analyze` writes
+  its CSVs directly.
 
 ### Migration
-Existing configs keep working through the aliases. To update, rename
+Existing configs keep working through the aliases, but **`folder_pattern` is
+removed** — delete it, the folder is found without it. To update the rest, rename
 `simnibs_simu` → `sim_base`, `simnibs_preps` → `seg_base`,
 `results_dir` → `out_root`, and delete `mni_template` / `mni_brain_mask`.
 

@@ -64,21 +64,42 @@ def features_csv_path(cfg: PipelineConfig) -> Path:
 
 
 def find_simulation_dir(
-    simu_root: Path, subject: str, condition: str, mode: str, folder_pattern: str | None
+    simu_root: Path, subject: str, condition: str, mode: str
 ) -> Path | None:
     """Locate the simulation/optimization folder for one (subject, condition, mode).
 
     Folder names look like ``simulation_simulation_<cond>_<study>_<hash>`` or
-    ``optimization_...``.  ``folder_pattern`` overrides the condition token when
-    the folder naming differs from the ROI key (e.g. 'ips-left' → 'ips_left').
+    ``optimization_...``.
+
+    ROI keys cannot contain underscores (they clash with the output filename
+    convention), while SimNIBS folders often do — ``ips-left`` as a key,
+    ``ips_left`` on disk. Both spellings are tried, so the two never have to be
+    declared separately.
+
+    Parameters
+    ----------
+    simu_root : Path
+        Root holding ``<subject>/simulations/``.
+    subject, condition, mode : str
+        Subject ID, ROI/condition key, and ``simulation`` or ``optimization``.
+
+    Returns
+    -------
+    Path or None
+        First matching folder, or None when the subject or condition is absent.
     """
-    token = folder_pattern or condition
     subj_dir = simu_root / subject
     if not subj_dir.is_dir():
         return None
-    # be permissive: match the mode prefix + condition token anywhere after it
-    matches = sorted(subj_dir.rglob(f"{mode}_*{token}*"))
-    return matches[0] if matches else None
+
+    # '-' and '_' are interchangeable in folder names
+    tokens = dict.fromkeys([condition, condition.replace("-", "_")])
+    for token in tokens:
+        # be permissive: match the mode prefix + condition token anywhere after it
+        matches = sorted(subj_dir.rglob(f"{mode}_*{token}*"))
+        if matches:
+            return matches[0]
+    return None
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -116,9 +137,7 @@ def process_subject_condition(
     """One CSV row for (subject, condition, mode), or None if unavailable."""
     simu_root = _simu_root(cfg)
     roi_def = cfg.target_generation.rois[condition]
-    sim_dir = find_simulation_dir(
-        simu_root, subject, condition, mode, roi_def.folder_pattern
-    )
+    sim_dir = find_simulation_dir(simu_root, subject, condition, mode)
     if sim_dir is None:
         logger.warning(f"{subject}/{condition}/{mode}: no simulation folder — skipped")
         return None

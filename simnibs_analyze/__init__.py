@@ -21,7 +21,6 @@ __all__ = [
     "_config_schema_analyze",
     "_config_schema_viz",
     "_logging",
-    "_pipeline_io",
     "run_analyze",
     "run_viz",
     "steps",

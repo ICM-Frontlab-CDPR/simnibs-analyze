@@ -1,0 +1,133 @@
+# =============================================================================
+# simnibs-analyze — example configuration
+# =============================================================================
+#
+#   simnibs-analyze --config config_analyze_example.yaml
+#
+# Every key is shown with its default in a comment. Keys marked REQUIRED have
+# no default. Validated against `PipelineConfig` before any work starts, so a
+# mistake here fails immediately with a precise message rather than mid-run.
+#
+# Check a config without running the pipeline:
+#   python -m simnibs_analyze._config_schema_analyze --config <this file>
+#
+# Full reference:
+#   https://icm-frontlab-cdpr.github.io/simnibs-analyze/configuration/
+# =============================================================================
+
+
+# ── Cohort ───────────────────────────────────────────────────────────────────
+# REQUIRED. Subject IDs as they appear in the folder names.
+subjects: ["0001", "0003", "0004", "0005", "0007"]
+
+# REQUIRED. Which conditions to process. Every entry here must have a matching
+# key under target_generation.rois, otherwise validation fails.
+stim_conditions:
+  - AFFT
+
+# REQUIRED. Any of: simulation, optimization.
+mode:
+  - simulation
+
+
+# ── Space ────────────────────────────────────────────────────────────────────
+# mni | native   (default: mni)
+#
+# Drives the output suffix (all_features_space-<space>.csv) and which volumes
+# are read. ROI coordinates below are ALWAYS given in MNI either way — in
+# native space they are warped onto the subject grid using the deformation
+# field found in seg_base/<sub>/m2m_<sub>/toMNI/.
+space: native
+
+
+# ── Paths ────────────────────────────────────────────────────────────────────
+# These key names are shared with the viz config, so this whole block can be
+# copied across unchanged.
+paths:
+  # Simulation / optimization results  →  <sub>/simulations/
+  sim_base: "/home/hippolyted/Data/stimSD/_tmp_simnibs-outputs/2-simnibs-simu"
+
+  # charm / segmentation results  →  <sub>/m2m_<sub>/
+  #
+  # Not strictly required, but without it you lose extra-ROI statistics (and
+  # therefore the focality ratio and the clustering), and native-space runs
+  # cannot warp MNI targets. A missing folder is warned about explicitly.
+  seg_base: "/home/hippolyted/Data/stimSD/_tmp_simnibs-outputs/1-simnibs-preps"
+
+  # REQUIRED. Where CSVs and statistics are written.
+  out_root: "/home/hippolyted/Data/stimSD/_tmp_simnibs-outputs/test-analyze"
+
+  # Legacy alias, still accepted: one root holding both of the above.
+  # simnibs_output: /data/derivatives/mri/simnibs
+
+
+# ── Execution policy ─────────────────────────────────────────────────────────
+running:
+  # skip | overwrite | error   (default: skip)
+  if_exists: skip
+
+
+# ── Targets ──────────────────────────────────────────────────────────────────
+target_generation:
+  # Sphere radius in mm, must be > 0.  (default: 10.0)
+  radius_mm: 10.0
+
+  # ROI definitions, keyed by condition name.
+  #
+  # NOTE: ROI names cannot contain underscores — they collide with the
+  # `space-<value>` output filename convention. Use hyphens instead, e.g.
+  # ips-left. SimNIBS folders on disk often use underscores anyway
+  # (..._ips_left_...); both spellings are tried automatically when locating
+  # the folder, so there is nothing extra to declare.
+  rois:
+
+    # -- sphere: centred on MNI coordinates ---------------------------------
+    AFFT:
+      method: sphere
+      coords: [28, -8, 54]     # exactly three floats, MNI mm
+
+    # -- atlas: one or more parcels -----------------------------------------
+    # atlas: harvard-oxford | aal | destrieux
+    # regions: a single label, or a list of labels
+    # Atlases are defined in MNI and warped automatically in native space.
+    #
+    # HA-fef:
+    #   method: atlas
+    #   atlas: harvard-oxford
+    #   regions: "Precentral Gyrus"
+
+
+# ── Preprocessing ────────────────────────────────────────────────────────────
+preprocessing:
+  smooth_fwhm: 2.0        # mm, >= 0            (default: 2.0)
+  outlier_method: iqr     # iqr | zscore        (default: iqr)
+  # portion: 0.9          # keep this fraction of voxels, in (0, 1]  (default: none)
+
+
+# ── Feature extraction ───────────────────────────────────────────────────────
+feature_extraction:
+  # Statistics computed inside the ROI, outside it, and as a ratio.
+  # (default: [mean, median, std, min, max])
+  metrics: [mean, median, std, min, max]
+
+
+# ── Group analysis ───────────────────────────────────────────────────────────
+analysis:
+  metric: mean              # column used for group statistics  (default: mean)
+  subject_col: subject      # (default: subject)
+  condition_col: condition  # (default: condition)
+
+  clustering:
+    # Reads the efield_ratio_<method> column.  (default: mean)
+    method: mean
+
+    # Ratio above which a simulation counts as "specific", must be > 0.
+    # (default: 1.5)
+    specificity_threshold: 1.5
+
+    # Column whose group median splits "high" from "low".  (default: mean)
+    intensity_col: mean
+
+    # Resulting labels: specific_high, specific_low, diffuse_high, diffuse_low.
+    # Clustering is skipped when extra-ROI stats are unavailable, since the
+    # ratio column cannot be computed — check seg_base if that happens.

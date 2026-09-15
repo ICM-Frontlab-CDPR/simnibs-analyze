@@ -570,6 +570,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#running_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        running
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#subjects" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -814,6 +825,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#running_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        running
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#subjects" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -932,12 +954,12 @@ raises a precise error rather than crashing mid-run.</p>
 <tr>
 <td><code>simnibs-analyze</code></td>
 <td><code>PipelineConfig</code></td>
-<td><code>docs/examples/config/config-analyze_htacs.yaml</code></td>
+<td><code>docs/examples/config/config_analyze_example.yaml</code></td>
 </tr>
 <tr>
 <td><code>simnibs-viz</code></td>
 <td><code>VizConfig</code></td>
-<td><code>docs/examples/config/config-viz_stimSD.yaml</code></td>
+<td><code>docs/examples/config/config_viz_example.yaml</code></td>
 </tr>
 </tbody>
 </table>
@@ -1036,8 +1058,8 @@ raises a precise error rather than crashing mid-run.</p>
 </tbody>
 </table>
 <h3 id="paths"><code>paths</code><a class="headerlink" href="#paths" title="Permanent link">&para;</a></h3>
-<p>Two mutually exclusive layouts are accepted. You must supply <strong>either</strong> the split
-form <strong>or</strong> the legacy form.</p>
+<p>Key names are the <strong>same in both schemas</strong>, so a <code>paths</code> block can be copied
+between an analyse config and a viz config unchanged.</p>
 <table>
 <thead>
 <tr>
@@ -1048,41 +1070,62 @@ form <strong>or</strong> the legacy form.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>simnibs_preps</code></td>
+<td><code>sim_base</code></td>
 <td>path</td>
-<td>Split form — segmentation results, <code>{sub}/m2m_{sub}/</code></td>
+<td>Simulation / optimization results — <code>{sub}/simulations/</code></td>
 </tr>
 <tr>
-<td><code>simnibs_simu</code></td>
+<td><code>seg_base</code></td>
 <td>path</td>
-<td>Split form — simulation/optimization results, <code>{sub}/simulations/</code></td>
+<td>charm / segmentation results — <code>{sub}/m2m_{sub}/</code></td>
 </tr>
 <tr>
-<td><code>simnibs_output</code></td>
-<td>path</td>
-<td>Legacy form — single root containing both. Deprecated</td>
-</tr>
-<tr>
-<td><code>results_dir</code></td>
+<td><code>out_root</code></td>
 <td>path</td>
 <td><strong>Required.</strong> Where CSVs, figures and statistics are written</td>
 </tr>
+</tbody>
+</table>
+<div class="admonition info">
+<p class="admonition-title"><code>seg_base</code> is not optional in practice</p>
+<p>It carries two things the pipeline needs: the tissue map used to compute
+extra-ROI statistics (and therefore the focality ratio and the clustering),
+and the deformation field used to place MNI targets in native space.
+Without it you get intra-ROI stats only, and native-space runs cannot warp.</p>
+</div>
+<p><strong>Deprecated aliases</strong>, still accepted so existing configs keep working:</p>
+<table>
+<thead>
 <tr>
-<td><code>mni_template</code></td>
-<td>path</td>
-<td>Optional MNI template</td>
+<th>Deprecated</th>
+<th>Use instead</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>simnibs_simu</code></td>
+<td><code>sim_base</code></td>
 </tr>
 <tr>
-<td><code>mni_brain_mask</code></td>
-<td>path</td>
-<td>Optional MNI brain mask</td>
+<td><code>simnibs_preps</code></td>
+<td><code>seg_base</code></td>
+</tr>
+<tr>
+<td><code>results_dir</code></td>
+<td><code>out_root</code></td>
+</tr>
+<tr>
+<td><code>simnibs_output</code></td>
+<td><code>sim_base</code> + <code>seg_base</code> (single root holding both)</td>
 </tr>
 </tbody>
 </table>
+<p>If both a new name and its alias are given, the new name wins.</p>
 <div class="admonition warning">
-<p class="admonition-title">Partial split form is rejected</p>
-<p><code>simnibs_preps</code> without <code>simnibs_simu</code> (or vice versa) fails validation. Give
-both, or fall back to <code>simnibs_output</code>.</p>
+<p class="admonition-title">Removed in 0.2.0</p>
+<p><code>mni_template</code> and <code>mni_brain_mask</code> are gone. They were accepted by the
+schema and then never read by any code — the brain mask is now resolved
+from the segmentation automatically, in whichever space the analysis runs.</p>
 </div>
 <h3 id="target_generation"><code>target_generation</code><a class="headerlink" href="#target_generation" title="Permanent link">&para;</a></h3>
 <table>
@@ -1109,12 +1152,19 @@ both, or fall back to <code>simnibs_output</code>.</p>
 </tr>
 </tbody>
 </table>
+<div class="admonition note">
+<p class="admonition-title">Coordinates are always MNI</p>
+<p><code>coords</code> are given in MNI millimetres regardless of <code>space</code>. When <code>space:
+native</code>, they are warped onto the subject grid using the deformation field
+in <code>seg_base/{sub}/m2m_{sub}/toMNI/</code>. Atlas parcels are warped the same way.</p>
+</div>
 <div class="admonition danger">
 <p class="admonition-title">ROI names cannot contain underscores</p>
 <p>Use hyphens: <code>ips-left</code>, not <code>ips_left</code>. Underscores are rejected at
-validation because they collide with the output filename convention. If the
-SimNIBS folder on disk <em>does</em> use an underscore, keep the hyphen in the ROI
-name and set <code>folder_pattern</code> to the on-disk spelling.</p>
+validation because they collide with the output filename convention.</p>
+<p>SimNIBS folders on disk often use underscores anyway (<code>..._ips_left_...</code>).
+That is handled for you — both spellings are tried when looking up the
+folder, so the two never have to be declared separately.</p>
 </div>
 <p>Each ROI is one of two methods, discriminated on the <code>method</code> key.</p>
 <p><strong>Sphere</strong> — centred on MNI coordinates:</p>
@@ -1123,8 +1173,7 @@ name and set <code>folder_pattern</code> to the on-disk spelling.</p>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">coords</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">28</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">-8</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">54</span><span class="p p-Indicator">]</span><span class="w">     </span><span class="c1"># exactly 3 floats, MNI mm</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nt">ips-left</span><span class="p">:</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sphere</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="nt">coords</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">-25</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">-60</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">52</span><span class="p p-Indicator">]</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="nt">folder_pattern</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ips_left</span><span class="w">  </span><span class="c1"># folder spelling differs from the ROI key</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="nt">coords</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">-25</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">-60</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">52</span><span class="p p-Indicator">]</span><span class="w">   </span><span class="c1"># matches an '..._ips_left_...' folder too</span>
 </code></pre></div>
 <p><strong>Atlas</strong> — one or more parcels:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">HA-fef</span><span class="p">:</span>
@@ -1155,11 +1204,6 @@ name and set <code>folder_pattern</code> to the on-disk spelling.</p>
 <td><code>regions</code></td>
 <td>atlas</td>
 <td>One label or a list of labels</td>
-</tr>
-<tr>
-<td><code>folder_pattern</code></td>
-<td>both</td>
-<td>Glob fragment for finding SimNIBS folders when the name differs from the ROI key</td>
 </tr>
 </tbody>
 </table>
@@ -1277,8 +1321,9 @@ name and set <code>folder_pattern</code> to the on-disk spelling.</p>
 <a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">      </span><span class="nt">coords</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">28</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">-8</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">54</span><span class="p p-Indicator">]</span>
 <a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>
 <a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="nt">paths</span><span class="p">:</span>
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">  </span><span class="nt">simnibs_output</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/derivatives/simnibs</span>
-<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">  </span><span class="nt">results_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/derivatives/results</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">  </span><span class="nt">sim_base</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/derivatives/simnibs-simu</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">  </span><span class="nt">seg_base</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/derivatives/simnibs-preps</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">  </span><span class="nt">out_root</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/derivatives/results</span>
 </code></pre></div>
 <hr />
 <h2 id="simnibs-viz-config"><code>simnibs-viz</code> config<a class="headerlink" href="#simnibs-viz-config" title="Permanent link">&para;</a></h2>
@@ -1311,6 +1356,11 @@ validation error instead of being silently ignored.</p>
 <td>Input and output roots</td>
 </tr>
 <tr>
+<td><code>running</code></td>
+<td>mapping</td>
+<td>Execution policy — same keys as the analyse schema</td>
+</tr>
+<tr>
 <td><code>fields_scale</code></td>
 <td>mapping</td>
 <td>Colour scale shared across the whole cohort</td>
@@ -1327,6 +1377,28 @@ validation error instead of being silently ignored.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="running_1"><code>running</code><a class="headerlink" href="#running_1" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>if_exists</code></td>
+<td>str</td>
+<td><code>skip</code></td>
+<td><code>skip</code>, <code>overwrite</code>, or <code>error</code> when a figure already exists</td>
+</tr>
+</tbody>
+</table>
+<p>A figure that already exists is skipped <strong>before</strong> any volume is loaded or
+warped, so re-running a cohort to add one figure costs almost nothing. Set
+<code>overwrite</code> to force a re-render.</p>
 <h3 id="subjects"><code>subjects</code><a class="headerlink" href="#subjects" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -1544,8 +1616,8 @@ validation error instead of being silently ignored.</p>
 <tr>
 <td><code>if_exists</code></td>
 <td>str</td>
-<td><code>overwrite</code></td>
-<td><code>overwrite</code>, <code>skip</code>, <code>error</code></td>
+<td>inherits <code>running.if_exists</code></td>
+<td>Override the global policy for this figure only</td>
 </tr>
 </tbody>
 </table>

@@ -463,10 +463,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#example-configs" class="md-nav__link">
+  <a href="#example-config" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Example configs
+        Example config
       
     </span>
   </a>
@@ -491,10 +491,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#example-configs_1" class="md-nav__link">
+  <a href="#example-config_1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Example configs
+        Example config
       
     </span>
   </a>
@@ -630,10 +630,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#example-configs" class="md-nav__link">
+  <a href="#example-config" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Example configs
+        Example config
       
     </span>
   </a>
@@ -658,10 +658,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#example-configs_1" class="md-nav__link">
+  <a href="#example-config_1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Example configs
+        Example config
       
     </span>
   </a>
@@ -767,12 +767,9 @@ analysis and clustering, writing summary CSVs to <code>paths.results_dir</code>.
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>simnibs-analyze<span class="w"> </span>--config<span class="w"> </span>config-analyze.yaml<span class="w"> </span>--skip-features
 </code></pre></div>
 </div>
-<h4 id="example-configs">Example configs<a class="headerlink" href="#example-configs" title="Permanent link">&para;</a></h4>
-<p><strong>Sphere ROIs, native space, simulation + optimization</strong> — the fullest example,
-with <code>folder_pattern</code> and an atlas ROI:</p>
-<p><a class="md-button md-button--primary" download="download" href="../examples/config/config-analyze_htacs.yaml"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7z"/></svg></span> config-analyze_htacs.yaml</a></p>
-<p><strong>Single ROI, MNI space</strong> — a minimal starting point:</p>
-<p><a class="md-button" download="download" href="../examples/config/config-analyze_stimSD.yaml"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7z"/></svg></span> config-analyze_stimSD.yaml</a></p>
+<h4 id="example-config">Example config<a class="headerlink" href="#example-config" title="Permanent link">&para;</a></h4>
+<p>Fully commented, every key shown with its default:</p>
+<p><a class="md-button md-button--primary" download="config_analyze_example.yaml" href="../examples/config/config_analyze_example.yaml"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7z"/></svg></span> config_analyze_example.yaml</a></p>
 <hr />
 <h3 id="simnibs-viz-figures-and-cohort-montages"><code>simnibs-viz</code> — figures and cohort montages<a class="headerlink" href="#simnibs-viz-figures-and-cohort-montages" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>simnibs-viz<span class="w"> </span>--config<span class="w"> </span>config-viz.yaml
@@ -808,9 +805,10 @@ downloads the browser itself:</p>
 </code></pre></div>
 <p>2D figures have no such requirement.</p>
 </div>
-<h4 id="example-configs_1">Example configs<a class="headerlink" href="#example-configs_1" title="Permanent link">&para;</a></h4>
-<p><strong>2D ortho and parallel slices, cohort montages</strong> — the reference example:</p>
-<p><a class="md-button md-button--primary" download="download" href="../examples/config/config-viz_stimSD.yaml"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7z"/></svg></span> config-viz_stimSD.yaml</a></p>
+<h4 id="example-config_1">Example config<a class="headerlink" href="#example-config_1" title="Permanent link">&para;</a></h4>
+<p>Covers 2D ortho, 2D slice mosaics and 3D rendering, with the layer registry
+explained inline:</p>
+<p><a class="md-button md-button--primary" download="config_viz_example.yaml" href="../examples/config/config_viz_example.yaml"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7z"/></svg></span> config_viz_example.yaml</a></p>
 <hr />
 <h2 id="checking-a-config-before-running">Checking a config before running<a class="headerlink" href="#checking-a-config-before-running" title="Permanent link">&para;</a></h2>
 <p>Validate the file without launching the pipeline:</p>

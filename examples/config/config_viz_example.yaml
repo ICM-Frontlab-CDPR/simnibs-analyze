@@ -1,0 +1,140 @@
+# =============================================================================
+# simnibs-viz — example configuration
+# =============================================================================
+#
+#   simnibs-viz --config config_viz_example.yaml
+#
+# The schema is built around a named registry of reusable layers (`vols`) that
+# figure blocks reference by name, so rendering details stay out of the figure
+# definitions. One figure block = one figure per subject.
+#
+# Unknown keys are REJECTED (extra="forbid"): a typo raises a validation error
+# instead of being silently ignored.
+#
+# Full reference:
+#   https://icm-frontlab-cdpr.github.io/simnibs-analyze/configuration/
+# =============================================================================
+
+
+# ── Cohort ───────────────────────────────────────────────────────────────────
+subjects:
+  ids: ["0001", "0003", "0004", "0005", "0007"]
+
+  # Substring matched against the simulation_* folder names, to pick which
+  # montage/condition to render.
+  stim_pattern: "AFFT"
+
+
+# ── Paths ────────────────────────────────────────────────────────────────────
+# Same key names as the analyse config — this block is interchangeable.
+paths:
+  seg_base: "/home/hippolyted/Data/stimSD/_tmp_simnibs-outputs/1-simnibs-preps"  # <sub>/m2m_<sub>/
+  sim_base: "/home/hippolyted/Data/stimSD/_tmp_simnibs-outputs/2-simnibs-simu"   # <sub>/simulations/
+  out_root: "/home/hippolyted/Data/stimSD/_tmp_simnibs-outputs/test-viz"         # one dir per subject
+
+
+# ── Execution policy ─────────────────────────────────────────────────────────
+running:
+  # skip | overwrite | error   (default: skip)
+  #
+  # Checked BEFORE any volume is loaded or warped, so re-running a cohort to
+  # add a single figure costs almost nothing.
+  if_exists: skip
+
+
+# ── E-field colour scale ─────────────────────────────────────────────────────
+# Locked manually for the whole cohort so panels stay comparable between
+# subjects. min must be < max. Values in V/m.
+fields_scale:
+  min: 0.05
+  max: 0.4
+
+
+# ── Layer registry ───────────────────────────────────────────────────────────
+# Each entry is `name: {kind: ...}`. Referenced by name from `figures` below.
+# All layers accept `colormap` and `opacity` (0.0–1.0).
+vols:
+
+  # -- kind: anat — structural background ------------------------------------
+  # source: t1 | brain_mask | label_prep | lesion_native | lesion_mni
+  # render: fill | contour
+  anat_brain:
+    kind: anat
+    source: brain_mask
+    colormap: gray
+    opacity: 0.5
+
+  # -- kind: roi — exactly ONE of atlas / coords / file -----------------------
+  # atlas + regions : atlas name plus a list of labels (regions is mandatory)
+  # coords          : [x, y, z] MNI mm, converted to native at runtime
+  # file            : path to a mask file
+  roi_target:
+    kind: roi
+    coords: [28, -8, 54]
+    radius: 10          # (default: 10.0), used with coords
+    colormap: blue      # (default: blue)
+    render: contour     # fill | contour   (default: fill)
+
+  # Atlas-based alternative:
+  # roi_atlas:
+  #   kind: roi
+  #   atlas: harvard-oxford
+  #   regions:
+  #     - "Temporal Pole"
+  #     - "Superior Temporal Gyrus, anterior division"
+
+  # -- kind: field — continuous e-field or current density --------------------
+  # name: E | J | magnE | magnJ   (default: magnE)
+  efield:
+    kind: field
+    name: magnE
+    colormap: hot       # (default: hot)
+    opacity: 0.6        # (default: 0.6)
+
+
+# ── Figure blocks ────────────────────────────────────────────────────────────
+# vols: layer names from the registry above. Must not be empty, and every name
+# must exist — checked at validation.
+#
+# cohort: true also composes a cohort montage across subjects, on the single
+# shared scale defined in fields_scale.
+figures:
+
+  # -- 2D ortho: one crosshair view ------------------------------------------
+  - name: anat_roi_ortho
+    type: "2D"
+    subtype: ortho                # ortho | parallel   (default: ortho)
+    vols: [anat_brain, roi_target]
+    cut_coords: [28, -8, 54]      # MNI mm; warped to native automatically
+    cohort: true
+    # cut_center_vol: roi_target  # centre on a layer's centre of mass instead.
+                                  # Mutually exclusive with cut_coords, and
+                                  # takes priority when both are given.
+
+  # -- 2D parallel: a series of slices ---------------------------------------
+  - name: efield_mosaic_axial
+    type: "2D"
+    subtype: parallel
+    vols: [anat_brain, roi_target, efield]
+    axis: z                       # x | y | z   (default: z)
+    n_cuts: 10                    # (default: 7), ignored if half_width is set
+    cohort: true
+    # half_width: 40              # half-extent in mm around the centre;
+    # spacing: 10                 # REQUIRED together with half_width
+    # contour_vols: [roi_target]  # render these as contour in this figure only
+    # montage_ncols: 4            # (default: auto)
+    # montage_panel_h: 4.0        # panel height in inches  (default: 4.0)
+
+  # -- 3D surface render ------------------------------------------------------
+  # Needs Playwright, which drives a headless browser over a NiiVue WebGL
+  # scene. Two steps — the second downloads the browser and is easy to miss:
+  #     pip install "simnibs-analyze[viz3d]"
+  #     playwright install chromium
+  - name: efield_3d
+    type: "3D"
+    vols: [anat_brain, roi_target, efield]
+    camera: [225, 15]             # [azimuth, elevation]  (default: [225.0, 15.0])
+    cohort: true
+    if_exists: overwrite          # overrides running.if_exists for this figure
+    # electrodes_cap: EEG10-20_Okamoto_2004   # cap name without .csv
+                                              # (default: none)

@@ -67,15 +67,46 @@ summary CSVs to `results_dir`.
 
 ---
 
-## Relationship to simnibs-reader
+## Ecosystem
 
-| Package | Responsibility |
-|---|---|
-| [`simnibs-reader`](https://github.com/ICM-Frontlab-CDPR/simnibs-reader) | Read SimNIBS output trees, expose e-field volumes, extract ROIs, compute stats |
-| `simnibs-analyze` | Orchestrate across a cohort, validate configs, analyse, cluster, visualise |
+<div class="grid cards" markdown>
 
-No direct `nibabel` / `nilearn` plumbing lives in the pipeline code — it all goes
-through the reader.
+-   :fontawesome-solid-brain:{ .lg .middle } **SimNIBS**
+
+    ---
+
+    The core simulation platform for non-invasive brain stimulation.
+
+    [:octicons-arrow-right-24: Documentation ](https://simnibs.github.io/simnibs/build/html/index.html)
+
+-   :material-package-variant:{ .lg .middle } **simnibs-modular**
+
+    ---
+
+    Modular pipeline components for SimNIBS workflows.
+
+    [:octicons-arrow-right-24: GitHub Pages](https://ICM-Frontlab-CDPR.github.io/simnibs-modular/)
+    · [:octicons-mark-github-16: Repo](https://github.com/ICM-Frontlab-CDPR/simnibs-modular)
+
+-   :material-file-tree:{ .lg .middle } **simnibs-reader**
+
+    ---
+
+    Structured access to SimNIBS output trees, ROIs and statistics.
+
+    [:octicons-arrow-right-24: GitHub Pages](https://ICM-Frontlab-CDPR.github.io/simnibs-reader/)
+    · [:octicons-mark-github-16: Repo](https://github.com/ICM-Frontlab-CDPR/simnibs-reader)
+
+-   :material-lightning-bolt:{ .lg .middle } **simnibs-pipeline**
+
+    ---
+
+    End-to-end automated stroke lesion-aware tDCS pipeline.
+
+    [:octicons-arrow-right-24: GitHub Pages](https://ICM-Frontlab-CDPR.github.io/simnibs-pipeline/)
+    · [:octicons-mark-github-16: Repo](https://github.com/ICM-Frontlab-CDPR/simnibs-pipeline)
+
+</div>
 
 ---
 

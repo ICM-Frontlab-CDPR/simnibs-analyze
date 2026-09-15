@@ -69,3 +69,4 @@ nav:
   - Configuration:
       - simnibs-analyze: configuration-analyze.md
       - simnibs-viz: configuration-viz.md
+  - Outputs: outputs.md

@@ -31,7 +31,7 @@ analysis and clustering, writing to `paths.out_root`.
 Feature extraction is the slow part. Once the CSV exists, `--skip-features`
 re-runs only the statistics; `--skip-analysis` stops after extraction.
 
-→ [Configuration reference](configuration-analyze.md)
+→ [Configuration reference](configuration-analyze.md) · [Outputs](outputs.md)
 
 ### `simnibs-viz` — figures and cohort montages
 
@@ -44,7 +44,7 @@ montages for the blocks flagged `cohort: true`, on a single shared e-field
 scale. Output goes to `paths.out_root`, one directory per
 `{subject}_{simulation}`, with montages in `_cohort/`.
 
-→ [Configuration reference](configuration-viz.md)
+→ [Configuration reference](configuration-viz.md) · [Outputs](outputs.md)
 
 ## Checking a config before running
 

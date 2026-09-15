@@ -40,6 +40,10 @@ Requires `simnibs-reader >= 0.3.0`.
 - `mni_template` and `mni_brain_mask`. The schema accepted them and no code
   ever read them — leftovers from when this package did its own MNI
   registration. The brain mask is resolved from the segmentation instead.
+- **`clusters_space-<space>.csv`.** `assign_clusters` returns the features
+  table with one extra column, so the whole table was being duplicated on disk
+  to carry a single label. The `cluster` column is now written back into
+  `all_features_space-<space>.csv`, leaving one extraction file.
 - **`folder_pattern`.** It existed only to restate a ROI name with underscores
   instead of hyphens, because ROI keys forbid underscores while SimNIBS folders
   use them. Both spellings are now tried automatically when locating the folder.
@@ -49,6 +53,7 @@ Requires `simnibs-reader >= 0.3.0`.
   its CSVs directly.
 
 ### Documentation
+- New **Outputs** page describing what each command writes, column by column.
 - One commented example config per command — `config_analyze_example.yaml` and
   `config_viz_example.yaml` — replacing six study-specific files that carried
   hardcoded paths, dead keys and TODO notes. Every key is shown with its

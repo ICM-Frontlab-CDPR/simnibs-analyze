@@ -284,6 +284,8 @@ def run_analysis(cfg: PipelineConfig, features_csv: Path) -> None:
             logger.warning(f"intra-subject diff {cond}: {e}")
 
     # clustering on efield_ratio_<method>
+    # The result is the features table plus one `cluster` column, so it is
+    # written back in place rather than duplicated into a second file.
     cl = a.clustering
     ratio_col = f"efield_ratio_{cl.method}"
     if ratio_col in df.columns:
@@ -293,7 +295,7 @@ def run_analysis(cfg: PipelineConfig, features_csv: Path) -> None:
                 specificity_threshold=cl.specificity_threshold,
                 intensity_col=cl.intensity_col,
             )
-            clustered.to_csv(results_dir / f"clusters_{tag}.csv", index=False)
+            clustered.to_csv(features_csv, index=False)
             logger.info(f"✓ clusters ({clustered['cluster'].value_counts().to_dict()})")
         except Exception as e:  # noqa: BLE001
             logger.warning(f"clustering failed: {e}")
@@ -341,7 +343,10 @@ def main(argv: Iterable[str] | None = None) -> int:
     if not args.skip_analysis:
         run_analysis(cfg, features_csv)
 
-    logger.info("Pipeline complete.")
+    produced = sorted(p.name for p in cfg.paths.out_root.glob("*.csv"))
+    logger.info(f"Pipeline complete — {cfg.paths.out_root}")
+    for name in produced:
+        logger.info(f"    {name}")
     return 0
 
 

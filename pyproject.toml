@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "simnibs-analyze"
-version = "0.1.1"
+version = "0.2.0"
 description = "Modular pipeline for brain stimulation modelling (tDCS/TMS) with SimNIBS"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,7 +12,7 @@ license = "MIT"
 license-files = ["LICENSE"]
 
 dependencies = [
-    "simnibs-reader>=0.2.0",
+    "simnibs-reader>=0.3.0",
     "nibabel>=5.0",
     "nilearn>=0.10",
     "numpy>=1.24",

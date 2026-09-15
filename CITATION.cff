@@ -15,8 +15,8 @@ authors:
     # orcid: "https://orcid.org/0000-0000-0000-0000"  # add if available
 license: MIT
 repository-code: https://github.com/ICM-Frontlab-CDPR/simnibs-analyze
-version: 0.1.1
-date-released: "2026-09-09"
+version: 0.2.0
+date-released: "2026-09-15"
 abstract: >-
   Modular pipeline for SimNIBS e-field analysis: NIfTI volume preprocessing,
   intra/extra-ROI feature extraction, inter/intra-subject analysis and

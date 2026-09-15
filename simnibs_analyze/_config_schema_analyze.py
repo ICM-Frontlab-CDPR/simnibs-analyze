@@ -65,32 +65,48 @@ class TargetGenerationConfig(BaseModel):
 
 
 class PathsConfig(BaseModel):
-    # ── Nouvelles clés (préféré) ───────────────────────────────────────────
-    simnibs_preps: Path | None = None
-    """Dossier des résultats charm/segmentation  →  {sub}/m2m_{sub}/"""
+    """Input and output locations.
+
+    Key names match the visualisation schema so a single set of paths can be
+    copied between an analyse config and a viz config unchanged.
+    """
+
+    sim_base: Path | None = None
+    """Simulation / optimization results  →  {sub}/simulations/"""
+    seg_base: Path | None = None
+    """charm / segmentation results  →  {sub}/m2m_{sub}/"""
+    out_root: Path | None = None
+    """Output folder: CSVs, figures, statistics."""
+
+    # ── Deprecated aliases, kept so existing configs keep working ──────────
     simnibs_simu: Path | None = None
-    """Dossier des résultats de simulation/optimisation  →  {sub}/simulations/"""
-
-    # ── Compatibilité ascendante (ancien pipeline, un seul dossier racine) ─
+    """Deprecated alias for sim_base."""
+    simnibs_preps: Path | None = None
+    """Deprecated alias for seg_base."""
+    results_dir: Path | None = None
+    """Deprecated alias for out_root."""
     simnibs_output: Path | None = None
-    """Deprecated : utiliser simnibs_preps + simnibs_simu."""
+    """Deprecated: one root holding both preps and simulations."""
 
-    # ── Sorties pipeline ──────────────────────────────────────────────────
-    results_dir: Path
-    """Dossier de sortie : CSVs, figures, statistiques."""
-
-    # ── Templates ─────────────────────────────────────────────────────────
-    mni_template: Path | None = None
-    mni_brain_mask: Path | None = None
+    @model_validator(mode="after")
+    def _apply_aliases(self) -> PathsConfig:
+        """Fold the deprecated names into the canonical ones."""
+        for canonical, legacy in (
+            ("sim_base", "simnibs_simu"),
+            ("seg_base", "simnibs_preps"),
+            ("out_root", "results_dir"),
+        ):
+            if getattr(self, canonical) is None and getattr(self, legacy) is not None:
+                object.__setattr__(self, canonical, getattr(self, legacy))
+        return self
 
     @model_validator(mode="after")
     def _validate_input_paths(self) -> PathsConfig:
-        split = self.simnibs_preps is not None and self.simnibs_simu is not None
-        legacy = self.simnibs_output is not None
-        if not split and not legacy:
+        if self.out_root is None:
+            raise ValueError("'out_root' is required (deprecated alias: results_dir).")
+        if self.sim_base is None and self.simnibs_output is None:
             raise ValueError(
-                "Specify either 'simnibs_output' (legacy) OR both "
-                "'simnibs_preps' + 'simnibs_simu'."
+                "Specify 'sim_base' + 'seg_base', or 'simnibs_output' (legacy)."
             )
         return self
 

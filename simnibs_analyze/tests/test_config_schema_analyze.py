@@ -69,9 +69,9 @@ class TestStimConditionsConsistency:
 
 
 class TestPathsConfig:
-    def test_legacy_single_root_accepted(self, minimal_analyze_cfg: dict) -> None:
+    def test_default_paths_accepted(self, minimal_analyze_cfg: dict) -> None:
         cfg = PipelineConfig.model_validate(minimal_analyze_cfg)
-        assert cfg.paths.simnibs_output is not None
+        assert cfg.paths.sim_base is not None
 
     def test_split_paths_accepted(self, minimal_analyze_cfg: dict, tmp_path: Path) -> None:
         minimal_analyze_cfg["paths"] = {

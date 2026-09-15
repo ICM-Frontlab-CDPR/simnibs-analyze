@@ -4,6 +4,42 @@ All notable changes to **simnibs-analyze** are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] — 2026-09-15
+
+Requires `simnibs-reader >= 0.3.0`.
+
+### Fixed
+- **Native-space runs extracted nothing.** ROI coordinates in the config are
+  always MNI, but they were handed to the reader unchanged, which treated them
+  as subject coordinates. The sphere landed outside the head and every subject
+  failed with nilearn's *"The mask is invalid as it is empty: it masks all
+  data"* — an error pointing nowhere near the cause. The analysis path now
+  states `coords_space="mni"`, and the reader warps onto the subject grid.
+  The warping code already existed, but lived in `run_viz` and was unreachable
+  from here.
+- **Extra-ROI statistics were unavailable in MNI space.** The segmentation was
+  attached only when `space: native`, so `complement()` had no brain mask.
+  The visible consequence was a missing `efield_ratio_mean` column and
+  *"clustering skipped"*. The segmentation is now attached in both spaces, and
+  a missing `m2m` folder is warned about explicitly instead of failing later.
+
+### Changed
+- **Path keys match the viz schema**: `sim_base`, `seg_base`, `out_root`. A
+  `paths` block can now be copied between an analyse config and a viz config.
+  The old names (`simnibs_simu`, `simnibs_preps`, `results_dir`,
+  `simnibs_output`) still work as deprecated aliases; the new name wins when
+  both are given.
+
+### Removed
+- `mni_template` and `mni_brain_mask`. The schema accepted them and no code
+  ever read them — leftovers from when this package did its own MNI
+  registration. The brain mask is resolved from the segmentation instead.
+
+### Migration
+Existing configs keep working through the aliases. To update, rename
+`simnibs_simu` → `sim_base`, `simnibs_preps` → `seg_base`,
+`results_dir` → `out_root`, and delete `mni_template` / `mni_brain_mask`.
+
 ## [0.1.1] — 2026-09-14
 
 ### Fixed

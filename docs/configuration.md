@@ -38,21 +38,36 @@ raises a precise error rather than crashing mid-run.
 
 ### `paths`
 
-Two mutually exclusive layouts are accepted. You must supply **either** the split
-form **or** the legacy form.
+Key names are the **same in both schemas**, so a `paths` block can be copied
+between an analyse config and a viz config unchanged.
 
 | Key | Type | Description |
 |---|---|---|
-| `simnibs_preps` | path | Split form — segmentation results, `{sub}/m2m_{sub}/` |
-| `simnibs_simu` | path | Split form — simulation/optimization results, `{sub}/simulations/` |
-| `simnibs_output` | path | Legacy form — single root containing both. Deprecated |
-| `results_dir` | path | **Required.** Where CSVs, figures and statistics are written |
-| `mni_template` | path | Optional MNI template |
-| `mni_brain_mask` | path | Optional MNI brain mask |
+| `sim_base` | path | Simulation / optimization results — `{sub}/simulations/` |
+| `seg_base` | path | charm / segmentation results — `{sub}/m2m_{sub}/` |
+| `out_root` | path | **Required.** Where CSVs, figures and statistics are written |
 
-!!! warning "Partial split form is rejected"
-    `simnibs_preps` without `simnibs_simu` (or vice versa) fails validation. Give
-    both, or fall back to `simnibs_output`.
+!!! info "`seg_base` is not optional in practice"
+    It carries two things the pipeline needs: the tissue map used to compute
+    extra-ROI statistics (and therefore the focality ratio and the clustering),
+    and the deformation field used to place MNI targets in native space.
+    Without it you get intra-ROI stats only, and native-space runs cannot warp.
+
+**Deprecated aliases**, still accepted so existing configs keep working:
+
+| Deprecated | Use instead |
+|---|---|
+| `simnibs_simu` | `sim_base` |
+| `simnibs_preps` | `seg_base` |
+| `results_dir` | `out_root` |
+| `simnibs_output` | `sim_base` + `seg_base` (single root holding both) |
+
+If both a new name and its alias are given, the new name wins.
+
+!!! warning "Removed in 0.2.0"
+    `mni_template` and `mni_brain_mask` are gone. They were accepted by the
+    schema and then never read by any code — the brain mask is now resolved
+    from the segmentation automatically, in whichever space the analysis runs.
 
 ### `target_generation`
 
@@ -60,6 +75,11 @@ form **or** the legacy form.
 |---|---|---|---|
 | `radius_mm` | float | `10.0` | Sphere radius, must be `> 0`. Used by `method: sphere` |
 | `rois` | mapping | — | ROI name → definition |
+
+!!! note "Coordinates are always MNI"
+    `coords` are given in MNI millimetres regardless of `space`. When `space:
+    native`, they are warped onto the subject grid using the deformation field
+    in `seg_base/{sub}/m2m_{sub}/toMNI/`. Atlas parcels are warped the same way.
 
 !!! danger "ROI names cannot contain underscores"
     Use hyphens: `ips-left`, not `ips_left`. Underscores are rejected at
@@ -140,8 +160,9 @@ target_generation:
       coords: [28, -8, 54]
 
 paths:
-  simnibs_output: /data/derivatives/simnibs
-  results_dir: /data/derivatives/results
+  sim_base: /data/derivatives/simnibs-simu
+  seg_base: /data/derivatives/simnibs-preps
+  out_root: /data/derivatives/results
 ```
 
 ---

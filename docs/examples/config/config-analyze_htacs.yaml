@@ -4,9 +4,7 @@ running:
 # Paths
 paths:
   simnibs_output: /Users/hippolyte.dreyfus/Desktop/hemianotACS/Data/derivatives/simnibs-config-healthyV2
-  results_dir: /Users/hippolyte.dreyfus/Desktop/hemianotACS/Data/derivatives/results-V4
-  mni_template: /Users/hippolyte.dreyfus/Documents/simnibs-modular/templates/MNI152_T1_1mm.nii.gz #TODO here should be one template directory and IO is responsable to find ellements within it
-  mni_brain_mask: /Users/hippolyte.dreyfus/Documents/simnibs-modular/templates/MNI152_T1_1mm_brain_mask.nii.gz
+  out_root: /Users/hippolyte.dreyfus/Desktop/hemianotACS/Data/derivatives/results-V4
 
 
 # Configuration for hemianotACS e-field analysis pipeline

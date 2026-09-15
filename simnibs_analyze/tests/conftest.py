@@ -21,8 +21,9 @@ def minimal_analyze_cfg(tmp_path: Path) -> dict:
             "rois": {"fef": {"method": "sphere", "coords": [30.0, -2.0, 50.0]}},
         },
         "paths": {
-            "simnibs_output": str(tmp_path / "simnibs"),
-            "results_dir": str(tmp_path / "results"),
+            "sim_base": str(tmp_path / "simu"),
+            "seg_base": str(tmp_path / "preps"),
+            "out_root": str(tmp_path / "results"),
         },
     }
 

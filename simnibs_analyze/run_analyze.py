@@ -47,20 +47,20 @@ SPACE_SUFFIX = {"mni": "space-mni", "native": "space-native"}
 
 def _simu_root(cfg: PipelineConfig) -> Path:
     """Root folder holding <subject>/simulations/ (new or legacy layout)."""
-    if cfg.paths.simnibs_simu is not None:
-        return cfg.paths.simnibs_simu
+    if cfg.paths.sim_base is not None:
+        return cfg.paths.sim_base
     return cfg.paths.simnibs_output  # legacy single-root
 
 
 def _preps_root(cfg: PipelineConfig) -> Path | None:
-    """Root folder holding <subject>/m2m_<subject>/ (for native-space work)."""
-    if cfg.paths.simnibs_preps is not None:
-        return cfg.paths.simnibs_preps
+    """Root folder holding <subject>/m2m_<subject>/."""
+    if cfg.paths.seg_base is not None:
+        return cfg.paths.seg_base
     return cfg.paths.simnibs_output
 
 
 def features_csv_path(cfg: PipelineConfig) -> Path:
-    return cfg.paths.results_dir / f"all_features_{SPACE_SUFFIX[cfg.space]}.csv"
+    return cfg.paths.out_root / f"all_features_{SPACE_SUFFIX[cfg.space]}.csv"
 
 
 def find_simulation_dir(
@@ -92,10 +92,18 @@ def _get_efield(sim, space: str):
 
 
 def _extract_roi(efield, roi_def, radius_mm: float):
-    """Build a reader ROI from a config ROI definition (sphere or atlas)."""
+    """Build a reader ROI from a config ROI definition (sphere or atlas).
+
+    Config coordinates are always MNI, whatever space the analysis runs in.
+    Saying so explicitly lets the reader warp them onto the subject grid when
+    the e-field is in native space; without it the sphere landed outside the
+    head and produced an empty mask.
+    """
     if roi_def.method == "sphere":
-        return efield.get_roi(coords=list(roi_def.coords), radius=radius_mm)
-    # atlas
+        return efield.get_roi(
+            coords=list(roi_def.coords), radius=radius_mm, coords_space="mni"
+        )
+    # atlas — atlases are defined in MNI, the reader warps when needed
     return efield.get_roi(atlas=roi_def.atlas, region=roi_def.regions)
 
 
@@ -121,12 +129,18 @@ def process_subject_condition(
         logger.warning(f"{subject}/{condition}/{mode}: reader error — {e}")
         return None
 
-    # attach segmentation so complement()/filter_tissue() can auto-resolve
-    if cfg.space == "native":
-        preps = _preps_root(cfg)
-        m2m = preps / subject / f"m2m_{subject}" if preps else None
-        if m2m and m2m.is_dir():
-            sim.set_segmentation(snr.segmentation(str(m2m)))
+    # Attach the segmentation in BOTH spaces. It resolves the brain mask for
+    # complement() (MNI or native) and carries the deformation field needed to
+    # warp MNI targets onto the subject grid.
+    preps = _preps_root(cfg)
+    m2m = preps / subject / f"m2m_{subject}" if preps else None
+    if m2m and m2m.is_dir():
+        sim.set_segmentation(snr.segmentation(str(m2m)))
+    else:
+        logger.warning(
+            f"{subject}: no m2m folder under {preps} — "
+            "extra-ROI stats and MNI→native warping will be unavailable"
+        )
 
     try:
         efield = _get_efield(sim, cfg.space)
@@ -216,7 +230,7 @@ def run_analysis(cfg: PipelineConfig, features_csv: Path) -> None:
     logger.info(f"Analysis on {len(df)} rows from {features_csv.name}")
 
     a = cfg.analysis
-    results_dir = cfg.paths.results_dir
+    results_dir = cfg.paths.out_root
     tag = SPACE_SUFFIX[cfg.space]
 
     # inter-subject summary
@@ -292,7 +306,7 @@ def main(argv: Iterable[str] | None = None) -> int:
         f"Subjects={len(cfg.subjects)} conditions={cfg.stim_conditions} "
         f"modes={cfg.mode} space={cfg.space}"
     )
-    cfg.paths.results_dir.mkdir(parents=True, exist_ok=True)
+    cfg.paths.out_root.mkdir(parents=True, exist_ok=True)
 
     # Step 1+2 — features
     if args.skip_features:

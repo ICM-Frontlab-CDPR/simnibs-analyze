@@ -8,7 +8,6 @@ the whole table was duplicated on disk to carry a single label.
 from __future__ import annotations
 
 import inspect
-from pathlib import Path
 
 import pandas as pd
 import pytest

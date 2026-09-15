@@ -26,8 +26,8 @@ simnibs-analyze --config config-analyze.yaml   # features + statistics
 simnibs-viz     --config config-viz.yaml       # figures + cohort montages
 ```
 
-Commented example configs in [`docs/examples/config/`](docs/examples/config/), full key
-reference in the [configuration guide](https://ICM-Frontlab-CDPR.github.io/simnibs-analyze/configuration/).
+Commented example configs in [`docs/examples/config/`](docs/examples/config/).
+Full key reference: [analyze](https://ICM-Frontlab-CDPR.github.io/simnibs-analyze/configuration-analyze/) · [viz](https://ICM-Frontlab-CDPR.github.io/simnibs-analyze/configuration-viz/).
 
 ---
 

@@ -63,4 +63,6 @@ plugins:
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
-  - Configuration: configuration.md
+  - Configuration:
+      - simnibs-analyze: configuration-analyze.md
+      - simnibs-viz: configuration-viz.md
